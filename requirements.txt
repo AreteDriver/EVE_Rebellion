@@ -1,0 +1,5 @@
+pygame>=2.0.0
+numpy>=1.20.0
+
+# For mobile/web build (optional)
+# pygbag>=0.8.0
