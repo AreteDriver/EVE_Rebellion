@@ -168,7 +168,10 @@ class PauseMenu:
     
     def toggle_difficulty(self):
         """Cycle through difficulty options."""
-        idx = VALID_DIFFICULTIES.index(self.difficulty)
+        try:
+            idx = VALID_DIFFICULTIES.index(self.difficulty)
+        except ValueError:
+            idx = 0  # Default to first difficulty if current is invalid
         idx = (idx + 1) % len(VALID_DIFFICULTIES)
         self.difficulty = VALID_DIFFICULTIES[idx]
     

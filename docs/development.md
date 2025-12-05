@@ -306,4 +306,10 @@ assert tutorial.get_current_message() is not None
 
 5. **Document data schemas**: Keep this document updated when adding new fields.
 
-6. **Test with corrupted files**: Ensure the game handles missing or malformed configuration gracefully.
+6. **Test with corrupted files**: Ensure the game handles missing or malformed configuration gracefully. Test scenarios include:
+   - Empty JSON files (`{}`)
+   - Invalid JSON syntax (missing quotes, trailing commas)
+   - Missing required fields
+   - Wrong data types (string instead of number for volume)
+   - Out-of-range values (volume > 1.0 or < 0.0)
+   - Missing files entirely

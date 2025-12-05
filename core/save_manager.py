@@ -299,8 +299,11 @@ class SaveManager:
             player.has_tracking = state.get('has_tracking', False)
             
             # Handle wolf upgrade specially since it affects ship appearance
-            if state.get('is_wolf', False) and not player.is_wolf:
-                player.upgrade_to_wolf()
+            if state.get('is_wolf', False) and not getattr(player, 'is_wolf', False):
+                if hasattr(player, 'upgrade_to_wolf'):
+                    player.upgrade_to_wolf()
+                else:
+                    player.is_wolf = True
             
             return True
         except (AttributeError, TypeError):
