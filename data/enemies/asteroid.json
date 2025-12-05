@@ -1,0 +1,26 @@
+{
+    "name": "Asteroid",
+    "description": "A tumbling space rock. Not hostile, but dangerous on collision.",
+    "health": 50,
+    "shields": 0,
+    "armor": 50,
+    "hull": 0,
+    "speed": 1.0,
+    "fire_rate": 0,
+    "score": 25,
+    "size": [30, 30],
+    "behavior": {
+        "pattern": "drift",
+        "aggressive": false,
+        "shoots": false
+    },
+    "drops": {
+        "powerup_chance": 0.05,
+        "refugees": 0
+    },
+    "visual": {
+        "sprite": "asteroid_medium",
+        "color": [128, 128, 128],
+        "rotation_speed": 2.0
+    }
+}
