@@ -86,7 +86,8 @@ data/
     "behavior": {
         "pattern": "drift|sine|zigzag|circle|swoop|flank",
         "aggressive": true,           // Actively targets player
-        "shoots": true                // Can fire projectiles
+        "shoots": true,               // Can fire projectiles
+        "preferred_range": 200        // Preferred combat range (optional)
     },
     "drops": {
         "powerup_chance": 0.15,       // Chance to drop power-up (0.0-1.0)
@@ -94,7 +95,14 @@ data/
     },
     "visual": {
         "sprite": "sprite_name",      // Reference to sprite asset
-        "color": [r, g, b]            // RGB color values (0-255)
+        "color": [r, g, b],           // RGB color values (0-255)
+        "accent_color": [r, g, b],    // Secondary color (optional)
+        "rotation_speed": 2.0         // Rotation speed for spinning sprites (optional)
+    },
+    "weapons": {                      // Weapon configuration (optional)
+        "type": "autocannon|laser",   // Weapon type
+        "damage": 10,                 // Damage per hit
+        "projectile_speed": 5         // Projectile movement speed
     }
 }
 ```
@@ -110,6 +118,7 @@ data/
     "industrial_chance": 0.1,         // Chance for industrial ships (0.0-1.0)
     "boss": "boss_enemy_id",          // Boss enemy ID (null for no boss)
     "background": "background_name",  // Background asset reference
+    "music": "music_track_name",      // Background music track (optional)
     "difficulty_modifier": 1.0,       // Multiplier for difficulty scaling
     "rewards": {
         "base_score": 500,            // Score for completing stage
