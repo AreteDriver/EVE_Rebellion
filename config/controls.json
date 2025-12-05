@@ -1,0 +1,33 @@
+{
+    "version": "1.0",
+    "keyboard": {
+        "move_left": ["K_LEFT", "K_a"],
+        "move_right": ["K_RIGHT", "K_d"],
+        "move_up": ["K_UP", "K_w"],
+        "move_down": ["K_DOWN", "K_s"],
+        "fire": ["K_SPACE"],
+        "fire_rocket": ["K_LSHIFT", "K_RSHIFT"],
+        "special_ammo_1": ["K_1"],
+        "special_ammo_2": ["K_2"],
+        "special_ammo_3": ["K_3"],
+        "special_ammo_4": ["K_4"],
+        "special_ammo_5": ["K_5"],
+        "cycle_ammo": ["K_q", "K_TAB"],
+        "pause": ["K_ESCAPE"]
+    },
+    "mouse": {
+        "fire": "BUTTON_LEFT",
+        "fire_rocket": "BUTTON_RIGHT"
+    },
+    "gamepad": {
+        "move_left": {"type": "axis", "axis": 0, "direction": -1},
+        "move_right": {"type": "axis", "axis": 0, "direction": 1},
+        "move_up": {"type": "axis", "axis": 1, "direction": -1},
+        "move_down": {"type": "axis", "axis": 1, "direction": 1},
+        "fire": {"type": "button", "button": 0},
+        "fire_rocket": {"type": "button", "button": 1},
+        "cycle_ammo": {"type": "button", "button": 2},
+        "pause": {"type": "button", "button": 7}
+    },
+    "gamepad_deadzone": 0.15
+}
