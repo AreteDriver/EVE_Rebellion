@@ -93,7 +93,7 @@ Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees al
 4. **Gate Assault** - Boss: Apocalypse Battleship
 5. **Final Push** - Boss: Abaddon Dreadnought
 
-### Upgrades
+### Upgrades (Rebel Station)
 
 | Upgrade | Cost | Effect |
 |---------|------|--------|
@@ -104,7 +104,30 @@ Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees al
 | Phased Plasma | 35 | Unlock Plasma rounds |
 | Fusion Ammo | 45 | Unlock Fusion rounds |
 | Barrage Ammo | 55 | Unlock Barrage rounds |
-| **Wolf Upgrade** | 50 | T2 Assault Frigate! |
+| **Wolf Upgrade** | 50 | T2 Assault Frigate (Offense) |
+| **Jaguar Upgrade** | 50 | T2 Assault Frigate (Defense) |
+
+### Skill Points & T2 Ships
+
+Earn skill points by destroying enemies:
+
+| Enemy Type | Skill Points |
+|------------|-------------|
+| Executioner | 5 SP |
+| Punisher | 8 SP |
+| Bestower | 10 SP |
+| Omen | 20 SP |
+| Maller | 25 SP |
+| Apocalypse | 100 SP |
+| Abaddon | 200 SP |
+
+Skill points persist across games and can be spent in the **Ship Selection Screen** to permanently unlock T2 ships:
+
+| Ship | Unlock Cost | Attributes |
+|------|-------------|------------|
+| Rifter | Free | Balanced T1 Frigate |
+| Wolf | 500 SP | +25% damage, +20% speed, +50 armor, +25 hull, +1 gun spread |
+| Jaguar | 500 SP | +10% damage, +30% speed, +50 shields, +15 hull |
 
 ### Power-ups (dropped by enemies)
 

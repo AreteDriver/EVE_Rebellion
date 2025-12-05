@@ -762,7 +762,7 @@ class Game:
         self.draw_ship_info_bubble(selected_ship)
         
         # Instructions
-        y = 580
+        y = 620
         if selected_ship in self.unlocked_ships:
             text = self.font.render("[ENTER] Launch Mission", True, (100, 255, 100))
         else:
@@ -941,8 +941,8 @@ class Game:
         y += bar_height + 8
         sp_bar_width = 150
         sp_bar_height = 10
-        # Calculate progress towards next T2 unlock (500 SP)
-        next_unlock_cost = 500
+        # Calculate progress towards next T2 unlock using actual cost from constants
+        next_unlock_cost = min(T2_SHIP_COSTS.values())
         sp_progress = min(self.player.skill_points / next_unlock_cost, 1.0)
         
         pygame.draw.rect(self.render_surface, (30, 30, 50), (x, y, sp_bar_width, sp_bar_height))
@@ -1133,7 +1133,7 @@ class Game:
         y += 32
         
         # Jaguar
-        jaguar_cost = costs.get('jaguar_upgrade', 50)
+        jaguar_cost = costs['jaguar_upgrade']
         if player.is_jaguar:
             color = (80, 80, 80)
             status = "[EQUIPPED]"
