@@ -1140,8 +1140,6 @@ class Enemy(pygame.sprite.Sprite):
             bullets.append(EnemyBullet(self.rect.centerx, self.rect.bottom, dx * 0.3, dy, 10))
         
         return bullets
-        
-        return bullets
     
     def take_damage(self, bullet):
         """Take damage from bullet, return True if destroyed"""
