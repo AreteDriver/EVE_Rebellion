@@ -2,7 +2,14 @@
 import pygame
 import random
 import math
-from constants import *
+from constants import (
+    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, STAGES, DIFFICULTY_SETTINGS,
+    SHAKE_DECAY, SHAKE_SMALL, SHAKE_MEDIUM, SHAKE_LARGE,
+    AMMO_TYPES, POWERUP_TYPES, UPGRADE_COSTS,
+    COLOR_MINMATAR_ACCENT, COLOR_AMARR_ACCENT, COLOR_TEXT,
+    COLOR_SHIELD, COLOR_ARMOR, COLOR_HULL,
+    BOSS_POOLS, WAVE_CONFIG, ENEMY_STATS
+)
 from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
                      RefugeePod, Powerup, Explosion, Star)
 from sounds import get_sound_manager, get_music_manager, play_sound
@@ -97,6 +104,13 @@ class Game:
         self.wave_delay = 0
         self.stage_complete = False
         
+        # Progressive wave system
+        self.total_waves_completed = 0
+        self.current_boss = None
+        self.stage_bosses = {}  # Track which boss was selected for each stage
+        self.wave_scaling = 1.0  # Current wave difficulty scaling
+        self.in_boss_fight = False
+        
         # Messages
         self.message = ""
         self.message_timer = 0
@@ -106,35 +120,106 @@ class Game:
         self.message = text
         self.message_timer = duration
     
+    def select_stage_boss(self, stage_index):
+        """Select a random boss for the stage based on boss tier"""
+        if stage_index in self.stage_bosses:
+            return self.stage_bosses[stage_index]
+        
+        stage = STAGES[stage_index]
+        boss_tier = stage.get('boss_tier', 0)
+        
+        if boss_tier == 0:
+            return None
+        
+        # Select random boss from the appropriate tier pool
+        boss_pool = BOSS_POOLS.get(boss_tier, [])
+        if boss_pool:
+            selected_boss = random.choice(boss_pool)
+            self.stage_bosses[stage_index] = selected_boss
+            return selected_boss
+        
+        return None
+    
+    def calculate_wave_scaling(self):
+        """Calculate difficulty scaling based on wave and stage progression"""
+        stage = STAGES[self.current_stage]
+        base_scaling = stage.get('wave_scaling', 1.0)
+        
+        # Progressive scaling within the stage
+        wave_progress = self.current_wave / max(1, stage['waves'] - 1)
+        wave_mult = 1.0 + (wave_progress * WAVE_CONFIG['difficulty_health_scale'] * 5)
+        
+        # Global progression scaling
+        total_mult = 1.0 + (self.total_waves_completed * WAVE_CONFIG['difficulty_health_scale'])
+        
+        # Player upgrade scaling - bosses get tougher if player is stronger
+        player_power = 1.0
+        if self.player.is_wolf:
+            player_power += 0.2
+        if self.player.has_gyro:
+            player_power += 0.1
+        if self.player.has_tracking:
+            player_power += 0.1
+        player_power += len(self.player.unlocked_ammo) * 0.05
+        
+        return base_scaling * wave_mult * total_mult * player_power
+    
     def spawn_wave(self):
-        """Spawn enemies for current wave"""
+        """Spawn enemies for current wave with progressive difficulty"""
         stage = STAGES[self.current_stage]
         
-        # Determine wave composition
-        num_enemies = 3 + self.current_wave + self.current_stage
+        # Calculate wave scaling
+        self.wave_scaling = self.calculate_wave_scaling()
         
-        # Check for boss wave
-        if (stage['boss'] and self.current_wave == stage['waves'] - 1):
-            # Boss wave
-            boss = Enemy(stage['boss'], SCREEN_WIDTH // 2, -100, self.difficulty_settings)
-            self.enemies.add(boss)
-            self.all_sprites.add(boss)
-            self.wave_enemies = 1
-            self.wave_spawned = 1
-            self.show_message(f"WARNING: {boss.stats['name'].upper()} APPROACHING!", 180)
-            self.play_sound('warning')
-            return
+        # Determine wave composition with progressive scaling
+        base_enemies = WAVE_CONFIG['base_enemies']
+        wave_bonus = self.current_wave * WAVE_CONFIG['enemies_per_wave']
+        stage_bonus = self.current_stage * WAVE_CONFIG['enemies_per_stage']
+        num_enemies = min(
+            base_enemies + wave_bonus + stage_bonus,
+            WAVE_CONFIG['max_enemies_per_wave']
+        )
+        
+        # Check for boss wave (last wave of stage with boss_tier)
+        boss_tier = stage.get('boss_tier', 0)
+        if boss_tier > 0 and self.current_wave == stage['waves'] - 1:
+            # Boss wave - select random boss from tier pool
+            boss_type = self.select_stage_boss(self.current_stage)
+            if boss_type:
+                self.in_boss_fight = True
+                boss = Enemy(
+                    boss_type, 
+                    SCREEN_WIDTH // 2, 
+                    -100, 
+                    self.difficulty_settings,
+                    self.wave_scaling
+                )
+                self.enemies.add(boss)
+                self.all_sprites.add(boss)
+                self.current_boss = boss
+                self.wave_enemies = 1
+                self.wave_spawned = 1
+                
+                # Get boss info for display
+                boss_name = boss.stats['name'].upper()
+                boss_class = boss.stats.get('ship_class', 'ship').upper()
+                ability_desc = boss.stats.get('ability_desc', '')
+                
+                self.show_message(f"WARNING: {boss_class} {boss_name} APPROACHING!", 180)
+                self.play_sound('warning')
+                return
         
         # Regular wave
         self.wave_enemies = num_enemies
         self.wave_spawned = 0
+        self.in_boss_fight = False
         
         # Maybe spawn industrial
         if random.random() < stage['industrial_chance']:
             self.wave_enemies += 1
     
     def spawn_enemy(self):
-        """Spawn a single enemy"""
+        """Spawn a single enemy with wave-scaled stats"""
         if self.wave_spawned >= self.wave_enemies:
             return
         
@@ -150,7 +235,13 @@ class Game:
         x = random.randint(50, SCREEN_WIDTH - 50)
         y = -50
         
-        enemy = Enemy(enemy_type, x, y, self.difficulty_settings)
+        enemy = Enemy(
+            enemy_type, 
+            x, 
+            y, 
+            self.difficulty_settings,
+            self.wave_scaling
+        )
         self.enemies.add(enemy)
         self.all_sprites.add(enemy)
         self.wave_spawned += 1
@@ -378,7 +469,7 @@ class Game:
         # Update screen shake
         self.shake.update()
         
-        # Enemy shooting
+        # Enemy shooting and boss special abilities
         for enemy in self.enemies:
             bullets = enemy.shoot(self.player.rect)
             if bullets:
@@ -386,6 +477,17 @@ class Game:
             for bullet in bullets:
                 self.enemy_bullets.add(bullet)
                 self.all_sprites.add(bullet)
+            
+            # Boss special ability usage
+            if enemy.is_boss and enemy.can_use_ability():
+                # Random chance to use ability each frame when available
+                if random.random() < 0.02:  # ~2% chance per frame
+                    ability_bullets = enemy.use_ability(self.player.rect)
+                    if ability_bullets:
+                        self.play_sound('laser', 0.4)  # Louder for abilities
+                        for bullet in ability_bullets:
+                            self.enemy_bullets.add(bullet)
+                            self.all_sprites.add(bullet)
         
         # Check collisions - player bullets vs enemies
         for bullet in self.player_bullets:
@@ -396,19 +498,36 @@ class Game:
                     # Enemy destroyed
                     self.player.score += enemy.score
                     
-                    # Screen shake based on enemy size
+                    # Screen shake based on enemy ship class
+                    ship_class = enemy.stats.get('ship_class', 'frigate')
                     if enemy.is_boss:
                         self.shake.add(SHAKE_LARGE)
                         self.play_sound('explosion_large')
-                    elif enemy.enemy_type in ['omen', 'maller']:
+                        self.in_boss_fight = False
+                        self.current_boss = None
+                    elif ship_class in ['cruiser', 'battlecruiser', 'battleship']:
+                        self.shake.add(SHAKE_MEDIUM)
+                        self.play_sound('explosion_medium')
+                    elif ship_class == 'destroyer':
                         self.shake.add(SHAKE_MEDIUM)
                         self.play_sound('explosion_medium')
                     else:
                         self.shake.add(SHAKE_SMALL)
                         self.play_sound('explosion_small', 0.6)
                     
-                    # Create explosion
-                    exp_size = 30 if not enemy.is_boss else 80
+                    # Create explosion scaled by ship class
+                    exp_sizes = {
+                        'frigate': 30,
+                        'destroyer': 45,
+                        'cruiser': 55,
+                        'battlecruiser': 70,
+                        'battleship': 90,
+                        'industrial': 40
+                    }
+                    exp_size = exp_sizes.get(ship_class, 30)
+                    if enemy.is_boss:
+                        exp_size = int(exp_size * 1.5)
+                    
                     explosion = Explosion(enemy.rect.centerx, enemy.rect.centery, 
                                         exp_size, COLOR_AMARR_ACCENT)
                     self.effects.add(explosion)
@@ -425,8 +544,16 @@ class Game:
                             self.pods.add(pod)
                             self.all_sprites.add(pod)
                     
-                    # Maybe drop powerup
-                    self.spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
+                    # Maybe drop powerup (bosses always drop)
+                    if enemy.is_boss:
+                        # Bosses guarantee multiple powerups
+                        for _ in range(2):
+                            self.spawn_powerup(
+                                enemy.rect.centerx + random.randint(-30, 30),
+                                enemy.rect.centery + random.randint(-30, 30)
+                            )
+                    else:
+                        self.spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
                     
                     enemy.kill()
                 break
@@ -509,7 +636,7 @@ class Game:
             self.show_message("Shields Boosted!", 60)
     
     def update_waves(self):
-        """Handle wave progression"""
+        """Handle wave progression with progressive difficulty"""
         stage = STAGES[self.current_stage]
         
         # Wave delay
@@ -521,22 +648,32 @@ class Game:
         if self.wave_enemies == 0 and not self.stage_complete:
             if self.current_wave < stage['waves']:
                 self.spawn_wave()
-                if not (stage['boss'] and self.current_wave == stage['waves'] - 1):
+                # Check if this is a boss wave
+                boss_tier = stage.get('boss_tier', 0)
+                is_boss_wave = boss_tier > 0 and self.current_wave == stage['waves'] - 1
+                if not is_boss_wave:
                     self.show_message(f"Wave {self.current_wave + 1}/{stage['waves']}", 90)
                     self.play_sound('wave_start', 0.4)
         
         # Spawn enemies gradually
         self.spawn_timer += 1
-        if self.spawn_timer >= 45 and self.wave_spawned < self.wave_enemies:
+        spawn_interval = WAVE_CONFIG['spawn_interval']
+        if self.spawn_timer >= spawn_interval and self.wave_spawned < self.wave_enemies:
             self.spawn_timer = 0
             self.spawn_enemy()
         
         # Wave complete?
         if len(self.enemies) == 0 and self.wave_spawned >= self.wave_enemies and self.wave_enemies > 0:
             self.current_wave += 1
+            self.total_waves_completed += 1
             self.wave_enemies = 0
             self.wave_spawned = 0
-            self.wave_delay = 90
+            self.wave_delay = WAVE_CONFIG['wave_delay']
+            
+            # Boss defeated message
+            if self.in_boss_fight:
+                self.in_boss_fight = False
+                self.show_message("BOSS DEFEATED!", 120)
             
             # Stage complete?
             if self.current_wave >= stage['waves']:
@@ -708,6 +845,83 @@ class Game:
         ))
         text = self.font_small.render(f"[{self.difficulty_settings['name']}]", True, diff_color)
         self.render_surface.blit(text, (x, y))
+        
+        # Boss health bar (if in boss fight)
+        if self.in_boss_fight and self.current_boss and self.current_boss.alive():
+            self.draw_boss_health_bar()
+    
+    def draw_boss_health_bar(self):
+        """Draw boss health bar at top of screen"""
+        boss = self.current_boss
+        if not boss:
+            return
+        
+        # Boss name and class
+        boss_name = boss.stats['name']
+        boss_class = boss.stats.get('ship_class', 'ship').title()
+        ability_desc = boss.stats.get('ability_desc', '')
+        
+        # Calculate total health percentage
+        total_health = boss.shields + boss.armor + boss.hull
+        max_health = boss.max_shields + boss.max_armor + boss.max_hull
+        health_pct = total_health / max_health if max_health > 0 else 0
+        
+        # Bar dimensions
+        bar_width = 400
+        bar_height = 20
+        x = (SCREEN_WIDTH - bar_width) // 2
+        y = 10
+        
+        # Boss name
+        name_text = self.font.render(f"{boss_class}: {boss_name}", True, COLOR_AMARR_ACCENT)
+        name_rect = name_text.get_rect(center=(SCREEN_WIDTH // 2, y + bar_height + 15))
+        self.render_surface.blit(name_text, name_rect)
+        
+        # Ability description
+        if ability_desc:
+            ability_text = self.font_small.render(ability_desc, True, (200, 180, 100))
+            ability_rect = ability_text.get_rect(center=(SCREEN_WIDTH // 2, y + bar_height + 35))
+            self.render_surface.blit(ability_text, ability_rect)
+        
+        # Background bar
+        pygame.draw.rect(self.render_surface, (40, 40, 40), (x, y, bar_width, bar_height))
+        
+        # Health segments (shields -> armor -> hull)
+        shield_pct = boss.shields / max_health if max_health > 0 else 0
+        armor_pct = boss.armor / max_health if max_health > 0 else 0
+        hull_pct = boss.hull / max_health if max_health > 0 else 0
+        
+        # Draw health segments
+        current_x = x
+        
+        # Shields (blue)
+        shield_width = int(bar_width * shield_pct)
+        if shield_width > 0:
+            pygame.draw.rect(self.render_surface, COLOR_SHIELD, 
+                           (current_x, y, shield_width, bar_height))
+            current_x += shield_width
+        
+        # Armor (orange)
+        armor_width = int(bar_width * armor_pct)
+        if armor_width > 0:
+            pygame.draw.rect(self.render_surface, COLOR_ARMOR, 
+                           (current_x, y, armor_width, bar_height))
+            current_x += armor_width
+        
+        # Hull (gray)
+        hull_width = int(bar_width * hull_pct)
+        if hull_width > 0:
+            pygame.draw.rect(self.render_surface, COLOR_HULL, 
+                           (current_x, y, hull_width, bar_height))
+        
+        # Border
+        border_color = (255, 100, 100) if hasattr(boss, 'enrage_mode') and boss.enrage_mode else (150, 120, 50)
+        pygame.draw.rect(self.render_surface, border_color, (x, y, bar_width, bar_height), 2)
+        
+        # Health percentage text
+        pct_text = self.font_small.render(f"{int(health_pct * 100)}%", True, COLOR_TEXT)
+        pct_rect = pct_text.get_rect(center=(SCREEN_WIDTH // 2, y + bar_height // 2))
+        self.render_surface.blit(pct_text, pct_rect)
     
     def draw_menu(self):
         """Draw main menu"""
