@@ -9,6 +9,10 @@ import os
 from pathlib import Path
 
 
+# Maximum allowed config file size (64KB should be plenty for control bindings)
+MAX_CONFIG_SIZE = 65536
+
+
 # Default control bindings used when config file is missing or invalid
 DEFAULT_CONTROLS = {
     "version": "1.0",
@@ -51,6 +55,34 @@ def _get_config_path():
     return module_dir / "config" / "controls.json"
 
 
+def _get_config_dir():
+    """Get the path to the config directory."""
+    module_dir = Path(__file__).parent.parent
+    return module_dir / "config"
+
+
+def _is_safe_path(config_path, base_dir=None):
+    """Check if config_path is within the allowed directory.
+
+    Args:
+        config_path: Path to validate.
+        base_dir: Base directory that config_path must be within.
+                  If None, uses the default config directory.
+
+    Returns:
+        bool: True if path is safe, False otherwise.
+    """
+    if base_dir is None:
+        base_dir = _get_config_dir()
+
+    try:
+        config_path = Path(config_path).resolve()
+        base_dir = Path(base_dir).resolve()
+        return str(config_path).startswith(str(base_dir))
+    except (ValueError, OSError):
+        return False
+
+
 def load_controls(config_path=None):
     """Load control bindings from the config file.
 
@@ -64,13 +96,18 @@ def load_controls(config_path=None):
         config_path = _get_config_path()
 
     try:
+        # Validate file size to prevent memory exhaustion
+        file_size = os.path.getsize(config_path)
+        if file_size > MAX_CONFIG_SIZE:
+            return DEFAULT_CONTROLS.copy()
+
         with open(config_path, 'r', encoding='utf-8') as f:
             controls = json.load(f)
         # Validate required sections exist
         if not all(key in controls for key in ['keyboard', 'mouse', 'gamepad']):
             return DEFAULT_CONTROLS.copy()
         return controls
-    except (FileNotFoundError, json.JSONDecodeError, IOError):
+    except (FileNotFoundError, json.JSONDecodeError, IOError, OSError):
         return DEFAULT_CONTROLS.copy()
 
 
@@ -87,9 +124,14 @@ def save_controls(controls, config_path=None):
     if config_path is None:
         config_path = _get_config_path()
 
+    # Validate path is within allowed directory
+    if not _is_safe_path(config_path):
+        return False
+
     try:
+        config_path = Path(config_path)
         # Ensure config directory exists
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        config_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(controls, f, indent=4)

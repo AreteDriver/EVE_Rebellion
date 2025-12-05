@@ -215,6 +215,33 @@ When implementing colorblind support, consider:
 - Ensure sufficient contrast between game elements
 - Test with colorblind simulation tools
 
+**Color palette recommendations for colorblind-friendly design:**
+- Use blue and orange instead of red and green for contrasting elements
+- Add texture or pattern variations to distinguish game objects
+- Consider brightness differences, not just hue changes
+
+**Example color transformations:**
+```python
+# Protanopia-friendly palette (avoid red-green distinctions)
+COLORBLIND_PALETTES = {
+    'protanopia': {
+        'enemy': (0, 100, 255),      # Blue instead of red
+        'friendly': (255, 200, 0),   # Yellow/orange
+        'neutral': (150, 150, 150),  # Gray
+    },
+    'deuteranopia': {
+        'enemy': (220, 100, 255),    # Magenta/purple
+        'friendly': (0, 150, 255),   # Cyan/blue
+        'neutral': (200, 200, 200),  # Light gray
+    },
+    'tritanopia': {
+        'enemy': (255, 100, 100),    # Red
+        'friendly': (100, 255, 100), # Green
+        'neutral': (150, 150, 150),  # Gray
+    }
+}
+```
+
 #### High Contrast UI
 
 - `enabled`: Toggle high contrast mode
@@ -240,12 +267,21 @@ When implementing features that respect accessibility settings:
 ```python
 import json
 
+# Default accessibility settings
+DEFAULT_ACCESSIBILITY = {
+    "colorblind_mode": {"enabled": False, "type": "none"},
+    "high_contrast_ui": {"enabled": False, "text_scale": 1.0},
+    "screen_shake": {"enabled": True, "intensity": 1.0},
+    "flash_effects": {"enabled": True, "intensity": 1.0},
+    "audio_cues": {"enabled": True, "volume": 1.0}
+}
+
 def load_accessibility_settings():
     try:
         with open('config/accessibility.json', 'r') as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        return get_default_accessibility_settings()
+        return DEFAULT_ACCESSIBILITY.copy()
 
 # Example: Conditional screen shake
 settings = load_accessibility_settings()
