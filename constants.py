@@ -140,6 +140,7 @@ ROCKET_DAMAGE = 50
 
 # Enemy stats
 ENEMY_STATS = {
+    # Frigates
     'executioner': {
         'name': 'Executioner',
         'shields': 60,
@@ -148,7 +149,8 @@ ENEMY_STATS = {
         'speed': 2.5,
         'fire_rate': 1500,
         'score': 100,
-        'size': (30, 40)
+        'size': (30, 40),
+        'ship_class': 'frigate'
     },
     'punisher': {
         'name': 'Punisher',
@@ -158,8 +160,80 @@ ENEMY_STATS = {
         'speed': 1.5,
         'fire_rate': 2000,
         'score': 150,
-        'size': (35, 45)
+        'size': (35, 45),
+        'ship_class': 'frigate'
     },
+    'tormentor': {
+        'name': 'Tormentor',
+        'shields': 50,
+        'armor': 50,
+        'hull': 25,
+        'speed': 2.0,
+        'fire_rate': 1800,
+        'score': 120,
+        'size': (32, 42),
+        'ship_class': 'frigate'
+    },
+    'crucifier': {
+        'name': 'Crucifier',
+        'shields': 45,
+        'armor': 35,
+        'hull': 20,
+        'speed': 2.3,
+        'fire_rate': 1600,
+        'score': 110,
+        'size': (28, 38),
+        'ship_class': 'frigate'
+    },
+    
+    # Destroyers (Boss 1 pool)
+    'coercer': {
+        'name': 'Coercer',
+        'shields': 80,
+        'armor': 120,
+        'hull': 60,
+        'speed': 1.8,
+        'fire_rate': 1000,
+        'score': 300,
+        'size': (42, 55),
+        'ship_class': 'destroyer',
+        'boss': True,
+        'boss_tier': 1,
+        'special_ability': 'rapid_fire',
+        'ability_desc': 'Fires rapid laser bursts'
+    },
+    'dragoon': {
+        'name': 'Dragoon',
+        'shields': 100,
+        'armor': 100,
+        'hull': 50,
+        'speed': 1.6,
+        'fire_rate': 1200,
+        'score': 320,
+        'size': (45, 58),
+        'ship_class': 'destroyer',
+        'boss': True,
+        'boss_tier': 1,
+        'special_ability': 'drone_swarm',
+        'ability_desc': 'Deploys tracking drones'
+    },
+    'heretic': {
+        'name': 'Heretic',
+        'shields': 90,
+        'armor': 110,
+        'hull': 55,
+        'speed': 1.7,
+        'fire_rate': 1100,
+        'score': 310,
+        'size': (40, 52),
+        'ship_class': 'destroyer',
+        'boss': True,
+        'boss_tier': 1,
+        'special_ability': 'missile_barrage',
+        'ability_desc': 'Launches missile volleys'
+    },
+    
+    # Cruisers (Boss 2 pool - Amarr only)
     'omen': {
         'name': 'Omen',
         'shields': 100,
@@ -168,7 +242,12 @@ ENEMY_STATS = {
         'speed': 1.2,
         'fire_rate': 1200,
         'score': 500,
-        'size': (50, 65)
+        'size': (50, 65),
+        'ship_class': 'cruiser',
+        'boss': True,
+        'boss_tier': 2,
+        'special_ability': 'beam_sweep',
+        'ability_desc': 'Wide angle beam sweep'
     },
     'maller': {
         'name': 'Maller',
@@ -178,19 +257,92 @@ ENEMY_STATS = {
         'speed': 0.8,
         'fire_rate': 1800,
         'score': 600,
-        'size': (55, 70)
+        'size': (55, 70),
+        'ship_class': 'cruiser',
+        'boss': True,
+        'boss_tier': 2,
+        'special_ability': 'armor_repair',
+        'ability_desc': 'Self-repairing armor'
     },
-    'bestower': {
-        'name': 'Bestower',
-        'shields': 40,
-        'armor': 100,
-        'hull': 60,
+    'arbitrator': {
+        'name': 'Arbitrator',
+        'shields': 120,
+        'armor': 180,
+        'hull': 90,
         'speed': 1.0,
-        'fire_rate': 0,  # Non-combat
-        'score': 200,
-        'refugees': 5,
-        'size': (45, 80)
+        'fire_rate': 1400,
+        'score': 550,
+        'size': (52, 68),
+        'ship_class': 'cruiser',
+        'boss': True,
+        'boss_tier': 2,
+        'special_ability': 'tracking_disrupt',
+        'ability_desc': 'Disrupts player accuracy'
     },
+    'augoror': {
+        'name': 'Augoror',
+        'shields': 90,
+        'armor': 200,
+        'hull': 85,
+        'speed': 0.9,
+        'fire_rate': 1500,
+        'score': 520,
+        'size': (48, 62),
+        'ship_class': 'cruiser',
+        'boss': True,
+        'boss_tier': 2,
+        'special_ability': 'energy_transfer',
+        'ability_desc': 'Drains player shields'
+    },
+    
+    # Battlecruisers (Boss 3 pool)
+    'harbinger': {
+        'name': 'Harbinger',
+        'shields': 200,
+        'armor': 350,
+        'hull': 150,
+        'speed': 0.6,
+        'fire_rate': 900,
+        'score': 1200,
+        'size': (65, 90),
+        'ship_class': 'battlecruiser',
+        'boss': True,
+        'boss_tier': 3,
+        'special_ability': 'focused_beam',
+        'ability_desc': 'High-damage focused laser'
+    },
+    'prophecy': {
+        'name': 'Prophecy',
+        'shields': 180,
+        'armor': 400,
+        'hull': 180,
+        'speed': 0.5,
+        'fire_rate': 1000,
+        'score': 1300,
+        'size': (70, 95),
+        'ship_class': 'battlecruiser',
+        'boss': True,
+        'boss_tier': 3,
+        'special_ability': 'heavy_drones',
+        'ability_desc': 'Deploys heavy attack drones'
+    },
+    'oracle': {
+        'name': 'Oracle',
+        'shields': 150,
+        'armor': 300,
+        'hull': 120,
+        'speed': 0.7,
+        'fire_rate': 700,
+        'score': 1100,
+        'size': (60, 85),
+        'ship_class': 'battlecruiser',
+        'boss': True,
+        'boss_tier': 3,
+        'special_ability': 'sniper_beam',
+        'ability_desc': 'Long-range precision laser'
+    },
+    
+    # Battleships (Boss 4 pool)
     'apocalypse': {
         'name': 'Apocalypse',
         'shields': 300,
@@ -200,7 +352,11 @@ ENEMY_STATS = {
         'fire_rate': 800,
         'score': 2000,
         'size': (80, 120),
-        'boss': True
+        'ship_class': 'battleship',
+        'boss': True,
+        'boss_tier': 4,
+        'special_ability': 'pulse_barrage',
+        'ability_desc': 'Multi-directional pulse fire'
     },
     'abaddon': {
         'name': 'Abaddon',
@@ -211,9 +367,53 @@ ENEMY_STATS = {
         'fire_rate': 600,
         'score': 5000,
         'size': (100, 150),
-        'boss': True
+        'ship_class': 'battleship',
+        'boss': True,
+        'boss_tier': 4,
+        'special_ability': 'omega_strike',
+        'ability_desc': 'Devastating area attack'
+    },
+    'armageddon': {
+        'name': 'Armageddon',
+        'shields': 400,
+        'armor': 550,
+        'hull': 280,
+        'speed': 0.4,
+        'fire_rate': 700,
+        'score': 3500,
+        'size': (90, 135),
+        'ship_class': 'battleship',
+        'boss': True,
+        'boss_tier': 4,
+        'special_ability': 'neut_pulse',
+        'ability_desc': 'Energy neutralizing pulse'
+    },
+    
+    # Industrial
+    'bestower': {
+        'name': 'Bestower',
+        'shields': 40,
+        'armor': 100,
+        'hull': 60,
+        'speed': 1.0,
+        'fire_rate': 0,  # Non-combat
+        'score': 200,
+        'refugees': 5,
+        'size': (45, 80),
+        'ship_class': 'industrial'
     }
 }
+
+# Boss pools by tier for random selection
+BOSS_POOLS = {
+    1: ['coercer', 'dragoon', 'heretic'],           # Destroyers
+    2: ['omen', 'maller', 'arbitrator', 'augoror'],  # Cruisers (Amarr only)
+    3: ['harbinger', 'prophecy', 'oracle'],          # Battlecruisers
+    4: ['apocalypse', 'abaddon', 'armageddon']       # Battleships
+}
+
+# Frigate pool for wave enemies
+FRIGATE_POOL = ['executioner', 'punisher', 'tormentor', 'crucifier']
 
 # Upgrade costs (refugees)
 UPGRADE_COSTS = {
@@ -235,41 +435,68 @@ POWERUP_TYPES = {
     'shield_boost': {'name': 'Shield Booster', 'color': (150, 200, 255), 'duration': 3000}
 }
 
-# Stage definitions
+# Stage definitions with progressive wave system and sequential boss battles
 STAGES = [
     {
         'name': 'Asteroid Belt Escape',
         'waves': 5,
         'enemies': ['executioner', 'punisher'],
         'industrial_chance': 0.1,
-        'boss': None
+        'boss': None,  # No boss for tutorial stage
+        'wave_scaling': 1.0,  # Base difficulty
+        'description': 'Escape through the asteroid belt!'
     },
     {
         'name': 'Amarr Patrol Interdiction',
         'waves': 7,
-        'enemies': ['executioner', 'punisher', 'omen'],
+        'enemies': ['executioner', 'punisher', 'tormentor'],
         'industrial_chance': 0.15,
-        'boss': 'omen'
+        'boss_tier': 1,  # Destroyer boss (randomly selected)
+        'boss': None,  # Will be randomly selected from BOSS_POOLS[1]
+        'wave_scaling': 1.2,
+        'description': 'Break through the patrol lines!'
     },
     {
         'name': 'Slave Colony Liberation',
         'waves': 8,
-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
+        'enemies': ['executioner', 'punisher', 'tormentor', 'crucifier'],
         'industrial_chance': 0.25,
-        'boss': None
+        'boss_tier': 2,  # Cruiser boss (randomly selected, Amarr only)
+        'boss': None,
+        'wave_scaling': 1.4,
+        'description': 'Free the enslaved Minmatar!'
     },
     {
         'name': 'Gate Assault',
         'waves': 10,
-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
+        'enemies': ['executioner', 'punisher', 'tormentor', 'crucifier'],
         'industrial_chance': 0.15,
-        'boss': 'apocalypse'
+        'boss_tier': 3,  # Battlecruiser boss (randomly selected)
+        'boss': None,
+        'wave_scaling': 1.6,
+        'description': 'Assault the stargate defenses!'
     },
     {
         'name': 'Final Push - Amarr Station',
         'waves': 12,
-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
+        'enemies': ['executioner', 'punisher', 'tormentor', 'crucifier'],
         'industrial_chance': 0.2,
-        'boss': 'abaddon'
+        'boss_tier': 4,  # Battleship boss (randomly selected)
+        'boss': None,
+        'wave_scaling': 2.0,
+        'description': 'The final battle for freedom!'
     }
 ]
+
+# Progressive wave configuration
+WAVE_CONFIG = {
+    'base_enemies': 3,           # Starting enemies per wave
+    'enemies_per_wave': 1,       # Additional enemies per wave progression
+    'enemies_per_stage': 1,      # Additional enemies per stage progression
+    'max_enemies_per_wave': 12,  # Cap on enemies per wave
+    'spawn_interval': 45,        # Frames between enemy spawns
+    'wave_delay': 90,            # Frames between waves
+    'boss_announce_delay': 180,  # Frames to announce boss
+    'difficulty_health_scale': 0.1,  # Health increase per wave
+    'difficulty_damage_scale': 0.05  # Damage increase per wave
+}
