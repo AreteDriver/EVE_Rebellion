@@ -44,10 +44,18 @@ class Player(pygame.sprite.Sprite):
         # Upgrades
         self.has_gyro = False
         self.has_tracking = False
+        self.has_fleet_upgrade = False
         
         # Powerup effects
         self.overdrive_until = 0
         self.shield_boost_until = 0
+        
+        # Fleet system
+        self.fleet_count = 1  # Number of ships in fleet (1 = just main ship)
+        self.fleet_ships = []  # List of FleetShip instances
+        self.fleet_upgrade_until = 0  # When the upgrade expires
+        self.fleet_volleys_remaining = 0  # Volleys remaining during upgrade
+        self.fleet_volley_cooldown = -2000  # Last volley time (init negative to allow immediate fire)
         
         # Score/Progress
         self.refugees = 0
@@ -243,6 +251,244 @@ class Player(pygame.sprite.Sprite):
         self.refugees += count
         self.total_refugees += count
         self.score += count * 10
+    
+    def activate_fleet_upgrade(self):
+        """Activate fleet upgrade - expand to max ships with volleys"""
+        now = pygame.time.get_ticks()
+        self.fleet_count = FLEET_MAX_SHIPS
+        self.fleet_upgrade_until = now + FLEET_UPGRADE_DURATION
+        self.fleet_volleys_remaining = FLEET_VOLLEY_COUNT
+        
+        # Create fleet ships
+        self.fleet_ships = []
+        for i in range(FLEET_MAX_SHIPS - 1):  # -1 because main ship is already there
+            ship = FleetShip(self, i)
+            self.fleet_ships.append(ship)
+    
+    def update_fleet(self):
+        """Update fleet status and timer"""
+        now = pygame.time.get_ticks()
+        
+        # Check if upgrade timer expired
+        if self.fleet_upgrade_until > 0 and now >= self.fleet_upgrade_until:
+            self.fleet_upgrade_until = 0
+            self.fleet_volleys_remaining = 0
+            # Downgrade to FLEET_DOWNGRADE_SHIPS
+            if self.fleet_count > FLEET_DOWNGRADE_SHIPS:
+                self.fleet_count = FLEET_DOWNGRADE_SHIPS
+                # Remove excess ships
+                while len(self.fleet_ships) > FLEET_DOWNGRADE_SHIPS - 1:
+                    self.fleet_ships.pop()
+        
+        # Update fleet ship positions
+        for ship in self.fleet_ships:
+            ship.update()
+    
+    def get_fleet_positions(self):
+        """Get positions of all ships in fleet (including main ship)"""
+        positions = [(self.rect.centerx, self.rect.top)]
+        
+        # Add fleet ship positions
+        total_ships = 1 + len(self.fleet_ships)
+        for i, ship in enumerate(self.fleet_ships):
+            # Position ships in formation around main ship
+            idx = i + 1  # Start from 1 since main ship is at 0
+            if idx % 2 == 1:
+                # Left side
+                offset_x = -FLEET_SHIP_SPACING * ((idx + 1) // 2)
+            else:
+                # Right side
+                offset_x = FLEET_SHIP_SPACING * (idx // 2)
+            
+            x = self.rect.centerx + offset_x
+            y = self.rect.top + 10  # Slightly behind main ship
+            positions.append((x, y))
+        
+        return positions
+    
+    def shoot_fleet(self):
+        """Fire from all ships in fleet, returns list of bullets"""
+        if not self.can_shoot():
+            return []
+        
+        self.last_shot = pygame.time.get_ticks()
+        bullets = []
+        ammo = AMMO_TYPES[self.current_ammo]
+        
+        # Get all ship positions
+        positions = self.get_fleet_positions()
+        
+        # Base shots per ship
+        num_shots = 2 + self.spread_bonus
+        spread = 15 + (self.spread_bonus * 5)
+        
+        for ship_x, ship_y in positions:
+            for i in range(num_shots):
+                offset = (i - (num_shots - 1) / 2) * spread
+                bullet = Bullet(
+                    ship_x + offset,
+                    ship_y,
+                    0, -BULLET_SPEED,
+                    ammo['tracer'],
+                    BULLET_DAMAGE,
+                    ammo['shield_mult'],
+                    ammo['armor_mult']
+                )
+                bullets.append(bullet)
+        
+        return bullets
+    
+    def fire_fleet_volley(self):
+        """Fire a powerful volley from all ships (limited uses during upgrade)"""
+        now = pygame.time.get_ticks()
+        
+        if self.fleet_volleys_remaining <= 0:
+            return []
+        
+        # Volley cooldown of 1 second
+        if now - self.fleet_volley_cooldown < 1000:
+            return []
+        
+        self.fleet_volley_cooldown = now
+        self.fleet_volleys_remaining -= 1
+        
+        bullets = []
+        ammo = AMMO_TYPES[self.current_ammo]
+        positions = self.get_fleet_positions()
+        
+        # Fire spread volley from each ship
+        for ship_x, ship_y in positions:
+            for angle in range(-30, 31, 10):  # -30 to 30 degrees in steps of 10
+                rad = math.radians(angle)
+                dx = math.sin(rad) * BULLET_SPEED * 0.5
+                dy = -BULLET_SPEED
+                
+                bullet = Bullet(
+                    ship_x,
+                    ship_y,
+                    dx, dy,
+                    ammo['tracer'],
+                    int(BULLET_DAMAGE * FLEET_VOLLEY_DAMAGE_MULT),
+                    ammo['shield_mult'],
+                    ammo['armor_mult']
+                )
+                bullets.append(bullet)
+        
+        return bullets
+    
+    def damage_fleet_ship(self, ship_index, amount):
+        """Apply damage to a specific fleet ship"""
+        if ship_index < 0 or ship_index >= len(self.fleet_ships):
+            return False
+        
+        ship = self.fleet_ships[ship_index]
+        destroyed = ship.take_damage(amount)
+        
+        if destroyed:
+            self.fleet_ships.pop(ship_index)
+            self.fleet_count = 1 + len(self.fleet_ships)
+            return True
+        
+        return False
+    
+    def get_fleet_upgrade_time_remaining(self):
+        """Get remaining time on fleet upgrade in ms"""
+        if self.fleet_upgrade_until <= 0:
+            return 0
+        now = pygame.time.get_ticks()
+        return max(0, self.fleet_upgrade_until - now)
+    
+    def is_fleet_active(self):
+        """Check if fleet has more than just the main ship"""
+        return self.fleet_count > 1
+
+
+class FleetShip:
+    """Individual ship in the player's fleet"""
+    
+    def __init__(self, player, index):
+        self.player = player
+        self.index = index
+        
+        # Individual ship health
+        self.shields = FLEET_SHIP_SHIELDS
+        self.armor = FLEET_SHIP_ARMOR
+        self.hull = FLEET_SHIP_HULL
+        self.max_shields = FLEET_SHIP_SHIELDS
+        self.max_armor = FLEET_SHIP_ARMOR
+        self.max_hull = FLEET_SHIP_HULL
+        
+        # Position offset from main ship
+        if (index + 1) % 2 == 1:
+            self.offset_x = -FLEET_SHIP_SPACING * ((index + 2) // 2)
+        else:
+            self.offset_x = FLEET_SHIP_SPACING * ((index + 1) // 2)
+        self.offset_y = 10  # Slightly behind
+        
+        # Create ship image (smaller version of player ship)
+        self.width = 30
+        self.height = 38
+        self.image = self._create_image()
+        self.rect = self.image.get_rect()
+    
+    def _create_image(self):
+        """Create a smaller fleet ship sprite"""
+        surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        
+        if self.player.is_wolf:
+            color = COLOR_MINMATAR_ACCENT
+            pygame.draw.polygon(surf, color, [
+                (self.width//2, 0),
+                (self.width-4, self.height-8),
+                (self.width//2, self.height-4),
+                (4, self.height-8)
+            ])
+            pygame.draw.circle(surf, (255, 150, 50), (self.width//2, self.height-6), 4)
+        else:
+            color = COLOR_MINMATAR_HULL
+            pygame.draw.polygon(surf, color, [
+                (self.width//2 - 2, 0),
+                (self.width-6, self.height-12),
+                (self.width//2, self.height),
+                (6, self.height-12)
+            ])
+            pygame.draw.circle(surf, (255, 100, 0), (self.width//2, self.height-4), 3)
+        
+        return surf
+    
+    def update(self):
+        """Update fleet ship position to follow main ship"""
+        self.rect.centerx = self.player.rect.centerx + self.offset_x
+        self.rect.top = self.player.rect.top + self.offset_y
+        
+        # Keep on screen
+        self.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
+    
+    def take_damage(self, amount):
+        """Apply damage to this fleet ship, return True if destroyed"""
+        # Shields first
+        if self.shields > 0:
+            absorbed = min(self.shields, amount)
+            self.shields -= absorbed
+            amount -= absorbed
+        
+        # Then armor
+        if amount > 0 and self.armor > 0:
+            absorbed = min(self.armor, amount)
+            self.armor -= absorbed
+            amount -= absorbed
+        
+        # Finally hull
+        if amount > 0:
+            self.hull -= amount
+        
+        return self.hull <= 0
+    
+    def get_health_percent(self):
+        """Get total health as percentage"""
+        total_max = self.max_shields + self.max_armor + self.max_hull
+        total_current = self.shields + self.armor + self.hull
+        return total_current / total_max if total_max > 0 else 0
 
 
 class Bullet(pygame.sprite.Sprite):
