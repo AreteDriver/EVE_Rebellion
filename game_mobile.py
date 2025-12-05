@@ -10,6 +10,10 @@ from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket,
 from sounds import get_sound_manager, get_music_manager, play_sound
 from touch_controls import TouchControls
 
+# Mobile-specific event and timing constants
+SHOP_TRANSITION_EVENT = pygame.USEREVENT + 1
+STAGE_COMPLETE_DELAY_MS = 2000
+
 
 class ScreenShake:
     """Manages screen shake effects"""
@@ -50,14 +54,9 @@ class MobileGame:
             self.audio_available = False
             print("Audio not available - continuing without sound")
         
-        # Use flexible screen size that works on mobile
+        # Use flexible screen size that works on mobile (stored as instance variables)
         self.screen_width = MOBILE_SCREEN_WIDTH
         self.screen_height = MOBILE_SCREEN_HEIGHT
-        
-        # Override constants for mobile
-        global SCREEN_WIDTH, SCREEN_HEIGHT
-        SCREEN_WIDTH = self.screen_width
-        SCREEN_HEIGHT = self.screen_height
         
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         self.render_surface = pygame.Surface((self.screen_width, self.screen_height))
@@ -695,10 +694,10 @@ class MobileGame:
                 self.show_message("STAGE COMPLETE!", 120)
                 self.play_sound('stage_complete')
                 # Go to shop after delay
-                pygame.time.set_timer(pygame.USEREVENT + 1, 2000, 1)
+                pygame.time.set_timer(SHOP_TRANSITION_EVENT, STAGE_COMPLETE_DELAY_MS, 1)
         
         # Check for shop transition
-        for event in pygame.event.get(pygame.USEREVENT + 1):
+        for event in pygame.event.get(SHOP_TRANSITION_EVENT):
             if self.stage_complete:
                 self.state = 'shop'
     

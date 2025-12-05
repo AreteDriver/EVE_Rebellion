@@ -3,6 +3,9 @@ import pygame
 import math
 from mobile_constants import *
 
+# Use negative ID for mouse events to distinguish from touch finger IDs
+MOUSE_TOUCH_ID = -1
+
 
 class VirtualJoystick:
     """Virtual joystick for touch-based movement"""
@@ -152,13 +155,17 @@ class TouchButton:
         self.touch_id = None
         return True
     
+    def _get_active_color(self, base_color):
+        """Get brightened color for active state"""
+        return tuple(min(c + 50, 255) if i < 3 else c for i, c in enumerate(base_color))
+    
     def draw(self, surface, font=None):
         """Draw button on screen"""
         btn_surface = pygame.Surface((self.radius * 3, self.radius * 3), pygame.SRCALPHA)
         center = (self.radius * 1.5, self.radius * 1.5)
         
         # Draw button circle
-        color = tuple(min(c + 50, 255) if i < 3 else c for i, c in enumerate(self.color)) if self.active else self.color
+        color = self._get_active_color(self.color) if self.active else self.color
         pygame.draw.circle(btn_surface, color, (int(center[0]), int(center[1])), self.radius)
         pygame.draw.circle(btn_surface, (200, 200, 200, 200), 
                           (int(center[0]), int(center[1])), self.radius, 2)
@@ -276,7 +283,7 @@ class TouchControls:
         
         if event.type == pygame.MOUSEBUTTONDOWN:
             x, y = event.pos
-            touch_id = 0  # Mouse only has one "touch"
+            touch_id = MOUSE_TOUCH_ID  # Use distinct ID for mouse events
             
             # Check joystick first
             if self.joystick.handle_touch_down(touch_id, x, y):
@@ -297,7 +304,7 @@ class TouchControls:
                     return
         
         elif event.type == pygame.MOUSEBUTTONUP:
-            touch_id = 0
+            touch_id = MOUSE_TOUCH_ID
             self.joystick.handle_touch_up(touch_id)
             self.fire_button.handle_touch_up(touch_id)
             self.rocket_button.handle_touch_up(touch_id)
@@ -308,7 +315,7 @@ class TouchControls:
         elif event.type == pygame.MOUSEMOTION:
             if pygame.mouse.get_pressed()[0]:  # Left button held
                 x, y = event.pos
-                touch_id = 0
+                touch_id = MOUSE_TOUCH_ID
                 self.joystick.handle_touch_move(touch_id, x, y)
         
         # Handle touch events (for actual mobile)
