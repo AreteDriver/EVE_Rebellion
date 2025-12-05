@@ -132,6 +132,66 @@ WOLF_SPEED_BONUS = 1.2
 WOLF_ARMOR_BONUS = 50
 WOLF_HULL_BONUS = 25
 
+# Jaguar upgrade bonuses (T2 variant with escort ships)
+JAGUAR_SPEED_BONUS = 1.15
+JAGUAR_ARMOR_BONUS = 40
+JAGUAR_HULL_BONUS = 20
+
+# Formation system
+FORMATION_COOLDOWN = 2000  # ms cooldown between formation switches
+FORMATION_SWITCH_KEY = pygame.K_f
+
+# Formation types with positioning and behavior configurations
+# Positions are offsets from player (x, y) - ships orbit these points
+FORMATION_TYPES = {
+    'standard': {
+        'name': 'Standard',
+        'description': 'Balanced distribution around main ship',
+        'color': (180, 180, 180),
+        # Positions for up to 4 escort ships (relative to player)
+        'positions': [
+            (-50, 20),   # Left-rear
+            (50, 20),    # Right-rear
+            (-70, -10),  # Left-forward
+            (70, -10),   # Right-forward
+        ],
+        'orbit_radius': 15,
+        'orbit_speed': 2.0,
+        'fire_spread': 0,  # Degrees offset from forward
+        'intercept_range': 0,  # No special interception
+    },
+    'offensive': {
+        'name': 'Offensive',
+        'description': 'Forward formation for concentrated firepower',
+        'color': (255, 100, 100),
+        'positions': [
+            (-30, -40),  # Left-front
+            (30, -40),   # Right-front
+            (-50, -20),  # Left-mid
+            (50, -20),   # Right-mid
+        ],
+        'orbit_radius': 10,
+        'orbit_speed': 1.5,
+        'fire_spread': 5,  # Slight convergence toward center
+        'intercept_range': 0,
+    },
+    'defensive': {
+        'name': 'Defensive',
+        'description': 'Close protection with projectile interception',
+        'color': (100, 150, 255),
+        'positions': [
+            (-35, 0),    # Left
+            (35, 0),     # Right
+            (-25, 30),   # Left-rear
+            (25, 30),    # Right-rear
+        ],
+        'orbit_radius': 20,
+        'orbit_speed': 3.0,
+        'fire_spread': -10,  # Wider spread for area denial
+        'intercept_range': 60,  # Can intercept projectiles within this range
+    },
+}
+
 # Bullet stats
 BULLET_SPEED = 12
 BULLET_DAMAGE = 10
@@ -224,7 +284,8 @@ UPGRADE_COSTS = {
     'plasma_ammo': 35,
     'fusion_ammo': 45,
     'barrage_ammo': 55,
-    'wolf_upgrade': 50
+    'wolf_upgrade': 50,
+    'jaguar_upgrade': 60,  # T2 variant with escort ships
 }
 
 # Powerup types

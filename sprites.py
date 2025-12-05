@@ -6,11 +6,12 @@ from constants import *
 
 
 class Player(pygame.sprite.Sprite):
-    """Player ship - Rifter/Wolf"""
+    """Player ship - Rifter/Wolf/Jaguar"""
     
     def __init__(self):
         super().__init__()
         self.is_wolf = False
+        self.is_jaguar = False
         self.width = 40
         self.height = 50
         self.image = self._create_ship_image()
@@ -53,12 +54,43 @@ class Player(pygame.sprite.Sprite):
         self.refugees = 0
         self.total_refugees = 0
         self.score = 0
+        
+        # Formation system (for Jaguar upgrade)
+        self.current_formation = 'standard'
+        self.formation_cooldown_until = 0
+        self.escort_ships = []  # List of EscortShip objects
     
     def _create_ship_image(self):
-        """Create Rifter/Wolf sprite"""
+        """Create Rifter/Wolf/Jaguar sprite"""
         surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         
-        if self.is_wolf:
+        if self.is_jaguar:
+            # Jaguar - compact, tactical with formation command colors
+            color = (100, 180, 220)  # Distinct blue-ish color
+            # Main body
+            pygame.draw.polygon(surf, color, [
+                (self.width//2, 0),
+                (self.width-6, self.height-12),
+                (self.width//2, self.height-3),
+                (6, self.height-12)
+            ])
+            # Wings - angular
+            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
+                (0, self.height-12),
+                (8, self.height//3),
+                (12, self.height-5)
+            ])
+            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
+                (self.width, self.height-12),
+                (self.width-8, self.height//3),
+                (self.width-12, self.height-5)
+            ])
+            # Formation indicator stripe (matches current formation color)
+            formation_color = FORMATION_TYPES[self.current_formation]['color']
+            pygame.draw.rect(surf, formation_color, (self.width//2 - 4, 5, 8, 4))
+            # Engine glow
+            pygame.draw.circle(surf, (100, 200, 255), (self.width//2, self.height-6), 5)
+        elif self.is_wolf:
             # Wolf - sleeker, more refined
             color = COLOR_MINMATAR_ACCENT
             # Main body
@@ -118,6 +150,53 @@ class Player(pygame.sprite.Sprite):
         self.hull = min(self.hull + WOLF_HULL_BONUS, self.max_hull)
         self.spread_bonus += 1
         self.image = self._create_ship_image()
+    
+    def upgrade_to_jaguar(self):
+        """Upgrade to Jaguar assault frigate with escort ships"""
+        self.is_jaguar = True
+        self.speed *= JAGUAR_SPEED_BONUS
+        self.max_armor += JAGUAR_ARMOR_BONUS
+        self.max_hull += JAGUAR_HULL_BONUS
+        self.armor = min(self.armor + JAGUAR_ARMOR_BONUS, self.max_armor)
+        self.hull = min(self.hull + JAGUAR_HULL_BONUS, self.max_hull)
+        self.image = self._create_ship_image()
+        # Spawn 2 escort ships
+        self._spawn_escort_ships(2)
+    
+    def _spawn_escort_ships(self, count):
+        """Spawn escort ships for formation"""
+        for i in range(count):
+            escort = EscortShip(self, i)
+            self.escort_ships.append(escort)
+    
+    def can_switch_formation(self):
+        """Check if formation switch is off cooldown"""
+        return pygame.time.get_ticks() >= self.formation_cooldown_until
+    
+    def switch_formation(self, formation_type=None):
+        """Switch to specified or next formation"""
+        if not self.is_jaguar or not self.can_switch_formation():
+            return False
+        
+        formation_keys = list(FORMATION_TYPES.keys())
+        
+        if formation_type is None:
+            # Cycle to next formation
+            current_idx = formation_keys.index(self.current_formation)
+            next_idx = (current_idx + 1) % len(formation_keys)
+            formation_type = formation_keys[next_idx]
+        
+        if formation_type in FORMATION_TYPES:
+            self.current_formation = formation_type
+            self.formation_cooldown_until = pygame.time.get_ticks() + FORMATION_COOLDOWN
+            # Update ship image to reflect formation color
+            self.image = self._create_ship_image()
+            return True
+        return False
+    
+    def get_formation_info(self):
+        """Get current formation configuration"""
+        return FORMATION_TYPES.get(self.current_formation, FORMATION_TYPES['standard'])
     
     def unlock_ammo(self, ammo_type):
         """Unlock new ammo type"""
@@ -243,6 +322,172 @@ class Player(pygame.sprite.Sprite):
         self.refugees += count
         self.total_refugees += count
         self.score += count * 10
+
+
+class EscortShip(pygame.sprite.Sprite):
+    """AI-controlled escort ship that follows player in formation"""
+    
+    def __init__(self, player, slot_index):
+        super().__init__()
+        self.player = player
+        self.slot_index = slot_index
+        self.width = 25
+        self.height = 30
+        self.image = self._create_image()
+        self.rect = self.image.get_rect()
+        
+        # Position at player initially
+        self.rect.centerx = player.rect.centerx
+        self.rect.centery = player.rect.centery
+        
+        # Movement smoothing
+        self.target_x = self.rect.centerx
+        self.target_y = self.rect.centery
+        self.orbit_angle = random.uniform(0, math.pi * 2)
+        
+        # Combat
+        self.last_shot = 0
+        self.fire_rate = 300  # ms between shots
+        self.damage = 6  # Slightly less than player
+        
+        # Health (escorts are fragile)
+        self.hull = 30
+        self.max_hull = 30
+    
+    def _create_image(self):
+        """Create small escort ship sprite"""
+        surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        
+        # Small triangular ship
+        color = (150, 180, 200)
+        pygame.draw.polygon(surf, color, [
+            (self.width // 2, 0),
+            (self.width - 3, self.height - 5),
+            (self.width // 2, self.height - 2),
+            (3, self.height - 5)
+        ])
+        # Engine glow
+        pygame.draw.circle(surf, (100, 200, 255), (self.width // 2, self.height - 4), 3)
+        
+        return surf
+    
+    def get_formation_position(self):
+        """Calculate target position based on current formation"""
+        formation = self.player.get_formation_info()
+        positions = formation['positions']
+        
+        # Get position for this slot (wrap if more escorts than positions)
+        pos_idx = self.slot_index % len(positions)
+        offset_x, offset_y = positions[pos_idx]
+        
+        # Add orbit movement
+        orbit_radius = formation['orbit_radius']
+        orbit_speed = formation['orbit_speed']
+        self.orbit_angle += orbit_speed * 0.02
+        
+        orbit_x = math.cos(self.orbit_angle) * orbit_radius
+        orbit_y = math.sin(self.orbit_angle) * orbit_radius * 0.5  # Elliptical
+        
+        return (
+            self.player.rect.centerx + offset_x + orbit_x,
+            self.player.rect.centery + offset_y + orbit_y
+        )
+    
+    def update(self, enemy_bullets=None):
+        """Update escort position and behavior"""
+        # Get target position from formation
+        self.target_x, self.target_y = self.get_formation_position()
+        
+        # Smooth movement toward target
+        dx = self.target_x - self.rect.centerx
+        dy = self.target_y - self.rect.centery
+        
+        # Move faster if far from position
+        speed = 0.15
+        self.rect.centerx += dx * speed
+        self.rect.centery += dy * speed
+        
+        # Keep on screen
+        self.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
+        
+        # Defensive formation: intercept projectiles
+        formation = self.player.get_formation_info()
+        if formation['intercept_range'] > 0 and enemy_bullets:
+            self._intercept_projectiles(enemy_bullets, formation['intercept_range'])
+    
+    def _intercept_projectiles(self, enemy_bullets, intercept_range):
+        """Move to intercept nearby enemy projectiles"""
+        closest_bullet = None
+        closest_dist = intercept_range
+        
+        for bullet in enemy_bullets:
+            # Only intercept bullets heading toward player
+            dx = bullet.rect.centerx - self.player.rect.centerx
+            dy = bullet.rect.centery - self.player.rect.centery
+            dist_to_player = math.sqrt(dx * dx + dy * dy)
+            
+            if dist_to_player < 200:  # Bullet is close to player
+                dx = bullet.rect.centerx - self.rect.centerx
+                dy = bullet.rect.centery - self.rect.centery
+                dist = math.sqrt(dx * dx + dy * dy)
+                
+                if dist < closest_dist:
+                    closest_dist = dist
+                    closest_bullet = bullet
+        
+        # Move toward closest bullet to intercept
+        if closest_bullet:
+            dx = closest_bullet.rect.centerx - self.rect.centerx
+            dy = closest_bullet.rect.centery - self.rect.centery
+            dist = math.sqrt(dx * dx + dy * dy)
+            if dist > 0:
+                # Intercept movement (overrides formation temporarily)
+                self.rect.centerx += (dx / dist) * 4
+                self.rect.centery += (dy / dist) * 4
+    
+    def can_shoot(self):
+        """Check if escort can fire"""
+        now = pygame.time.get_ticks()
+        return now - self.last_shot > self.fire_rate
+    
+    def shoot(self):
+        """Fire autocannon bullets"""
+        if not self.can_shoot():
+            return []
+        
+        self.last_shot = pygame.time.get_ticks()
+        
+        formation = self.player.get_formation_info()
+        fire_spread = formation['fire_spread']
+        
+        # Use player's current ammo type
+        ammo = AMMO_TYPES[self.player.current_ammo]
+        
+        # Calculate firing direction (forward with formation-based spread)
+        angle_rad = math.radians(fire_spread)
+        dx = math.sin(angle_rad) * 2
+        dy = -BULLET_SPEED  # Always fire forward (up)
+        
+        bullet = Bullet(
+            self.rect.centerx,
+            self.rect.top,
+            dx, dy,
+            ammo['tracer'],
+            self.damage,
+            ammo['shield_mult'],
+            ammo['armor_mult']
+        )
+        
+        return [bullet]
+    
+    def take_damage(self, amount):
+        """Take damage to hull"""
+        self.hull -= amount
+        return self.hull <= 0  # Return True if destroyed
+    
+    def is_alive(self):
+        """Check if escort is still alive"""
+        return self.hull > 0
 
 
 class Bullet(pygame.sprite.Sprite):

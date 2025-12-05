@@ -4,7 +4,7 @@ import random
 import math
 from constants import *
 from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
-                     RefugeePod, Powerup, Explosion, Star)
+                     RefugeePod, Powerup, Explosion, Star, EscortShip)
 from sounds import get_sound_manager, get_music_manager, play_sound
 
 
@@ -83,6 +83,7 @@ class Game:
         self.pods = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
+        self.escort_ships = pygame.sprite.Group()
         
         # Player
         self.player = Player()
@@ -204,6 +205,14 @@ class Game:
                     elif event.key == pygame.K_q or event.key == pygame.K_TAB:
                         self.player.cycle_ammo()
                         self.play_sound('ammo_switch')
+                    elif event.key == FORMATION_SWITCH_KEY:
+                        # Formation switching (only for Jaguar upgrade)
+                        if self.player.is_jaguar and self.player.switch_formation():
+                            formation = self.player.get_formation_info()
+                            self.show_message(f"Formation: {formation['name']}", 60)
+                            self.play_sound('ammo_switch')
+                        elif self.player.is_jaguar and not self.player.can_switch_formation():
+                            self.play_sound('error')
                     else:
                         # Check ammo hotkeys
                         for ammo_type, data in AMMO_TYPES.items():
@@ -304,11 +313,24 @@ class Game:
             else:
                 self.play_sound('error')
         
-        elif key == pygame.K_8 and not player.is_wolf:
+        elif key == pygame.K_8 and not player.is_wolf and not player.is_jaguar:
             if player.refugees >= costs['wolf_upgrade']:
                 player.refugees -= costs['wolf_upgrade']
                 player.upgrade_to_wolf()
                 purchased = "WOLF UPGRADE!"
+                self.play_sound('upgrade')
+            else:
+                self.play_sound('error')
+        
+        elif key == pygame.K_9 and not player.is_jaguar and not player.is_wolf:
+            if player.refugees >= costs['jaguar_upgrade']:
+                player.refugees -= costs['jaguar_upgrade']
+                player.upgrade_to_jaguar()
+                # Add escort ships to sprite groups
+                for escort in player.escort_ships:
+                    self.escort_ships.add(escort)
+                    self.all_sprites.add(escort)
+                purchased = "JAGUAR UPGRADE!"
                 self.play_sound('upgrade')
             else:
                 self.play_sound('error')
@@ -329,7 +351,7 @@ class Game:
         
         if purchased:
             self.show_message(f"Purchased: {purchased}", 90)
-            if purchased != "WOLF UPGRADE!":  # Wolf has its own sound
+            if purchased not in ["WOLF UPGRADE!", "JAGUAR UPGRADE!"]:  # Upgrades have their own sound
                 self.play_sound('purchase')
     
     def update(self):
@@ -358,6 +380,19 @@ class Game:
                 self.play_sound('rocket', 0.5)
                 self.player_bullets.add(rocket)
                 self.all_sprites.add(rocket)
+        
+        # Update escort ships (Jaguar formation)
+        if self.player.is_jaguar:
+            for escort in list(self.player.escort_ships):
+                # Update escort position with enemy bullets for interception
+                escort.update(self.enemy_bullets)
+                
+                # Escort shooting (when player is shooting)
+                if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0]:
+                    escort_bullets = escort.shoot()
+                    for bullet in escort_bullets:
+                        self.player_bullets.add(bullet)
+                        self.all_sprites.add(bullet)
         
         # Update stars
         for star in self.stars:
@@ -457,6 +492,26 @@ class Game:
                 self.state = 'gameover'
                 self.music_manager.stop_music()
                 return
+        
+        # Enemy bullets vs escort ships (defensive formation benefit)
+        if self.player.is_jaguar:
+            for escort in list(self.player.escort_ships):
+                escort_hits = pygame.sprite.spritecollide(escort, self.enemy_bullets, True)
+                for bullet in escort_hits:
+                    damage = int(bullet.damage * self.difficulty_settings['enemy_damage_mult'])
+                    self.play_sound('armor_hit', 0.3)
+                    
+                    if escort.take_damage(damage):
+                        # Escort destroyed
+                        explosion = Explosion(escort.rect.centerx, escort.rect.centery,
+                                            20, (100, 180, 220))
+                        self.effects.add(explosion)
+                        self.all_sprites.add(explosion)
+                        self.shake.add(SHAKE_SMALL)
+                        self.play_sound('explosion_small', 0.5)
+                        self.player.escort_ships.remove(escort)
+                        self.escort_ships.remove(escort)
+                        escort.kill()
         
         # Player collision with enemies
         hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
@@ -708,6 +763,30 @@ class Game:
         ))
         text = self.font_small.render(f"[{self.difficulty_settings['name']}]", True, diff_color)
         self.render_surface.blit(text, (x, y))
+        
+        # Formation indicator (for Jaguar upgrade)
+        if self.player.is_jaguar:
+            y += 25
+            formation = self.player.get_formation_info()
+            
+            # Formation name with color indicator
+            pygame.draw.rect(self.render_surface, formation['color'], (x, y, 12, 12))
+            text = self.font_small.render(f"[F] {formation['name']}", True, formation['color'])
+            self.render_surface.blit(text, (x + 16, y - 2))
+            
+            # Cooldown indicator
+            if not self.player.can_switch_formation():
+                cooldown_remaining = (self.player.formation_cooldown_until - pygame.time.get_ticks()) / FORMATION_COOLDOWN
+                cooldown_width = int(60 * max(0, cooldown_remaining))
+                pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y + 14, 60, 4))
+                pygame.draw.rect(self.render_surface, (150, 150, 150), (x, y + 14, 60 - cooldown_width, 4))
+            
+            # Escort count
+            y += 22
+            escort_count = len(self.player.escort_ships)
+            escort_color = (100, 200, 255) if escort_count > 0 else (150, 100, 100)
+            text = self.font_small.render(f"Escorts: {escort_count}", True, escort_color)
+            self.render_surface.blit(text, (x, y))
     
     def draw_menu(self):
         """Draw main menu"""
@@ -779,6 +858,10 @@ class Game:
         costs = UPGRADE_COSTS
         player = self.player
         
+        # Wolf and Jaguar are mutually exclusive
+        wolf_owned_or_blocked = player.is_wolf or player.is_jaguar
+        jaguar_owned_or_blocked = player.is_jaguar or player.is_wolf
+        
         upgrades = [
             ("1", "Gyrostabilizer", costs['gyrostabilizer'], player.has_gyro, "+30% Fire Rate"),
             ("2", "Armor Plate", costs['armor_plate'], False, "+30 Max Armor"),
@@ -787,13 +870,14 @@ class Game:
             ("5", "Phased Plasma", costs['plasma_ammo'], 'plasma' in player.unlocked_ammo, "Strong vs Armor"),
             ("6", "Fusion Ammo", costs['fusion_ammo'], 'fusion' in player.unlocked_ammo, "High Damage"),
             ("7", "Barrage Ammo", costs['barrage_ammo'], 'barrage' in player.unlocked_ammo, "Fast Fire"),
-            ("8", "WOLF UPGRADE", costs['wolf_upgrade'], player.is_wolf, "T2 Assault Ship!")
+            ("8", "WOLF UPGRADE", costs['wolf_upgrade'], wolf_owned_or_blocked, "T2 Assault Ship!"),
+            ("9", "JAGUAR UPGRADE", costs['jaguar_upgrade'], jaguar_owned_or_blocked, "T2 + Escorts! [F]")
         ]
         
         for key, name, cost, owned, desc in upgrades:
             if owned:
                 color = (80, 80, 80)
-                status = "[OWNED]"
+                status = "[OWNED]" if (name == "WOLF UPGRADE" and player.is_wolf) or (name == "JAGUAR UPGRADE" and player.is_jaguar) else "[N/A]"
             elif player.refugees >= cost:
                 color = (100, 255, 100)
                 status = f"[{cost} refugees]"
@@ -803,10 +887,10 @@ class Game:
             
             text = self.font.render(f"[{key}] {name} - {desc} {status}", True, color)
             self.render_surface.blit(text, (50, y))
-            y += 35
+            y += 32
         
         # Continue prompt
-        y += 30
+        y += 20
         text = self.font.render("Press ENTER to continue to next stage", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
@@ -856,7 +940,12 @@ class Game:
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
         self.render_surface.blit(text, rect)
         
-        ship_type = "Wolf Assault Frigate" if self.player.is_wolf else "Rifter Frigate"
+        if self.player.is_jaguar:
+            ship_type = "Jaguar Assault Frigate"
+        elif self.player.is_wolf:
+            ship_type = "Wolf Assault Frigate"
+        else:
+            ship_type = "Rifter Frigate"
         text = self.font.render(f"Ship: {ship_type}", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 80))
         self.render_surface.blit(text, rect)

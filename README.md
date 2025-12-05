@@ -45,6 +45,7 @@ chmod +x main.py
 | Fire Rockets | Shift or Right Mouse Button |
 | Select Ammo | 1-5 |
 | Cycle Ammo | Q or Tab |
+| Switch Formation | F (Jaguar only) |
 | Pause | ESC |
 
 ### Menu Controls
@@ -105,6 +106,19 @@ Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees al
 | Fusion Ammo | 45 | Unlock Fusion rounds |
 | Barrage Ammo | 55 | Unlock Barrage rounds |
 | **Wolf Upgrade** | 50 | T2 Assault Frigate! |
+| **Jaguar Upgrade** | 60 | T2 with escort ships and formations! |
+
+### Formations (Jaguar Upgrade)
+
+The Jaguar upgrade adds 2 escort ships that follow you in formation. Press **F** to cycle between formations:
+
+| Formation | Description | Best For |
+|-----------|-------------|----------|
+| **Standard** | Balanced distribution around your ship | General combat |
+| **Offensive** | Ships cluster in front for concentrated fire | Boss fights, focused damage |
+| **Defensive** | Ships orbit closer, can intercept projectiles | Survival, heavy enemy fire |
+
+Formation switches have a 2-second cooldown to prevent abuse.
 
 ### Power-ups (dropped by enemies)
 
