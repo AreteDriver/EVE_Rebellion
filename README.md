@@ -2,6 +2,8 @@
 
 A top-down arcade space shooter inspired by EVE Online, featuring the iconic Rifter frigate in a fight for freedom against the Amarr Empire.
 
+**Now available for Desktop and Mobile/Web!**
+
 ## Features
 
 - **Procedural Sound Effects** - Retro-style synthesized sounds for weapons, explosions, pickups
@@ -11,6 +13,7 @@ A top-down arcade space shooter inspired by EVE Online, featuring the iconic Rif
 - **Advanced Enemy AI** - Multiple movement patterns (sine wave, zigzag, swoop, flank, circle)
 - **5 Ammo Types** - Swappable ammunition with tactical rock-paper-scissors mechanics
 - **Upgrade System** - Spend rescued refugees on ship improvements
+- **Mobile Support** - Touch controls with virtual joystick for mobile/web play
 
 ## Requirements
 
@@ -26,6 +29,7 @@ pip install pygame numpy
 
 ## Running the Game
 
+### Desktop Version
 ```bash
 python main.py
 ```
@@ -36,7 +40,24 @@ chmod +x main.py
 ./main.py
 ```
 
+### Mobile/Web Version
+
+Run the mobile version locally for testing:
+```bash
+python main_mobile.py
+```
+
+Build and deploy for web/mobile browsers using Pygbag:
+```bash
+pip install pygbag
+pygbag main_mobile.py
+```
+
+This will start a local server at `http://localhost:8000` where you can test the game in your browser. The built files can be deployed to any static web host.
+
 ## Controls
+
+### Desktop Controls
 
 | Action | Keys |
 |--------|------|
@@ -46,6 +67,16 @@ chmod +x main.py
 | Select Ammo | 1-5 |
 | Cycle Ammo | Q or Tab |
 | Pause | ESC |
+
+### Mobile/Touch Controls
+
+| Action | Control |
+|--------|---------|
+| Move | Virtual Joystick (bottom-left) |
+| Fire Autocannons | FIRE Button (bottom-right) |
+| Fire Rockets | RKT Button (above fire) |
+| Select Ammo | Ammo Buttons 1-5 (top-right) |
+| Pause | Pause Button (top-left) |
 
 ### Menu Controls
 
@@ -148,12 +179,17 @@ Sound gracefully disables if no audio device is available.
 
 ```
 minmatar_rebellion/
-├── main.py          # Entry point
-├── game.py          # Main game logic, states, rendering
-├── sprites.py       # All game entities (player, enemies, bullets)
-├── constants.py     # Configuration, stats, stage definitions
-├── sounds.py        # Procedural sound generation
-└── README.md        # This file
+├── main.py              # Desktop entry point
+├── main_mobile.py       # Mobile/Web entry point (Pygbag compatible)
+├── game.py              # Desktop game logic, states, rendering
+├── game_mobile.py       # Mobile game logic with touch controls
+├── sprites.py           # All game entities (player, enemies, bullets)
+├── constants.py         # Configuration, stats, stage definitions
+├── mobile_constants.py  # Mobile-specific settings
+├── touch_controls.py    # Virtual joystick and touch buttons
+├── sounds.py            # Procedural sound generation
+├── requirements.txt     # Python dependencies
+└── README.md            # This file
 ```
 
 ## Customization
