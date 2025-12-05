@@ -161,6 +161,9 @@ RIFTER_T2_VARIANTS = {
     }
 }
 
+# Enemy AI constants
+ENEMY_EVASION_DURATION = 60  # Frames (~1 second at 60 FPS)
+
 # Bullet stats
 BULLET_SPEED = 12
 BULLET_DAMAGE = 10

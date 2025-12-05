@@ -304,7 +304,7 @@ class Game:
             else:
                 self.play_sound('error')
         
-        elif key == pygame.K_8 and not player.is_wolf and not player.t2_variant:
+        elif key == pygame.K_8 and not player.is_wolf and player.t2_variant is None:
             if player.refugees >= costs['wolf_upgrade']:
                 player.refugees -= costs['wolf_upgrade']
                 player.upgrade_to_wolf()
@@ -313,7 +313,7 @@ class Game:
             else:
                 self.play_sound('error')
         
-        elif key == pygame.K_9 and not player.is_wolf and not player.t2_variant:
+        elif key == pygame.K_9 and not player.is_wolf and player.t2_variant is None:
             # T2 Autocannon Rifter variant
             if player.refugees >= costs['autocannon_rifter']:
                 player.refugees -= costs['autocannon_rifter']
@@ -323,7 +323,7 @@ class Game:
             else:
                 self.play_sound('error')
         
-        elif key == pygame.K_0 and not player.is_wolf and not player.t2_variant:
+        elif key == pygame.K_0 and not player.is_wolf and player.t2_variant is None:
             # T2 Rocket Specialist Rifter variant
             if player.refugees >= costs['rocket_rifter']:
                 player.refugees -= costs['rocket_rifter']

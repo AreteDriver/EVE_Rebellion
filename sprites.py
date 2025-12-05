@@ -84,10 +84,10 @@ class Player(pygame.sprite.Sprite):
             ])
             # Engine glow
             pygame.draw.circle(surf, (255, 150, 50), (self.width//2, self.height-8), 5)
-        elif self.t2_variant == 'autocannon':
+        elif self.t2_variant == 'autocannon' and 'autocannon' in RIFTER_T2_VARIANTS:
             # Autocannon Rifter - wider wings with visible gun ports
             variant = RIFTER_T2_VARIANTS['autocannon']
-            color = variant['color_accent']
+            color = variant.get('color_accent', COLOR_MINMATAR_ACCENT)
             # Main body
             pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
                 (self.width//2, 0),
@@ -112,10 +112,10 @@ class Player(pygame.sprite.Sprite):
             pygame.draw.rect(surf, (100, 100, 100), (self.width-8, 5, 3, 15))
             # Engine glow
             pygame.draw.circle(surf, color, (self.width//2, self.height-5), 5)
-        elif self.t2_variant == 'rocket':
+        elif self.t2_variant == 'rocket' and 'rocket' in RIFTER_T2_VARIANTS:
             # Rocket Specialist Rifter - bulkier with rocket pods
             variant = RIFTER_T2_VARIANTS['rocket']
-            color = variant['color_accent']
+            color = variant.get('color_accent', COLOR_MINMATAR_ACCENT)
             # Main body (bulkier)
             pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
                 (self.width//2, 0),
@@ -666,7 +666,7 @@ class Enemy(pygame.sprite.Sprite):
             # Randomly trigger evasive maneuvers
             if not self.is_evading and random.random() < 0.02:
                 self.is_evading = True
-                self.evasion_timer = 60  # Evade for about 1 second
+                self.evasion_timer = ENEMY_EVASION_DURATION
         
         elif player_variant == 'autocannon':
             # React to autocannon variant - increase aggression (fire faster)
