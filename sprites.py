@@ -288,21 +288,9 @@ class Player(pygame.sprite.Sprite):
         """Get positions of all ships in fleet (including main ship)"""
         positions = [(self.rect.centerx, self.rect.top)]
         
-        # Add fleet ship positions
-        total_ships = 1 + len(self.fleet_ships)
-        for i, ship in enumerate(self.fleet_ships):
-            # Position ships in formation around main ship
-            idx = i + 1  # Start from 1 since main ship is at 0
-            if idx % 2 == 1:
-                # Left side
-                offset_x = -FLEET_SHIP_SPACING * ((idx + 1) // 2)
-            else:
-                # Right side
-                offset_x = FLEET_SHIP_SPACING * (idx // 2)
-            
-            x = self.rect.centerx + offset_x
-            y = self.rect.top + 10  # Slightly behind main ship
-            positions.append((x, y))
+        # Add fleet ship positions using each ship's actual rect
+        for ship in self.fleet_ships:
+            positions.append((ship.rect.centerx, ship.rect.top))
         
         return positions
     
