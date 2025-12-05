@@ -132,6 +132,35 @@ WOLF_SPEED_BONUS = 1.2
 WOLF_ARMOR_BONUS = 50
 WOLF_HULL_BONUS = 25
 
+# T2 Rifter Variant Types
+RIFTER_T2_VARIANTS = {
+    'autocannon': {
+        'name': 'Autocannon Rifter',
+        'description': 'Balanced autocannon + rocket fire',
+        'speed_bonus': 1.1,
+        'armor_bonus': 30,
+        'hull_bonus': 20,
+        'fire_rate_mult': 1.4,      # 40% faster autocannon fire
+        'rocket_cooldown_mult': 0.7, # 30% faster rockets
+        'rocket_salvo': 1,          # Fires 1 rocket at a time
+        'spread_bonus': 1,          # +1 gun spread
+        'color_accent': (255, 140, 0),  # Orange accent
+    },
+    'rocket': {
+        'name': 'Rocket Specialist Rifter',
+        'description': 'High-volume rocket salvos',
+        'speed_bonus': 1.0,
+        'armor_bonus': 40,
+        'hull_bonus': 30,
+        'fire_rate_mult': 1.0,      # Normal autocannon fire
+        'rocket_cooldown_mult': 0.5, # 50% faster rockets
+        'rocket_salvo': 3,          # Fires 3 rockets in a spread
+        'spread_bonus': 0,          # No gun spread bonus
+        'max_rockets_bonus': 10,    # +10 max rockets
+        'color_accent': (200, 50, 50),  # Red accent
+    }
+}
+
 # Bullet stats
 BULLET_SPEED = 12
 BULLET_DAMAGE = 10
@@ -224,7 +253,9 @@ UPGRADE_COSTS = {
     'plasma_ammo': 35,
     'fusion_ammo': 45,
     'barrage_ammo': 55,
-    'wolf_upgrade': 50
+    'wolf_upgrade': 50,
+    'autocannon_rifter': 40,  # T2 Autocannon variant
+    'rocket_rifter': 40,      # T2 Rocket Specialist variant
 }
 
 # Powerup types

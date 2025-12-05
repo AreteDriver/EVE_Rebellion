@@ -6,11 +6,12 @@ from constants import *
 
 
 class Player(pygame.sprite.Sprite):
-    """Player ship - Rifter/Wolf"""
+    """Player ship - Rifter/Wolf/T2 Variants"""
     
     def __init__(self):
         super().__init__()
         self.is_wolf = False
+        self.t2_variant = None  # None, 'autocannon', or 'rocket'
         self.width = 40
         self.height = 50
         self.image = self._create_ship_image()
@@ -31,6 +32,8 @@ class Player(pygame.sprite.Sprite):
         self.unlocked_ammo = ['sabot']
         self.rockets = PLAYER_MAX_ROCKETS
         self.max_rockets = PLAYER_MAX_ROCKETS
+        self.rocket_cooldown_mult = 1.0  # T2 variant modifier
+        self.rocket_salvo = 1  # Number of rockets fired per volley
         
         # Timing
         self.last_shot = 0
@@ -55,7 +58,7 @@ class Player(pygame.sprite.Sprite):
         self.score = 0
     
     def _create_ship_image(self):
-        """Create Rifter/Wolf sprite"""
+        """Create Rifter/Wolf/T2 variant sprite"""
         surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         
         if self.is_wolf:
@@ -81,6 +84,66 @@ class Player(pygame.sprite.Sprite):
             ])
             # Engine glow
             pygame.draw.circle(surf, (255, 150, 50), (self.width//2, self.height-8), 5)
+        elif self.t2_variant == 'autocannon':
+            # Autocannon Rifter - wider wings with visible gun ports
+            variant = RIFTER_T2_VARIANTS['autocannon']
+            color = variant['color_accent']
+            # Main body
+            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
+                (self.width//2, 0),
+                (self.width-5, self.height-12),
+                (self.width//2, self.height),
+                (5, self.height-12)
+            ])
+            # Left gun wing (extended)
+            pygame.draw.polygon(surf, color, [
+                (0, self.height-8),
+                (3, self.height//4),
+                (15, self.height-5)
+            ])
+            # Right gun wing (extended)
+            pygame.draw.polygon(surf, color, [
+                (self.width, self.height-8),
+                (self.width-3, self.height//4),
+                (self.width-15, self.height-5)
+            ])
+            # Gun barrels (autocannons)
+            pygame.draw.rect(surf, (100, 100, 100), (5, 5, 3, 15))
+            pygame.draw.rect(surf, (100, 100, 100), (self.width-8, 5, 3, 15))
+            # Engine glow
+            pygame.draw.circle(surf, color, (self.width//2, self.height-5), 5)
+        elif self.t2_variant == 'rocket':
+            # Rocket Specialist Rifter - bulkier with rocket pods
+            variant = RIFTER_T2_VARIANTS['rocket']
+            color = variant['color_accent']
+            # Main body (bulkier)
+            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
+                (self.width//2, 0),
+                (self.width-3, self.height-15),
+                (self.width//2, self.height),
+                (3, self.height-15)
+            ])
+            # Left rocket pod
+            pygame.draw.rect(surf, color, (0, self.height//3, 8, 20))
+            pygame.draw.polygon(surf, (150, 50, 50), [
+                (4, self.height//3 - 5),
+                (0, self.height//3),
+                (8, self.height//3)
+            ])
+            # Right rocket pod
+            pygame.draw.rect(surf, color, (self.width-8, self.height//3, 8, 20))
+            pygame.draw.polygon(surf, (150, 50, 50), [
+                (self.width-4, self.height//3 - 5),
+                (self.width-8, self.height//3),
+                (self.width, self.height//3)
+            ])
+            # Rocket indicators
+            for i in range(3):
+                pygame.draw.circle(surf, (255, 100, 100), (3, self.height//3 + 5 + i*5), 2)
+                pygame.draw.circle(surf, (255, 100, 100), (self.width-3, self.height//3 + 5 + i*5), 2)
+            # Engine glow (twin engines)
+            pygame.draw.circle(surf, color, (self.width//2 - 5, self.height-5), 4)
+            pygame.draw.circle(surf, color, (self.width//2 + 5, self.height-5), 4)
         else:
             # Rifter - asymmetric, aggressive
             color = COLOR_MINMATAR_HULL
@@ -111,6 +174,7 @@ class Player(pygame.sprite.Sprite):
     def upgrade_to_wolf(self):
         """Upgrade to Wolf assault frigate"""
         self.is_wolf = True
+        self.t2_variant = None  # Wolf replaces T2 variants
         self.speed *= WOLF_SPEED_BONUS
         self.max_armor += WOLF_ARMOR_BONUS
         self.max_hull += WOLF_HULL_BONUS
@@ -118,6 +182,34 @@ class Player(pygame.sprite.Sprite):
         self.hull = min(self.hull + WOLF_HULL_BONUS, self.max_hull)
         self.spread_bonus += 1
         self.image = self._create_ship_image()
+    
+    def upgrade_to_t2_variant(self, variant_type):
+        """Upgrade to T2 Rifter variant (autocannon or rocket)"""
+        if variant_type not in RIFTER_T2_VARIANTS:
+            return False
+        
+        variant = RIFTER_T2_VARIANTS[variant_type]
+        self.t2_variant = variant_type
+        self.is_wolf = False  # T2 variants are not Wolf
+        
+        # Apply variant bonuses
+        self.speed *= variant['speed_bonus']
+        self.max_armor += variant['armor_bonus']
+        self.max_hull += variant['hull_bonus']
+        self.armor = min(self.armor + variant['armor_bonus'], self.max_armor)
+        self.hull = min(self.hull + variant['hull_bonus'], self.max_hull)
+        self.fire_rate_mult *= variant['fire_rate_mult']
+        self.rocket_cooldown_mult = variant['rocket_cooldown_mult']
+        self.rocket_salvo = variant['rocket_salvo']
+        self.spread_bonus += variant['spread_bonus']
+        
+        # Rocket variant gets extra max rockets
+        if 'max_rockets_bonus' in variant:
+            self.max_rockets += variant['max_rockets_bonus']
+            self.rockets = min(self.rockets + variant['max_rockets_bonus'], self.max_rockets)
+        
+        self.image = self._create_ship_image()
+        return True
     
     def unlock_ammo(self, ammo_type):
         """Unlock new ammo type"""
@@ -193,16 +285,28 @@ class Player(pygame.sprite.Sprite):
     def can_rocket(self):
         """Check if can fire rocket"""
         now = pygame.time.get_ticks()
-        return self.rockets > 0 and now - self.last_rocket > PLAYER_ROCKET_COOLDOWN
+        cooldown = PLAYER_ROCKET_COOLDOWN * self.rocket_cooldown_mult
+        return self.rockets >= self.rocket_salvo and now - self.last_rocket > cooldown
     
     def shoot_rocket(self):
-        """Fire rocket, returns rocket or None"""
+        """Fire rocket(s), returns list of rockets"""
         if not self.can_rocket():
-            return None
+            return []
         
         self.last_rocket = pygame.time.get_ticks()
-        self.rockets -= 1
-        return Rocket(self.rect.centerx, self.rect.top)
+        rockets = []
+        
+        # Fire salvo based on variant
+        for i in range(self.rocket_salvo):
+            self.rockets -= 1
+            # Spread rockets for multi-rocket salvos
+            if self.rocket_salvo > 1:
+                angle = (i - (self.rocket_salvo - 1) / 2) * 15  # 15 degree spread
+                rockets.append(Rocket(self.rect.centerx, self.rect.top, angle))
+            else:
+                rockets.append(Rocket(self.rect.centerx, self.rect.top))
+        
+        return rockets
     
     def take_damage(self, amount):
         """Apply damage through shields -> armor -> hull"""
@@ -271,8 +375,9 @@ class Bullet(pygame.sprite.Sprite):
 class Rocket(pygame.sprite.Sprite):
     """Rocket projectile"""
     
-    def __init__(self, x, y):
+    def __init__(self, x, y, angle=0):
         super().__init__()
+        self.angle = angle
         self.image = pygame.Surface((8, 20), pygame.SRCALPHA)
         # Rocket body
         pygame.draw.rect(self.image, (150, 150, 150), (2, 5, 4, 15))
@@ -280,14 +385,26 @@ class Rocket(pygame.sprite.Sprite):
         pygame.draw.polygon(self.image, (200, 50, 50), [(4, 0), (0, 8), (8, 8)])
         # Exhaust
         pygame.draw.polygon(self.image, (255, 200, 50), [(2, 18), (4, 22), (6, 18)])
+        
+        # Rotate image if angle is non-zero
+        if angle != 0:
+            self.image = pygame.transform.rotate(self.image, -angle)
+        
         self.rect = self.image.get_rect(center=(x, y))
         self.damage = ROCKET_DAMAGE
         self.shield_mult = 1.2
         self.armor_mult = 1.2
+        
+        # Calculate velocity based on angle
+        rad = math.radians(angle)
+        self.dx = math.sin(rad) * ROCKET_SPEED
+        self.dy = -math.cos(rad) * ROCKET_SPEED
     
     def update(self):
-        self.rect.y -= ROCKET_SPEED
-        if self.rect.bottom < 0:
+        self.rect.x += self.dx
+        self.rect.y += self.dy
+        if (self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or
+            self.rect.right < 0 or self.rect.left > SCREEN_WIDTH):
             self.kill()
 
 
@@ -370,6 +487,10 @@ class Enemy(pygame.sprite.Sprite):
         if self.is_boss:
             self.boss_phase = 0
             self.boss_phase_timer = 0
+        
+        # Evasion state for reacting to player T2 variants
+        self.evasion_timer = 0
+        self.is_evading = False
     
     def _select_movement_pattern(self):
         """Select movement pattern based on enemy type"""
@@ -487,7 +608,7 @@ class Enemy(pygame.sprite.Sprite):
         
         return surf
     
-    def update(self, player_rect=None):
+    def update(self, player_rect=None, player_variant=None):
         """Update enemy position and behavior with advanced patterns"""
         self.pattern_timer += 0.05
         
@@ -499,8 +620,14 @@ class Enemy(pygame.sprite.Sprite):
                 self.entered = True
             return
         
-        # Execute movement pattern
-        if self.pattern == self.PATTERN_DRIFT:
+        # React to player T2 variants
+        self._react_to_player_variant(player_variant, player_rect)
+        
+        # Execute movement pattern (with potential evasion modifier)
+        if self.is_evading and player_variant == 'rocket':
+            # Evasive maneuvers against rocket specialist
+            self._move_evasive(player_rect)
+        elif self.pattern == self.PATTERN_DRIFT:
             self._move_drift()
         elif self.pattern == self.PATTERN_SINE:
             self._move_sine()
@@ -522,6 +649,44 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.left = 10
         elif self.rect.right > SCREEN_WIDTH - 10:
             self.rect.right = SCREEN_WIDTH - 10
+    
+    def _react_to_player_variant(self, player_variant, player_rect):
+        """Adjust behavior based on player's T2 variant"""
+        if not player_variant:
+            return
+        
+        # Decrement evasion timer
+        if self.evasion_timer > 0:
+            self.evasion_timer -= 1
+        else:
+            self.is_evading = False
+        
+        if player_variant == 'rocket':
+            # React to rocket specialist - more evasive, try to stay moving
+            # Randomly trigger evasive maneuvers
+            if not self.is_evading and random.random() < 0.02:
+                self.is_evading = True
+                self.evasion_timer = 60  # Evade for about 1 second
+        
+        elif player_variant == 'autocannon':
+            # React to autocannon variant - increase aggression (fire faster)
+            # This makes them prioritize attacking the high-threat autocannon
+            if self.fire_rate > 0 and random.random() < 0.01:
+                # Occasionally fire faster when facing autocannon rifter
+                self.last_shot -= 200
+    
+    def _move_evasive(self, player_rect):
+        """Evasive movement pattern when facing rocket specialist"""
+        # Fast zigzag movement to avoid rockets
+        direction = 1 if int(self.pattern_timer * 4) % 2 == 0 else -1
+        evasion_speed = self.speed * 2.5  # Move faster when evading
+        self.rect.x += direction * evasion_speed
+        
+        # Also move vertically to avoid rockets
+        if player_rect:
+            # Try to move perpendicular to rocket flight path
+            if random.random() < 0.1:
+                self.rect.y += random.choice([-1, 1]) * self.speed
     
     def _move_drift(self):
         """Basic side-to-side drift"""

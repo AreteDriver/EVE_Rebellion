@@ -304,11 +304,31 @@ class Game:
             else:
                 self.play_sound('error')
         
-        elif key == pygame.K_8 and not player.is_wolf:
+        elif key == pygame.K_8 and not player.is_wolf and not player.t2_variant:
             if player.refugees >= costs['wolf_upgrade']:
                 player.refugees -= costs['wolf_upgrade']
                 player.upgrade_to_wolf()
                 purchased = "WOLF UPGRADE!"
+                self.play_sound('upgrade')
+            else:
+                self.play_sound('error')
+        
+        elif key == pygame.K_9 and not player.is_wolf and not player.t2_variant:
+            # T2 Autocannon Rifter variant
+            if player.refugees >= costs['autocannon_rifter']:
+                player.refugees -= costs['autocannon_rifter']
+                player.upgrade_to_t2_variant('autocannon')
+                purchased = "AUTOCANNON RIFTER T2!"
+                self.play_sound('upgrade')
+            else:
+                self.play_sound('error')
+        
+        elif key == pygame.K_0 and not player.is_wolf and not player.t2_variant:
+            # T2 Rocket Specialist Rifter variant
+            if player.refugees >= costs['rocket_rifter']:
+                player.refugees -= costs['rocket_rifter']
+                player.upgrade_to_t2_variant('rocket')
+                purchased = "ROCKET SPECIALIST T2!"
                 self.play_sound('upgrade')
             else:
                 self.play_sound('error')
@@ -329,7 +349,7 @@ class Game:
         
         if purchased:
             self.show_message(f"Purchased: {purchased}", 90)
-            if purchased != "WOLF UPGRADE!":  # Wolf has its own sound
+            if purchased not in ["WOLF UPGRADE!", "AUTOCANNON RIFTER T2!", "ROCKET SPECIALIST T2!"]:
                 self.play_sound('purchase')
     
     def update(self):
@@ -353,11 +373,12 @@ class Game:
         
         # Rockets
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2]:
-            rocket = self.player.shoot_rocket()
-            if rocket:
+            rockets = self.player.shoot_rocket()
+            if rockets:
                 self.play_sound('rocket', 0.5)
-                self.player_bullets.add(rocket)
-                self.all_sprites.add(rocket)
+                for rocket in rockets:
+                    self.player_bullets.add(rocket)
+                    self.all_sprites.add(rocket)
         
         # Update stars
         for star in self.stars:
@@ -367,9 +388,9 @@ class Game:
         self.player_bullets.update()
         self.enemy_bullets.update()
         
-        # Update enemies with player position for AI
+        # Update enemies with player position and variant for AI
         for enemy in self.enemies:
-            enemy.update(self.player.rect)
+            enemy.update(self.player.rect, self.player.t2_variant)
         
         self.pods.update()
         self.powerups.update()
@@ -775,9 +796,12 @@ class Game:
         self.render_surface.blit(text, rect)
         
         # Upgrade options
-        y = 160
+        y = 140
         costs = UPGRADE_COSTS
         player = self.player
+        
+        # Check if player already has a ship upgrade
+        has_ship_upgrade = player.is_wolf or player.t2_variant is not None
         
         upgrades = [
             ("1", "Gyrostabilizer", costs['gyrostabilizer'], player.has_gyro, "+30% Fire Rate"),
@@ -787,7 +811,9 @@ class Game:
             ("5", "Phased Plasma", costs['plasma_ammo'], 'plasma' in player.unlocked_ammo, "Strong vs Armor"),
             ("6", "Fusion Ammo", costs['fusion_ammo'], 'fusion' in player.unlocked_ammo, "High Damage"),
             ("7", "Barrage Ammo", costs['barrage_ammo'], 'barrage' in player.unlocked_ammo, "Fast Fire"),
-            ("8", "WOLF UPGRADE", costs['wolf_upgrade'], player.is_wolf, "T2 Assault Ship!")
+            ("8", "WOLF UPGRADE", costs['wolf_upgrade'], has_ship_upgrade, "T2 Assault Ship!"),
+            ("9", "AUTOCANNON T2", costs['autocannon_rifter'], has_ship_upgrade, "AC + Rockets!"),
+            ("0", "ROCKET T2", costs['rocket_rifter'], has_ship_upgrade, "Rocket Salvos!")
         ]
         
         for key, name, cost, owned, desc in upgrades:
@@ -803,10 +829,10 @@ class Game:
             
             text = self.font.render(f"[{key}] {name} - {desc} {status}", True, color)
             self.render_surface.blit(text, (50, y))
-            y += 35
+            y += 30
         
         # Continue prompt
-        y += 30
+        y += 20
         text = self.font.render("Press ENTER to continue to next stage", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
@@ -856,7 +882,15 @@ class Game:
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
         self.render_surface.blit(text, rect)
         
-        ship_type = "Wolf Assault Frigate" if self.player.is_wolf else "Rifter Frigate"
+        # Determine ship type for display
+        if self.player.is_wolf:
+            ship_type = "Wolf Assault Frigate"
+        elif self.player.t2_variant == 'autocannon':
+            ship_type = "Autocannon Rifter T2"
+        elif self.player.t2_variant == 'rocket':
+            ship_type = "Rocket Specialist T2"
+        else:
+            ship_type = "Rifter Frigate"
         text = self.font.render(f"Ship: {ship_type}", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 80))
         self.render_surface.blit(text, rect)
