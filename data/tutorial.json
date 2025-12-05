@@ -1,0 +1,49 @@
+{
+    "steps": [
+        {
+            "id": "welcome",
+            "message": "Welcome to Minmatar Rebellion!",
+            "duration": 3.0
+        },
+        {
+            "id": "movement",
+            "message": "Use WASD or Arrow Keys to move your ship.",
+            "duration": 4.0
+        },
+        {
+            "id": "shooting",
+            "message": "Press SPACE or Left Click to fire autocannons.",
+            "duration": 4.0
+        },
+        {
+            "id": "rockets",
+            "message": "Press SHIFT or Right Click to fire rockets.",
+            "duration": 4.0
+        },
+        {
+            "id": "ammo",
+            "message": "Press 1-5 or Q/Tab to switch ammo types.",
+            "duration": 4.0
+        },
+        {
+            "id": "refugees",
+            "message": "Destroy industrial ships to rescue refugees!",
+            "duration": 4.0
+        },
+        {
+            "id": "upgrades",
+            "message": "Spend refugees at the Rebel Station on upgrades.",
+            "duration": 4.0
+        },
+        {
+            "id": "pause",
+            "message": "Press ESC to pause the game.",
+            "duration": 3.0
+        },
+        {
+            "id": "good_luck",
+            "message": "Good luck, pilot! Fight for freedom!",
+            "duration": 3.0
+        }
+    ]
+}
