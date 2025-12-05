@@ -58,10 +58,19 @@ class Game:
         self.shake = ScreenShake()
         
         # Game state
-        self.state = 'menu'  # menu, difficulty, playing, shop, paused, gameover, victory
+        self.state = 'menu'  # menu, difficulty, ship_select, playing, shop, paused, gameover, victory
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
+        
+        # T2 Ship unlocks (persists across games)
+        self.unlocked_ships = ['rifter']  # Start with only Rifter unlocked
+        self.total_skill_points = 0  # Accumulated skill points across all games
+        self.selected_ship = 'rifter'
+        
+        # Ship selection UI state
+        self.ship_select_index = 0
+        self.show_ship_info = False
         
         # Background stars
         self.stars = [Star() for _ in range(100)]
@@ -73,7 +82,7 @@ class Game:
         if self.sound_enabled:
             self.sound_manager.play(sound_name, volume)
     
-    def reset_game(self):
+    def reset_game(self, ship_type=None):
         """Reset all game state"""
         # Sprite groups
         self.all_sprites = pygame.sprite.Group()
@@ -84,8 +93,10 @@ class Game:
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
         
-        # Player
-        self.player = Player()
+        # Player - use selected ship type
+        if ship_type is None:
+            ship_type = self.selected_ship
+        self.player = Player(ship_type)
         self.all_sprites.add(self.player)
         
         # Stage/Wave tracking
@@ -197,6 +208,9 @@ class Game:
                         self.state = 'menu'
                         self.play_sound('menu_select')
                 
+                elif self.state == 'ship_select':
+                    self.handle_ship_select_input(event.key)
+                
                 elif self.state == 'playing':
                     if event.key == pygame.K_ESCAPE:
                         self.state = 'paused'
@@ -223,20 +237,62 @@ class Game:
                 
                 elif self.state in ['gameover', 'victory']:
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        # Save skill points before reset
+                        self.total_skill_points += self.player.skill_points
                         self.reset_game()
                         self.state = 'menu'
                         self.play_sound('menu_select')
     
+    def handle_ship_select_input(self, key):
+        """Handle ship selection screen input"""
+        ships = ['rifter', 'wolf', 'jaguar']
+        
+        if key == pygame.K_LEFT or key == pygame.K_a:
+            self.ship_select_index = (self.ship_select_index - 1) % len(ships)
+            self.play_sound('menu_select')
+        elif key == pygame.K_RIGHT or key == pygame.K_d:
+            self.ship_select_index = (self.ship_select_index + 1) % len(ships)
+            self.play_sound('menu_select')
+        elif key == pygame.K_i:
+            # Toggle info display
+            self.show_ship_info = not self.show_ship_info
+            self.play_sound('menu_select')
+        elif key == pygame.K_u:
+            # Unlock ship with skill points
+            ship = ships[self.ship_select_index]
+            if ship not in self.unlocked_ships and ship in T2_SHIP_COSTS:
+                cost = T2_SHIP_COSTS[ship]
+                if self.total_skill_points >= cost:
+                    self.total_skill_points -= cost
+                    self.unlocked_ships.append(ship)
+                    self.play_sound('upgrade')
+                    self.show_message(f"{ship.upper()} UNLOCKED!", 90)
+                else:
+                    self.play_sound('error')
+        elif key == pygame.K_RETURN or key == pygame.K_SPACE:
+            # Select ship and start game
+            ship = ships[self.ship_select_index]
+            if ship in self.unlocked_ships:
+                self.selected_ship = ship
+                self.reset_game(ship)
+                self.state = 'playing'
+                self.show_message(STAGES[0]['name'], 180)
+                self.play_sound('wave_start')
+                if self.music_enabled:
+                    self.music_manager.start_music()
+            else:
+                self.play_sound('error')
+        elif key == pygame.K_ESCAPE:
+            self.state = 'difficulty'
+            self.play_sound('menu_select')
+    
     def set_difficulty(self, difficulty):
-        """Set game difficulty and start"""
+        """Set game difficulty and go to ship selection"""
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
-        self.reset_game()
-        self.state = 'playing'
-        self.show_message(STAGES[0]['name'], 180)
-        self.play_sound('wave_start')
-        if self.music_enabled:
-            self.music_manager.start_music()
+        self.state = 'ship_select'
+        self.ship_select_index = 0
+        self.play_sound('menu_select')
     
     def handle_shop_input(self, key):
         """Handle shop menu input"""
@@ -244,6 +300,9 @@ class Game:
         player = self.player
         
         purchased = None
+        
+        # Check if player already has T2 ship
+        has_t2 = player.is_wolf or player.is_jaguar
         
         if key == pygame.K_1 and not player.has_gyro:
             if player.refugees >= costs['gyrostabilizer']:
@@ -304,11 +363,20 @@ class Game:
             else:
                 self.play_sound('error')
         
-        elif key == pygame.K_8 and not player.is_wolf:
+        elif key == pygame.K_8 and not has_t2:
             if player.refugees >= costs['wolf_upgrade']:
                 player.refugees -= costs['wolf_upgrade']
                 player.upgrade_to_wolf()
                 purchased = "WOLF UPGRADE!"
+                self.play_sound('upgrade')
+            else:
+                self.play_sound('error')
+        
+        elif key == pygame.K_9 and not has_t2:
+            if player.refugees >= costs['jaguar_upgrade']:
+                player.refugees -= costs['jaguar_upgrade']
+                player.upgrade_to_jaguar()
+                purchased = "JAGUAR UPGRADE!"
                 self.play_sound('upgrade')
             else:
                 self.play_sound('error')
@@ -329,7 +397,7 @@ class Game:
         
         if purchased:
             self.show_message(f"Purchased: {purchased}", 90)
-            if purchased != "WOLF UPGRADE!":  # Wolf has its own sound
+            if purchased not in ["WOLF UPGRADE!", "JAGUAR UPGRADE!"]:  # T2 upgrades have their own sound
                 self.play_sound('purchase')
     
     def update(self):
@@ -395,6 +463,10 @@ class Game:
                 if enemy.take_damage(bullet):
                     # Enemy destroyed
                     self.player.score += enemy.score
+                    
+                    # Award skill points for the kill
+                    skill_points = SKILL_POINTS_PER_ENEMY.get(enemy.enemy_type, 5)
+                    self.player.add_skill_points(skill_points)
                     
                     # Screen shake based on enemy size
                     if enemy.is_boss:
@@ -565,6 +637,8 @@ class Game:
             self.draw_menu()
         elif self.state == 'difficulty':
             self.draw_difficulty()
+        elif self.state == 'ship_select':
+            self.draw_ship_select()
         elif self.state == 'playing':
             self.draw_game()
         elif self.state == 'paused':
@@ -619,6 +693,203 @@ class Game:
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
     
+    def draw_ship_select(self):
+        """Draw ship selection screen"""
+        # Title
+        title = self.font_large.render("SELECT YOUR SHIP", True, COLOR_MINMATAR_ACCENT)
+        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 60))
+        self.render_surface.blit(title, rect)
+        
+        # Skill points display
+        sp_text = self.font.render(f"Skill Points: {self.total_skill_points}", True, (200, 150, 255))
+        rect = sp_text.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        self.render_surface.blit(sp_text, rect)
+        
+        ships = ['rifter', 'wolf', 'jaguar']
+        ship_width = 120
+        spacing = 40
+        total_width = len(ships) * ship_width + (len(ships) - 1) * spacing
+        start_x = (SCREEN_WIDTH - total_width) // 2
+        
+        for i, ship in enumerate(ships):
+            x = start_x + i * (ship_width + spacing) + ship_width // 2
+            y = 220
+            
+            # Selection highlight
+            is_selected = i == self.ship_select_index
+            is_unlocked = ship in self.unlocked_ships
+            
+            # Draw ship box
+            box_color = (80, 60, 40) if is_unlocked else (40, 40, 50)
+            if is_selected:
+                box_color = COLOR_MINMATAR_ACCENT if is_unlocked else (80, 80, 100)
+            
+            pygame.draw.rect(self.render_surface, box_color, 
+                           (x - ship_width//2, y - 20, ship_width, 140), 0, 8)
+            
+            # Selection border
+            border_color = (255, 255, 255) if is_selected else (100, 100, 100)
+            pygame.draw.rect(self.render_surface, border_color,
+                           (x - ship_width//2, y - 20, ship_width, 140), 2, 8)
+            
+            # Draw ship sprite preview
+            preview = self._create_ship_preview(ship)
+            preview_rect = preview.get_rect(center=(x, y + 30))
+            self.render_surface.blit(preview, preview_rect)
+            
+            # Ship name
+            info = T2_SHIP_INFO[ship]
+            name_color = (255, 255, 255) if is_unlocked else (150, 150, 150)
+            name_text = self.font.render(info['name'], True, name_color)
+            name_rect = name_text.get_rect(center=(x, y + 75))
+            self.render_surface.blit(name_text, name_rect)
+            
+            # Ship type
+            type_text = self.font_small.render(info['type'], True, (150, 150, 150))
+            type_rect = type_text.get_rect(center=(x, y + 95))
+            self.render_surface.blit(type_text, type_rect)
+            
+            # Lock/unlock status
+            if not is_unlocked:
+                cost = T2_SHIP_COSTS.get(ship, 0)
+                lock_color = (100, 255, 100) if self.total_skill_points >= cost else (255, 100, 100)
+                lock_text = self.font_small.render(f"LOCKED ({cost} SP)", True, lock_color)
+                lock_rect = lock_text.get_rect(center=(x, y + 115))
+                self.render_surface.blit(lock_text, lock_rect)
+        
+        # Draw info bubble for selected ship
+        selected_ship = ships[self.ship_select_index]
+        self.draw_ship_info_bubble(selected_ship)
+        
+        # Instructions
+        y = 580
+        if selected_ship in self.unlocked_ships:
+            text = self.font.render("[ENTER] Launch Mission", True, (100, 255, 100))
+        else:
+            cost = T2_SHIP_COSTS.get(selected_ship, 0)
+            if self.total_skill_points >= cost:
+                text = self.font.render(f"[U] Unlock ({cost} SP)", True, (100, 255, 100))
+            else:
+                text = self.font.render(f"Need {cost} SP to unlock", True, (255, 100, 100))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+        
+        y += 30
+        text = self.font_small.render("[LEFT/RIGHT] Select Ship    [ESC] Back", True, (150, 150, 150))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+    
+    def _create_ship_preview(self, ship_type):
+        """Create a preview sprite for ship selection"""
+        width, height = 50, 60
+        surf = pygame.Surface((width, height), pygame.SRCALPHA)
+        
+        if ship_type == 'wolf':
+            color = COLOR_MINMATAR_ACCENT
+            pygame.draw.polygon(surf, color, [
+                (width//2, 0),
+                (width-5, height-12),
+                (width//2, height-5),
+                (5, height-12)
+            ])
+            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
+                (0, height-15),
+                (12, height//2),
+                (12, height-5)
+            ])
+            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
+                (width, height-15),
+                (width-12, height//2),
+                (width-12, height-5)
+            ])
+            pygame.draw.circle(surf, (255, 150, 50), (width//2, height-8), 6)
+        elif ship_type == 'jaguar':
+            color = (100, 150, 180)
+            pygame.draw.polygon(surf, color, [
+                (width//2, 0),
+                (width-3, height-12),
+                (width//2, height-3),
+                (3, height-12)
+            ])
+            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
+                (0, height-12),
+                (10, height//3),
+                (14, height-8)
+            ])
+            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
+                (width, height-12),
+                (width-10, height//3),
+                (width-14, height-8)
+            ])
+            pygame.draw.circle(surf, (100, 180, 255), (width//2, height-6), 6)
+        else:  # rifter
+            color = COLOR_MINMATAR_HULL
+            pygame.draw.polygon(surf, color, [
+                (width//2 - 3, 0),
+                (width-8, height-15),
+                (width//2, height),
+                (8, height-15)
+            ])
+            pygame.draw.polygon(surf, COLOR_MINMATAR_DARK, [
+                (0, height-10),
+                (6, height//3),
+                (14, height-5)
+            ])
+            pygame.draw.polygon(surf, COLOR_MINMATAR_DARK, [
+                (width-3, height-20),
+                (width-8, height//2),
+                (width-14, height-8)
+            ])
+            pygame.draw.circle(surf, (255, 100, 0), (width//2, height-5), 5)
+        
+        return surf
+    
+    def draw_ship_info_bubble(self, ship_type):
+        """Draw detailed info bubble for selected ship"""
+        info = T2_SHIP_INFO[ship_type]
+        
+        # Info box position
+        box_x = 50
+        box_y = 380
+        box_width = SCREEN_WIDTH - 100
+        box_height = 180
+        
+        # Draw box background
+        pygame.draw.rect(self.render_surface, (30, 30, 40), 
+                        (box_x, box_y, box_width, box_height), 0, 8)
+        pygame.draw.rect(self.render_surface, (80, 80, 100),
+                        (box_x, box_y, box_width, box_height), 2, 8)
+        
+        # Ship name and type
+        y = box_y + 15
+        title = self.font.render(f"{info['name']} - {info['type']}", True, COLOR_MINMATAR_ACCENT)
+        self.render_surface.blit(title, (box_x + 15, y))
+        
+        # Description
+        y += 30
+        desc = self.font_small.render(info['description'], True, COLOR_TEXT)
+        self.render_surface.blit(desc, (box_x + 15, y))
+        
+        # Attributes
+        y += 25
+        attr_title = self.font_small.render("Attributes:", True, (150, 200, 255))
+        self.render_surface.blit(attr_title, (box_x + 15, y))
+        
+        y += 20
+        for attr in info['attributes']:
+            attr_text = self.font_small.render(f"• {attr}", True, (150, 150, 150))
+            self.render_surface.blit(attr_text, (box_x + 25, y))
+            y += 18
+        
+        # Strategy
+        y += 5
+        strategy_title = self.font_small.render("Strategy:", True, (255, 200, 100))
+        self.render_surface.blit(strategy_title, (box_x + 15, y))
+        
+        y += 20
+        strategy = self.font_small.render(info['strategy'], True, (150, 150, 150))
+        self.render_surface.blit(strategy, (box_x + 25, y))
+    
     def draw_game(self):
         """Draw gameplay elements"""
         # Draw sprites
@@ -666,8 +937,25 @@ class Game:
         pygame.draw.rect(self.render_surface, COLOR_HULL, (x, y, int(bar_width * hull_pct), bar_height))
         pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y, bar_width, bar_height), 1)
         
+        # Skill Points progress bar
+        y += bar_height + 8
+        sp_bar_width = 150
+        sp_bar_height = 10
+        # Calculate progress towards next T2 unlock (500 SP)
+        next_unlock_cost = 500
+        sp_progress = min(self.player.skill_points / next_unlock_cost, 1.0)
+        
+        pygame.draw.rect(self.render_surface, (30, 30, 50), (x, y, sp_bar_width, sp_bar_height))
+        pygame.draw.rect(self.render_surface, (200, 150, 255), (x, y, int(sp_bar_width * sp_progress), sp_bar_height))
+        pygame.draw.rect(self.render_surface, (100, 80, 150), (x, y, sp_bar_width, sp_bar_height), 1)
+        
+        # Skill points text
+        y += sp_bar_height + 2
+        text = self.font_small.render(f"SP: {self.player.skill_points}", True, (200, 150, 255))
+        self.render_surface.blit(text, (x, y))
+        
         # Ammo indicator
-        y += bar_height + 10
+        y += 18
         ammo = AMMO_TYPES[self.player.current_ammo]
         pygame.draw.rect(self.render_surface, ammo['color'], (x, y, 20, 20))
         text = self.font_small.render(ammo['name'], True, COLOR_TEXT)
@@ -699,6 +987,13 @@ class Game:
             stage = STAGES[self.current_stage]
             text = self.font_small.render(f"Stage {self.current_stage + 1}", True, COLOR_TEXT)
             self.render_surface.blit(text, (x, y))
+        
+        # Ship type indicator
+        y += 20
+        ship_name = self.player.ship_type.upper()
+        ship_color = (200, 150, 255) if self.player.ship_type != 'rifter' else COLOR_TEXT
+        text = self.font_small.render(f"Ship: {ship_name}", True, ship_color)
+        self.render_surface.blit(text, (x, y))
         
         # Difficulty indicator
         y += 20
@@ -771,26 +1066,33 @@ class Game:
         
         # Refugees
         text = self.font.render(f"Refugees Available: {self.player.refugees}", True, (100, 255, 100))
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 90))
+        self.render_surface.blit(text, rect)
+        
+        # Skill Points
+        text = self.font.render(f"Skill Points: {self.player.skill_points}", True, (200, 150, 255))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 115))
         self.render_surface.blit(text, rect)
         
         # Upgrade options
-        y = 160
+        y = 155
         costs = UPGRADE_COSTS
         player = self.player
         
+        # Check if player already has a T2 ship
+        has_t2 = player.is_wolf or player.is_jaguar
+        
         upgrades = [
-            ("1", "Gyrostabilizer", costs['gyrostabilizer'], player.has_gyro, "+30% Fire Rate"),
-            ("2", "Armor Plate", costs['armor_plate'], False, "+30 Max Armor"),
-            ("3", "Tracking Enhancer", costs['tracking_enhancer'], player.has_tracking, "+1 Gun Spread"),
-            ("4", "EMP Ammo", costs['emp_ammo'], 'emp' in player.unlocked_ammo, "Strong vs Shields"),
-            ("5", "Phased Plasma", costs['plasma_ammo'], 'plasma' in player.unlocked_ammo, "Strong vs Armor"),
-            ("6", "Fusion Ammo", costs['fusion_ammo'], 'fusion' in player.unlocked_ammo, "High Damage"),
-            ("7", "Barrage Ammo", costs['barrage_ammo'], 'barrage' in player.unlocked_ammo, "Fast Fire"),
-            ("8", "WOLF UPGRADE", costs['wolf_upgrade'], player.is_wolf, "T2 Assault Ship!")
+            ("1", "Gyrostabilizer", costs['gyrostabilizer'], player.has_gyro, "+30% Fire Rate", "refugees"),
+            ("2", "Armor Plate", costs['armor_plate'], False, "+30 Max Armor", "refugees"),
+            ("3", "Tracking Enhancer", costs['tracking_enhancer'], player.has_tracking, "+1 Gun Spread", "refugees"),
+            ("4", "EMP Ammo", costs['emp_ammo'], 'emp' in player.unlocked_ammo, "Strong vs Shields", "refugees"),
+            ("5", "Phased Plasma", costs['plasma_ammo'], 'plasma' in player.unlocked_ammo, "Strong vs Armor", "refugees"),
+            ("6", "Fusion Ammo", costs['fusion_ammo'], 'fusion' in player.unlocked_ammo, "High Damage", "refugees"),
+            ("7", "Barrage Ammo", costs['barrage_ammo'], 'barrage' in player.unlocked_ammo, "Fast Fire", "refugees"),
         ]
         
-        for key, name, cost, owned, desc in upgrades:
+        for key, name, cost, owned, desc, currency in upgrades:
             if owned:
                 color = (80, 80, 80)
                 status = "[OWNED]"
@@ -803,10 +1105,52 @@ class Game:
             
             text = self.font.render(f"[{key}] {name} - {desc} {status}", True, color)
             self.render_surface.blit(text, (50, y))
-            y += 35
+            y += 32
+        
+        # T2 Ship upgrades (using refugees as in original, but mention they unlock permanently)
+        y += 10
+        t2_header = self.font_small.render("--- T2 Ship Upgrades (Use Refugees) ---", True, (150, 150, 200))
+        rect = t2_header.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(t2_header, rect)
+        y += 25
+        
+        # Wolf
+        wolf_cost = costs['wolf_upgrade']
+        if player.is_wolf:
+            color = (80, 80, 80)
+            status = "[EQUIPPED]"
+        elif has_t2:
+            color = (80, 80, 80)
+            status = "[OTHER T2]"
+        elif player.refugees >= wolf_cost:
+            color = (100, 255, 100)
+            status = f"[{wolf_cost} refugees]"
+        else:
+            color = (255, 100, 100)
+            status = f"[{wolf_cost} refugees]"
+        text = self.font.render(f"[8] WOLF - T2 Assault (Offense) {status}", True, color)
+        self.render_surface.blit(text, (50, y))
+        y += 32
+        
+        # Jaguar
+        jaguar_cost = costs.get('jaguar_upgrade', 50)
+        if player.is_jaguar:
+            color = (80, 80, 80)
+            status = "[EQUIPPED]"
+        elif has_t2:
+            color = (80, 80, 80)
+            status = "[OTHER T2]"
+        elif player.refugees >= jaguar_cost:
+            color = (100, 255, 100)
+            status = f"[{jaguar_cost} refugees]"
+        else:
+            color = (255, 100, 100)
+            status = f"[{jaguar_cost} refugees]"
+        text = self.font.render(f"[9] JAGUAR - T2 Assault (Defense) {status}", True, color)
+        self.render_surface.blit(text, (50, y))
         
         # Continue prompt
-        y += 30
+        y += 50
         text = self.font.render("Press ENTER to continue to next stage", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
@@ -818,15 +1162,24 @@ class Game:
         self.render_surface.blit(overlay, (0, 0))
         
         text = self.font_large.render("SHIP DESTROYED", True, (255, 100, 100))
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 80))
         self.render_surface.blit(text, rect)
         
         text = self.font.render(f"Final Score: {self.player.score}", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 30))
         self.render_surface.blit(text, rect)
         
         text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        self.render_surface.blit(text, rect)
+        
+        # Show skill points earned
+        text = self.font.render(f"Skill Points Earned: {self.player.skill_points}", True, (200, 150, 255))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 35))
+        self.render_surface.blit(text, rect)
+        
+        text = self.font_small.render("(Skill points saved for T2 ship unlocks)", True, (150, 150, 200))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 55))
         self.render_surface.blit(text, rect)
         
         text = self.font.render("Press ENTER to return to menu", True, COLOR_TEXT)
@@ -856,18 +1209,33 @@ class Game:
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
         self.render_surface.blit(text, rect)
         
-        ship_type = "Wolf Assault Frigate" if self.player.is_wolf else "Rifter Frigate"
-        text = self.font.render(f"Ship: {ship_type}", True, COLOR_TEXT)
+        # Skill points earned
+        text = self.font.render(f"Skill Points Earned: {self.player.skill_points}", True, (200, 150, 255))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 80))
+        self.render_surface.blit(text, rect)
+        
+        # Ship type
+        if self.player.is_wolf:
+            ship_type = "Wolf Assault Frigate"
+        elif self.player.is_jaguar:
+            ship_type = "Jaguar Assault Frigate"
+        else:
+            ship_type = "Rifter Frigate"
+        text = self.font.render(f"Ship: {ship_type}", True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 120))
         self.render_surface.blit(text, rect)
         
         diff_text = f"Difficulty: {self.difficulty_settings['name']}"
         text = self.font.render(diff_text, True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 110))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 150))
+        self.render_surface.blit(text, rect)
+        
+        text = self.font_small.render("(Skill points saved for T2 ship unlocks)", True, (150, 150, 200))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 185))
         self.render_surface.blit(text, rect)
         
         text = self.font.render("Press ENTER to play again", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 170))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 220))
         self.render_surface.blit(text, rect)
     
     def run(self):

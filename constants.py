@@ -127,10 +127,59 @@ PLAYER_START_SHIELDS = 100
 PLAYER_START_ARMOR = 100
 PLAYER_START_HULL = 50
 
-# Wolf upgrade bonuses
+# Wolf upgrade bonuses (T2 Assault Frigate - offensive focus)
 WOLF_SPEED_BONUS = 1.2
 WOLF_ARMOR_BONUS = 50
 WOLF_HULL_BONUS = 25
+WOLF_DAMAGE_BONUS = 1.25
+
+# Jaguar upgrade bonuses (T2 Assault Frigate - defensive focus)
+JAGUAR_SPEED_BONUS = 1.3
+JAGUAR_SHIELD_BONUS = 50
+JAGUAR_HULL_BONUS = 15
+JAGUAR_DAMAGE_BONUS = 1.1
+
+# Skill Point System
+SKILL_POINTS_PER_ENEMY = {
+    'executioner': 5,
+    'punisher': 8,
+    'omen': 20,
+    'maller': 25,
+    'bestower': 10,
+    'apocalypse': 100,
+    'abaddon': 200
+}
+
+# T2 Ship Unlock Costs (in skill points)
+T2_SHIP_COSTS = {
+    'wolf': 500,      # Offensive focused T2
+    'jaguar': 500     # Defensive focused T2
+}
+
+# T2 Ship descriptions for info bubbles
+T2_SHIP_INFO = {
+    'rifter': {
+        'name': 'Rifter',
+        'type': 'T1 Frigate',
+        'description': 'Standard Minmatar frigate with balanced stats.',
+        'attributes': ['Balanced shields and armor', 'Standard speed', 'Base damage output'],
+        'strategy': 'Good all-around ship for learning the game.'
+    },
+    'wolf': {
+        'name': 'Wolf',
+        'type': 'T2 Assault Frigate',
+        'description': 'Offensive powerhouse with enhanced firepower.',
+        'attributes': ['+25% damage bonus', '+20% speed', '+50 armor', '+25 hull', '+1 gun spread'],
+        'strategy': 'Aggressive playstyle. Best for dealing heavy damage quickly.'
+    },
+    'jaguar': {
+        'name': 'Jaguar',
+        'type': 'T2 Assault Frigate', 
+        'description': 'Defensive tank with superior shields and speed.',
+        'attributes': ['+10% damage bonus', '+30% speed', '+50 shields', '+15 hull'],
+        'strategy': 'Hit-and-run tactics. Superior survivability and evasion.'
+    }
+}
 
 # Bullet stats
 BULLET_SPEED = 12
@@ -224,7 +273,8 @@ UPGRADE_COSTS = {
     'plasma_ammo': 35,
     'fusion_ammo': 45,
     'barrage_ammo': 55,
-    'wolf_upgrade': 50
+    'wolf_upgrade': 50,
+    'jaguar_upgrade': 50
 }
 
 # Powerup types
