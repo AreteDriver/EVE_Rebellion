@@ -140,6 +140,7 @@ JAGUAR_HULL_BONUS = 20
 # Formation system
 FORMATION_COOLDOWN = 2000  # ms cooldown between formation switches
 FORMATION_SWITCH_KEY = pygame.K_f
+ESCORT_INTERCEPT_DISTANCE = 200  # Distance to player for escort interception check
 
 # Formation types with positioning and behavior configurations
 # Positions are offsets from player (x, y) - ships orbit these points

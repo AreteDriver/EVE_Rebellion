@@ -776,7 +776,7 @@ class Game:
             
             # Cooldown indicator
             if not self.player.can_switch_formation():
-                cooldown_remaining = (self.player.formation_cooldown_until - pygame.time.get_ticks()) / FORMATION_COOLDOWN
+                cooldown_remaining = (self.player.formation_cooldown_until - pygame.time.get_ticks()) / max(FORMATION_COOLDOWN, 1)
                 cooldown_width = int(60 * max(0, cooldown_remaining))
                 pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y + 14, 60, 4))
                 pygame.draw.rect(self.render_surface, (150, 150, 150), (x, y + 14, 60 - cooldown_width, 4))
