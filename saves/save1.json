@@ -1,0 +1,25 @@
+{
+    "player": {
+        "score": 1500,
+        "refugees": 25,
+        "total_refugees": 45,
+        "shields": 80,
+        "armor": 100,
+        "hull": 50,
+        "max_shields": 100,
+        "max_armor": 100,
+        "max_hull": 50,
+        "rockets": 8,
+        "current_ammo": "sabot",
+        "unlocked_ammo": ["sabot", "emp"],
+        "has_gyro": true,
+        "has_tracking": false,
+        "is_wolf": false
+    },
+    "game": {
+        "current_stage": 1,
+        "current_wave": 3,
+        "difficulty": "normal"
+    },
+    "timestamp": "2024-01-15T10:30:00Z"
+}
