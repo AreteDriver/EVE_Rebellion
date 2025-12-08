@@ -212,6 +212,39 @@ ENEMY_STATS = {
         'score': 5000,
         'size': (100, 150),
         'boss': True
+    },
+    'amarr_capital': {
+        'name': 'Golden Supercarrier',
+        'shields': 500,
+        'armor': 1500,
+        'hull': 1000,
+        'speed': 0.3,
+        'fire_rate': 1500,
+        'score': 5000,
+        'size': (200, 300),
+        'boss': True
+    },
+    'machariel': {
+        'name': 'Machariel',
+        'shields': 200,
+        'armor': 400,
+        'hull': 300,
+        'speed': 1.0,
+        'fire_rate': 800,
+        'score': 2000,
+        'size': (80, 120),
+        'boss': True
+    },
+    'stratios': {
+        'name': 'Stratios',
+        'shields': 150,
+        'armor': 150,
+        'hull': 100,
+        'speed': 1.2,
+        'fire_rate': 1000,
+        'score': 1500,
+        'size': (60, 80),
+        'boss': True
     }
 }
 
@@ -273,3 +306,112 @@ STAGES = [
         'boss': 'abaddon'
     }
 ]
+
+
+def _convert_json_stage_to_stage_format(stage_data):
+    """
+    Convert a JSON stage definition to the format used by STAGES.
+    
+    This function handles both simple stage formats (like example_stage.json)
+    and complex wave-based formats (like capital_ship_assault.json).
+    
+    Args:
+        stage_data: Dictionary loaded from a JSON stage file
+        
+    Returns:
+        Dictionary in STAGES format, or None if conversion fails
+    """
+    # Simple format: has 'waves' as integer, 'enemies' as list
+    if isinstance(stage_data.get('waves'), int):
+        return {
+            'name': stage_data.get('name', 'Unknown Stage'),
+            'waves': stage_data['waves'],
+            'enemies': stage_data.get('enemies', []),
+            'industrial_chance': stage_data.get('industrial_chance', 0.1),
+            'boss': stage_data.get('boss')
+        }
+    
+    # Complex format: has 'waves' as list of wave definitions
+    elif isinstance(stage_data.get('waves'), list):
+        # For complex wave formats, we simplify by counting waves
+        # and extracting boss from last wave if present
+        waves_list = stage_data['waves']
+        num_waves = len(waves_list)
+        
+        # Collect all enemy types from all waves
+        all_enemies = []
+        boss_type = None
+        
+        for wave in waves_list:
+            if 'boss' in wave:
+                boss_type = wave['boss']
+            elif 'enemies' in wave:
+                for enemy_def in wave['enemies']:
+                    if isinstance(enemy_def, dict) and 'type' in enemy_def:
+                        if enemy_def['type'] not in all_enemies:
+                            all_enemies.append(enemy_def['type'])
+        
+        # Check if stage has a boss definition at top level
+        if not boss_type and 'boss' in stage_data:
+            boss_info = stage_data['boss']
+            if isinstance(boss_info, dict):
+                boss_type = boss_info.get('type')
+            else:
+                boss_type = boss_info
+        
+        return {
+            'name': stage_data.get('name', 'Unknown Stage'),
+            'waves': num_waves,
+            'enemies': all_enemies if all_enemies else ['executioner', 'punisher'],
+            'industrial_chance': 0.1,  # Default value
+            'boss': boss_type
+        }
+    
+    return None
+
+
+def load_expansion_stages():
+    """
+    Load expansion stages from data/stages/ directory and add them to STAGES.
+    
+    This function is called at module initialization to integrate expansion
+    content. It skips example_stage.json and any stages already in the base
+    STAGES list.
+    """
+    try:
+        from core.loader import load_stages
+        
+        # Load all stage JSON files
+        json_stages = load_stages()
+        
+        # List of stage files to skip (examples or already integrated)
+        skip_stages = {'example_stage'}
+        
+        # Stage names already in base STAGES to avoid duplicates
+        existing_names = {stage['name'] for stage in STAGES}
+        
+        for stage_id, stage_data in json_stages.items():
+            # Skip example stages
+            if stage_id in skip_stages:
+                continue
+            
+            # Skip if already in STAGES by name
+            if stage_data.get('name') in existing_names:
+                continue
+            
+            # Convert JSON format to STAGES format
+            converted_stage = _convert_json_stage_to_stage_format(stage_data)
+            
+            if converted_stage:
+                STAGES.append(converted_stage)
+    
+    except ImportError:
+        # If loader is not available, silently skip
+        pass
+    except Exception as e:
+        # Log error but don't crash
+        print(f"Warning: Could not load expansion stages: {e}")
+
+
+# Load expansion stages on module import
+load_expansion_stages()
