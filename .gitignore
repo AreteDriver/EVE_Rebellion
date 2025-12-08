@@ -50,3 +50,9 @@ htmlcov/
 /tmp/
 *.tmp
 *.bak
+
+# Distribution archives
+*.zip
+*.tar.gz
+*.tar.bz2
+*.rar

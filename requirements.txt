@@ -1,0 +1,7 @@
+# Minmatar Rebellion - Python Dependencies
+
+# Core game engine
+pygame>=2.0.0
+
+# Sound generation and audio processing
+numpy>=1.19.0
