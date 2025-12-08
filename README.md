@@ -52,6 +52,20 @@ pip install pygame numpy
 
 ## Running the Game
 
+### Using the convenience scripts
+
+Linux/macOS:
+```bash
+./run.sh
+```
+
+Windows:
+```bash
+run.bat
+```
+
+### Direct execution
+
 ```bash
 python main.py
 ```
@@ -62,7 +76,8 @@ chmod +x main.py
 ./main.py
 ```
 
-If installed via setup.py:
+### After installation via setup.py
+
 ```bash
 minmatar-rebellion
 ```

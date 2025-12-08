@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing progression module dependency for upgrade_screen.py
 
 ### Removed
-- Removed `minmatar_rebellion_v2_updated.zip` from git tracking (883KB)
+- Removed `minmatar_rebellion_v2_updated.zip` from git tracking (kept locally, excluded via .gitignore)
 
 ## [1.0.0] - Initial Release
 
