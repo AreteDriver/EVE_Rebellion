@@ -14,27 +14,63 @@ A top-down arcade space shooter inspired by EVE Online, featuring the iconic Rif
 
 ## Requirements
 
-- Python 3.8+
-- Pygame 2.0+
-- NumPy (for sound generation)
+- Python 3.8 or higher (tested with Python 3.12)
+- Pygame 2.0 or higher
+- NumPy (for procedural sound generation)
 
 ## Installation
+
+### Option 1: Quick Install (Global)
 
 ```bash
 pip install pygame numpy
 ```
 
+### Option 2: Virtual Environment (Recommended)
+
+Using a virtual environment keeps your project dependencies isolated:
+
+**On Windows:**
+```bash
+python -m venv venv
+venv\Scripts\activate
+pip install pygame numpy
+```
+
+**On macOS/Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install pygame numpy
+```
+
+### Option 3: From requirements.txt
+
+If a `requirements.txt` file is present:
+```bash
+pip install -r requirements.txt
+```
+
 ## Running the Game
+
+Make sure you have activated your virtual environment (if using one), then run:
 
 ```bash
 python main.py
 ```
 
-Or on Linux:
+**On macOS/Linux:**
+```bash
+python3 main.py
+```
+
+Or make it executable:
 ```bash
 chmod +x main.py
 ./main.py
 ```
+
+**Note:** If you see audio-related warnings on systems without audio output, the game will continue to run with sound disabled.
 
 ## Controls
 
@@ -147,14 +183,36 @@ Sound gracefully disables if no audio device is available.
 ## File Structure
 
 ```
-minmatar_rebellion/
-├── main.py          # Entry point
-├── game.py          # Main game logic, states, rendering
-├── sprites.py       # All game entities (player, enemies, bullets)
-├── constants.py     # Configuration, stats, stage definitions
-├── sounds.py        # Procedural sound generation
-└── README.md        # This file
+EVE_Rebellion/
+├── main.py              # Entry point
+├── game.py              # Main game logic, states, rendering
+├── sprites.py           # All game entities (player, enemies, bullets, etc.)
+├── constants.py         # Configuration, stats, stage definitions
+├── sounds.py            # Procedural sound generation
+├── upgrade_screen.py    # Skill point upgrade system
+├── core/                # Core utilities and loaders
+│   ├── __init__.py
+│   └── loader.py        # JSON data loader for game content
+├── enemies/             # Enemy class implementations
+│   └── __init__.py
+├── stages/              # Stage class implementations
+│   └── __init__.py
+├── powerups/            # Power-up class implementations
+│   └── __init__.py
+├── expansion/           # Expansion/DLC content
+│   └── capital_ship_enemy.py
+├── data/                # JSON data files for game content
+│   ├── enemies/         # Enemy definitions (*.json)
+│   ├── stages/          # Stage definitions (*.json)
+│   ├── powerups/        # Power-up definitions (*.json)
+│   └── upgrades.json    # Upgrade definitions
+├── docs/                # Documentation
+│   └── development.md   # Development guide
+├── CONTRIBUTING.md      # Contribution guidelines
+└── README.md            # This file
 ```
+
+**Note on Graphics:** All ship graphics and visual elements are **procedurally generated** using Pygame drawing functions. No external image files are required. Ship sprites are created at runtime using geometric shapes and colors defined in `sprites.py` and `constants.py`.
 
 ## Customization
 
@@ -166,6 +224,72 @@ Edit `constants.py` to adjust:
 - Upgrade costs
 - Difficulty multipliers
 - Screen shake intensity
+
+## Troubleshooting
+
+### Ship Graphics Not Displaying
+
+**This game does not use external image files.** All ship graphics are procedurally generated at runtime using Pygame's drawing functions. If ships are not visible:
+
+1. **Check Pygame installation:**
+   ```bash
+   python -c "import pygame; print(pygame.version.ver)"
+   ```
+   Should print version 2.0 or higher.
+
+2. **Verify display initialization:**
+   - The game requires a display output. If running on a headless server, you may need to set up a virtual display (Xvfb).
+   - Make sure your system supports the screen resolution (default is 800x600).
+
+3. **Graphics rendering issues:**
+   - Ships are created using `pygame.Surface` with `pygame.SRCALPHA` for transparency.
+   - If you see blank sprites, check that your graphics drivers support alpha blending.
+
+4. **Color constants:**
+   - Ship colors are defined in `constants.py` (e.g., `COLOR_MINMATAR_HULL`, `COLOR_AMARR_GOLD`).
+   - Enemy ships use the `_create_image()` method in the `Enemy` class in `sprites.py`.
+   - Player ships use `_create_ship_image()` method in the `Player` class.
+
+### Common Issues
+
+**"ModuleNotFoundError: No module named 'pygame'"**
+- Make sure you installed pygame: `pip install pygame numpy`
+- If using a virtual environment, ensure it's activated.
+
+**"ModuleNotFoundError: No module named 'progression'"**
+- The `progression` module is referenced in `upgrade_screen.py` but not currently included in the repository.
+- This affects the skill point upgrade system but not core gameplay.
+- You can comment out the upgrade screen import in `game.py` if needed, or create a stub `progression.py` module.
+
+**No sound/Audio warnings or crashes**
+- Sound generation requires NumPy: `pip install numpy`
+- On systems without audio devices (e.g., headless servers, Docker containers), pygame.mixer.init() may fail.
+- Current workaround: The game initializes audio in `game.py` line 41. On systems without audio, you may need to wrap this in a try-except block or set SDL environment variable:
+  ```bash
+  export SDL_AUDIODRIVER=dummy
+  python main.py
+  ```
+- The `SoundGenerator` class in `sounds.py` handles missing audio gracefully, but the main game initialization may still fail without an audio device.
+
+**Game runs slowly**
+- Try reducing the screen resolution in `constants.py` (change `SCREEN_WIDTH` and `SCREEN_HEIGHT`).
+- Disable screen shake by setting `SHAKE_DECAY = 0` in `constants.py`.
+
+**"Permission denied" when running ./main.py**
+- Run `chmod +x main.py` first to make it executable.
+- Or use `python main.py` or `python3 main.py` instead.
+
+**Import errors about game modules**
+- Make sure you're running the game from the repository root directory.
+- The game expects to find `sprites.py`, `constants.py`, etc., in the same directory as `main.py`.
+
+### Development & Modding
+
+For information about adding custom content (enemies, stages, power-ups) using JSON data files, see:
+- `docs/development.md` - Data-driven design documentation
+- `CONTRIBUTING.md` - Contribution guidelines
+
+You can create new enemies, stages, and power-ups by adding JSON files to the `data/` directory structure without modifying Python code.
 
 ## IP Notice
 
