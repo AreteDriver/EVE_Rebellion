@@ -56,7 +56,8 @@ def save_progress(sp: int = 0,
                   wolf_unlocked: bool = False,
                   jaguar_unlocked: bool = False,
                   total_kills: int = 0,
-                  highest_stage: int = 0) -> None:
+                  highest_stage: int = 0,
+                  purchased_upgrades: List[str] = None) -> None:
     """
     Save player progress to the save file.
     
@@ -67,16 +68,19 @@ def save_progress(sp: int = 0,
         jaguar_unlocked: Whether Jaguar assault frigate is unlocked
         total_kills: Total number of enemies killed
         highest_stage: Highest stage reached
+        purchased_upgrades: List of purchased upgrade IDs (if None, preserves existing)
     """
     if unlocked_ships is None:
         unlocked_ships = []
     
-    # Load existing data to preserve purchased_upgrades if they exist
+    # Load existing data to preserve purchased_upgrades if not specified
     existing_data = load_progress()
+    if purchased_upgrades is None:
+        purchased_upgrades = existing_data.get('purchased_upgrades', [])
     
     data = {
         'total_sp': sp,
-        'purchased_upgrades': existing_data.get('purchased_upgrades', []),
+        'purchased_upgrades': purchased_upgrades,
         'unlocked_ships': unlocked_ships,
         'wolf_unlocked': wolf_unlocked,
         'jaguar_unlocked': jaguar_unlocked,
