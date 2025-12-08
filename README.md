@@ -258,18 +258,24 @@ Edit `constants.py` to adjust:
 
 **"ModuleNotFoundError: No module named 'progression'"**
 - The `progression` module is referenced in `upgrade_screen.py` but not currently included in the repository.
-- This affects the skill point upgrade system only. The main game and upgrade shop functionality work without it.
-- If you encounter this error when the game tries to load the upgrade screen, you may need to create a stub `progression.py` module with basic save/load functions.
+- This will prevent the upgrade screen from loading if it tries to import this module.
+- The upgrade screen provides a skill point system for permanent upgrades, but the main game's upgrade shop (accessed between stages) works without it.
+- If you need the upgrade screen functionality, create a stub `progression.py` module with basic save/load functions.
 
 **No sound/Audio warnings or crashes**
 - Sound generation requires NumPy: `pip install numpy`
-- On systems without audio devices (e.g., headless servers, Docker containers), pygame.mixer.init() may fail.
-- Current workaround: The game initializes audio in `game.py` using pygame.mixer.init(). On systems without audio, you may need to wrap this in a try-except block or set SDL environment variable:
+- On systems without audio devices (e.g., headless servers, Docker containers), pygame.mixer.init() may fail and crash the game.
+- **Solution:** Set the SDL audio driver to dummy mode before running:
   ```bash
   export SDL_AUDIODRIVER=dummy
   python main.py
   ```
-- The `SoundGenerator` class in `sounds.py` handles missing audio gracefully, but the main game initialization may still fail without an audio device.
+  On Windows PowerShell:
+  ```powershell
+  $env:SDL_AUDIODRIVER="dummy"
+  python main.py
+  ```
+- The `SoundGenerator` class in `sounds.py` handles missing audio gracefully, but the main game initialization in `game.py` may still fail without an audio device unless the above workaround is used.
 
 **Game runs slowly**
 - Try reducing the screen resolution in `constants.py` (change `SCREEN_WIDTH` and `SCREEN_HEIGHT`).
