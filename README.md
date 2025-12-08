@@ -167,6 +167,27 @@ Edit `constants.py` to adjust:
 - Difficulty multipliers
 - Screen shake intensity
 
+## Troubleshooting
+
+### No Image Files Required
+The game uses **procedural graphics** - all ships, enemies, bullets, and effects are drawn programmatically using Pygame's drawing functions. No image files (PNG, JPG, etc.) are needed to run the game.
+
+### Expansion Stages
+The `data/stages/` directory contains expansion stage definitions that reference image and music files. These stages are **not currently loaded** by the game. The game uses the stage definitions in `constants.py` instead.
+
+If you want to use expansion stages:
+1. Create the required image files in an `images/` directory
+2. Create the required music files in a `music/` directory  
+3. Modify `game.py` to load stages from `data/stages/` using the `core.loader` module
+
+### Audio Issues
+If you encounter audio errors, the game will automatically disable sound. This is normal if:
+- No audio device is available (headless systems, Docker containers)
+- Audio drivers are not properly configured
+- The system is running in a restricted environment
+
+The game is fully playable without audio.
+
 ## IP Notice
 
 This is a personal/fan project. Ship designs and names are inspired by CCP Games' EVE Online. For any commercial use, original designs would need to be created or licensing obtained.
