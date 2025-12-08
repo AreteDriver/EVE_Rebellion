@@ -50,3 +50,6 @@ htmlcov/
 /tmp/
 *.tmp
 *.bak
+
+# Save files
+player_progress.json
