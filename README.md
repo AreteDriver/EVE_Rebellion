@@ -246,7 +246,7 @@ Edit `constants.py` to adjust:
    - If you see blank sprites, check that your graphics drivers support alpha blending.
 
 4. **Color constants:**
-   - Ship colors are defined in `constants.py` (e.g., `COLOR_MINMATAR_HULL`, `COLOR_AMARR_GOLD`).
+   - Ship colors are defined in `constants.py` (e.g., `COLOR_MINMATAR_HULL`, `COLOR_AMARR_ACCENT`).
    - Enemy ships use the `_create_image()` method in the `Enemy` class in `sprites.py`.
    - Player ships use `_create_ship_image()` method in the `Player` class.
 
@@ -258,8 +258,8 @@ Edit `constants.py` to adjust:
 
 **"ModuleNotFoundError: No module named 'progression'"**
 - The `progression` module is referenced in `upgrade_screen.py` but not currently included in the repository.
-- This affects the skill point upgrade system but not core gameplay.
-- You can comment out the upgrade screen import in `game.py` if needed, or create a stub `progression.py` module.
+- This affects the skill point upgrade system only. The main game and upgrade shop functionality work without it.
+- If you encounter this error when the game tries to load the upgrade screen, you may need to create a stub `progression.py` module with basic save/load functions.
 
 **No sound/Audio warnings or crashes**
 - Sound generation requires NumPy: `pip install numpy`
