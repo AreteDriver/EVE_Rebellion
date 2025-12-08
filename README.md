@@ -87,11 +87,21 @@ Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees al
 
 ### Stages
 
+The game includes 5 core campaign stages plus 3 expansion stages:
+
+#### Core Campaign
 1. **Asteroid Belt Escape** - Tutorial, basic enemies
 2. **Amarr Patrol Interdiction** - Introduces cruisers, mini-boss
 3. **Slave Colony Liberation** - High refugee opportunity
 4. **Gate Assault** - Boss: Apocalypse Battleship
 5. **Final Push** - Boss: Abaddon Dreadnought
+
+#### Expansion Stages
+6. **Capital Ship Assault** - Boss: Golden Supercarrier (amarr_capital)
+7. **Sisters Rescue** - Boss: Stratios (Sisters of EVE cruiser)
+8. **Pirate Invasion** - Boss: Machariel (Angel Cartel battleship)
+
+Expansion stages are automatically loaded from `data/stages/` directory. See the **Expansion Content** section below for details.
 
 ### Upgrades
 
@@ -148,13 +158,50 @@ Sound gracefully disables if no audio device is available.
 
 ```
 minmatar_rebellion/
-├── main.py          # Entry point
-├── game.py          # Main game logic, states, rendering
-├── sprites.py       # All game entities (player, enemies, bullets)
-├── constants.py     # Configuration, stats, stage definitions
-├── sounds.py        # Procedural sound generation
-└── README.md        # This file
+├── main.py              # Entry point
+├── game.py              # Main game logic, states, rendering
+├── sprites.py           # All game entities (player, enemies, bullets)
+├── constants.py         # Configuration, stats, stage definitions
+├── sounds.py            # Procedural sound generation
+├── core/
+│   └── loader.py        # JSON data loader for enemies, stages, powerups
+├── data/
+│   ├── enemies/         # Enemy definitions (JSON)
+│   ├── stages/          # Stage/level definitions (JSON)
+│   └── powerups/        # Power-up definitions (JSON)
+├── expansion/
+│   └── capital_ship_enemy.py  # CapitalShipEnemy boss class
+├── docs/
+│   └── development.md   # Developer guide for adding content
+└── README.md            # This file
 ```
+
+## Expansion Content
+
+The game supports **expansion content** through a data-driven architecture. Expansion stages, enemies, and bosses are automatically loaded from JSON files in the `data/` directory.
+
+### How Expansion Integration Works
+
+1. **Stage Loading**: All JSON files in `data/stages/` are loaded and converted to the game's stage format
+2. **Enemy Integration**: New enemies like `amarr_capital`, `machariel`, and `stratios` are defined in both:
+   - `data/enemies/*.json` (visual and behavior properties)
+   - `constants.py` ENEMY_STATS (core stats for game engine)
+3. **Boss Classes**: Specialized boss classes (like `CapitalShipEnemy`) can be added to the `expansion/` directory
+
+### Currently Available Expansion Content
+
+- **Capital Ship Assault** stage with the `amarr_capital` boss (Golden Supercarrier)
+  - Uses the specialized `CapitalShipEnemy` class with multi-turret firing
+- **Sisters Rescue** stage with `stratios` boss
+- **Pirate Invasion** stage with `machariel` boss
+
+### Adding Your Own Expansion Content
+
+See `docs/development.md` for detailed instructions on:
+- Creating new stage JSON files
+- Defining new enemies
+- Adding specialized boss behaviors
+- Extending the loader system
 
 ## Customization
 

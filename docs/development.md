@@ -204,6 +204,154 @@ When adding new functionality:
 - Ensure the `effect` ID matches a handler in the game code
 - Verify `duration` is a positive number
 
+## Creating Expansion Content
+
+The game now supports **expansion content** that is automatically loaded from the `data/` directory. This allows you to add new stages, enemies, and bosses without modifying the core game code.
+
+### Adding a New Expansion Stage
+
+1. **Create a JSON file** in `data/stages/` with a descriptive name (e.g., `my_custom_stage.json`)
+
+2. **Use one of two formats**:
+
+   **Simple Format** (recommended for most stages):
+   ```json
+   {
+     "name": "My Custom Stage",
+     "description": "Description of your stage",
+     "waves": 5,
+     "enemies": ["executioner", "punisher", "omen"],
+     "industrial_chance": 0.15,
+     "boss": "apocalypse"
+   }
+   ```
+
+   **Complex Format** (for fine-grained wave control):
+   ```json
+   {
+     "name": "My Complex Stage",
+     "description": "A more detailed stage",
+     "waves": [
+       {
+         "enemies": [
+           {"type": "executioner", "count": 10},
+           {"type": "punisher", "count": 5}
+         ]
+       },
+       {
+         "enemies": [
+           {"type": "omen", "count": 3}
+         ]
+       },
+       {
+         "boss": "amarr_capital"
+       }
+     ],
+     "boss": {
+       "type": "amarr_capital",
+       "name": "Golden Supercarrier"
+     }
+   }
+   ```
+
+3. **Stage will automatically load** on game startup
+
+### Adding a New Enemy or Boss
+
+1. **Add stats to `constants.py`** in the `ENEMY_STATS` dictionary:
+   ```python
+   'my_enemy': {
+       'name': 'My Enemy Name',
+       'shields': 100,
+       'armor': 150,
+       'hull': 80,
+       'speed': 1.5,
+       'fire_rate': 1200,
+       'score': 500,
+       'size': (50, 65),
+       'boss': False  # True for bosses
+   }
+   ```
+
+2. **(Optional) Create enemy JSON** in `data/enemies/my_enemy.json` for additional metadata:
+   ```json
+   {
+     "name": "My Enemy Name",
+     "description": "Description of the enemy",
+     "shields": 100,
+     "armor": 150,
+     "hull": 80,
+     "behavior": {
+       "pattern": "sine",
+       "aggressive": true,
+       "shoots": true
+     },
+     "visual": {
+       "color": [200, 100, 50]
+     }
+   }
+   ```
+
+3. **Reference the enemy** in your stage's `enemies` or `boss` field
+
+### Adding a Specialized Boss Class
+
+For bosses with unique mechanics (like the `amarr_capital` with multiple turrets):
+
+1. **Create a new Python file** in the `expansion/` directory (e.g., `expansion/my_boss.py`)
+
+2. **Extend the Enemy class**:
+   ```python
+   from sprites import Enemy
+   
+   class MyBossEnemy(Enemy):
+       def __init__(self, x, difficulty=None):
+           super().__init__('my_boss', x, y=-200, difficulty=difficulty or {})
+           # Add custom initialization
+       
+       def update(self, *args, **kwargs):
+           super().update(*args, **kwargs)
+           # Add custom behavior
+   ```
+
+3. **Import in `game.py`**:
+   ```python
+   from expansion.my_boss import MyBossEnemy
+   ```
+
+4. **Update spawn logic** in `game.py`'s `spawn_wave()` method:
+   ```python
+   if boss_type == 'my_boss':
+       boss = MyBossEnemy(SCREEN_WIDTH // 2, self.difficulty_settings)
+   ```
+
+### Expansion Content Loading Process
+
+When the game starts:
+
+1. `constants.py` calls `load_expansion_stages()`
+2. All JSON files in `data/stages/` are loaded via `core/loader.py`
+3. Stage definitions are converted to the game's internal format
+4. Expansion stages are appended to the `STAGES` list
+5. The game can now access all stages (core + expansion)
+
+### Example: The Capital Ship Expansion
+
+The included expansion demonstrates all these concepts:
+
+- **Boss Enemy**: `amarr_capital` added to `ENEMY_STATS` in `constants.py`
+- **Boss Class**: `expansion/capital_ship_enemy.py` with multi-turret mechanics
+- **Stage Definition**: `data/stages/capital_ship_assault.json` with complex wave format
+- **Game Integration**: `game.py` checks for `amarr_capital` and spawns `CapitalShipEnemy`
+
+### Best Practices for Expansions
+
+- **Keep enemy names consistent** between JSON files and `ENEMY_STATS`
+- **Test in isolation** by creating a simple test stage first
+- **Document special mechanics** in JSON `description` fields
+- **Balance carefully** - expansion bosses should be challenging but fair
+- **Avoid modifying core files** - use the expansion system instead
+
 ## Future Improvements
 
 Planned enhancements to the data system:
