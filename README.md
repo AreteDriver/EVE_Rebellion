@@ -264,7 +264,7 @@ Edit `constants.py` to adjust:
 **No sound/Audio warnings or crashes**
 - Sound generation requires NumPy: `pip install numpy`
 - On systems without audio devices (e.g., headless servers, Docker containers), pygame.mixer.init() may fail.
-- Current workaround: The game initializes audio in `game.py` line 41. On systems without audio, you may need to wrap this in a try-except block or set SDL environment variable:
+- Current workaround: The game initializes audio in `game.py` using pygame.mixer.init(). On systems without audio, you may need to wrap this in a try-except block or set SDL environment variable:
   ```bash
   export SDL_AUDIODRIVER=dummy
   python main.py
