@@ -194,7 +194,7 @@ If you don't see ships or other graphics:
 
 1. **Check Pygame version**: Ensure you have Pygame 2.0+ installed
    ```bash
-   python3 -c "import pygame; print(pygame.version.ver)"
+   python3 -c "import pygame; print(pygame.__version__)"
    ```
 
 2. **Verify display initialization**: Make sure your system can create a display window
@@ -209,8 +209,8 @@ If you don't see ships or other graphics:
 
 4. **Try software rendering** (if hardware acceleration fails):
    ```bash
-   SDL_VIDEODRIVER=software python main.py    # Linux/macOS
-   set SDL_VIDEODRIVER=software && python main.py  # Windows
+   SDL_VIDEODRIVER=software python3 main.py    # Linux/macOS
+   set SDL_VIDEODRIVER=software && python3 main.py  # Windows
    ```
 
 ### Audio warnings (ALSA errors on Linux)
@@ -218,7 +218,7 @@ If you don't see ships or other graphics:
 ALSA warnings like "cannot find card '0'" are harmless and don't affect gameplay. They occur when audio hardware is unavailable. The game will continue with audio disabled. To suppress these warnings:
 
 ```bash
-SDL_AUDIODRIVER=dummy python main.py
+SDL_AUDIODRIVER=dummy python3 main.py
 ```
 
 Or disable sound in-game by pressing 'S' in the menu.
@@ -245,7 +245,7 @@ If the game runs slowly:
 3. **Run from the correct directory**: Always run from the game's root directory
    ```bash
    cd /path/to/EVE_Rebellion
-   python main.py
+   python3 main.py
    ```
 
 ## IP Notice
