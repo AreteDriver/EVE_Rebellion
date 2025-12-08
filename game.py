@@ -114,9 +114,9 @@ class Game:
         num_enemies = 3 + self.current_wave + self.current_stage
         
         # Check for boss wave
-        if (stage['boss'] and self.current_wave == stage['waves'] - 1):
+        if (stage.get('boss') and self.current_wave == stage['waves'] - 1):
             # Boss wave
-            boss = Enemy(stage['boss'], SCREEN_WIDTH // 2, -100, self.difficulty_settings)
+            boss = Enemy(stage.get('boss'), SCREEN_WIDTH // 2, -100, self.difficulty_settings)
             self.enemies.add(boss)
             self.all_sprites.add(boss)
             self.wave_enemies = 1
@@ -521,7 +521,7 @@ class Game:
         if self.wave_enemies == 0 and not self.stage_complete:
             if self.current_wave < stage['waves']:
                 self.spawn_wave()
-                if not (stage['boss'] and self.current_wave == stage['waves'] - 1):
+                if not (stage.get('boss') and self.current_wave == stage['waves'] - 1):
                     self.show_message(f"Wave {self.current_wave + 1}/{stage['waves']}", 90)
                     self.play_sound('wave_start', 0.4)
         
