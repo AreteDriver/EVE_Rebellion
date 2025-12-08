@@ -338,8 +338,8 @@ def _convert_json_stage_to_stage_format(stage_data):
         waves_list = stage_data['waves']
         num_waves = len(waves_list)
         
-        # Collect all enemy types from all waves
-        all_enemies = []
+        # Collect all enemy types from all waves (using set for O(1) lookups)
+        all_enemies_set = set()
         boss_type = None
         
         for wave in waves_list:
@@ -348,8 +348,7 @@ def _convert_json_stage_to_stage_format(stage_data):
             elif 'enemies' in wave:
                 for enemy_def in wave['enemies']:
                     if isinstance(enemy_def, dict) and 'type' in enemy_def:
-                        if enemy_def['type'] not in all_enemies:
-                            all_enemies.append(enemy_def['type'])
+                        all_enemies_set.add(enemy_def['type'])
         
         # Check if stage has a boss definition at top level
         if not boss_type and 'boss' in stage_data:
@@ -362,7 +361,7 @@ def _convert_json_stage_to_stage_format(stage_data):
         return {
             'name': stage_data.get('name', 'Unknown Stage'),
             'waves': num_waves,
-            'enemies': all_enemies if all_enemies else ['executioner', 'punisher'],
+            'enemies': list(all_enemies_set) if all_enemies_set else ['executioner', 'punisher'],
             'industrial_chance': 0.1,  # Default value
             'boss': boss_type
         }
