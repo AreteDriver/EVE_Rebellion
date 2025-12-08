@@ -20,6 +20,32 @@ A top-down arcade space shooter inspired by EVE Online, featuring the iconic Rif
 
 ## Installation
 
+### Quick Start (Manual)
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the game
+python main.py
+```
+
+### Installation via setup.py
+
+```bash
+# Clone or download the repository
+git clone https://github.com/AreteDriver/EVE_Rebellion.git
+cd EVE_Rebellion
+
+# Install the game and dependencies
+pip install -e .
+
+# Run from anywhere
+minmatar-rebellion
+```
+
+### Direct Dependency Installation
+
 ```bash
 pip install pygame numpy
 ```
@@ -34,6 +60,11 @@ Or on Linux:
 ```bash
 chmod +x main.py
 ./main.py
+```
+
+If installed via setup.py:
+```bash
+minmatar-rebellion
 ```
 
 ## Controls
