@@ -1,5 +1,4 @@
 """Mobile-specific constants for Minmatar Rebellion"""
-import pygame
 
 # Mobile display - optimized for portrait mobile screens
 # Will be overridden at runtime based on actual device

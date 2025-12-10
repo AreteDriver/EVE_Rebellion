@@ -1,7 +1,14 @@
 """Touch controls module for mobile version of Minmatar Rebellion"""
 import pygame
 import math
-from mobile_constants import *
+from mobile_constants import (
+    JOYSTICK_AREA_X, JOYSTICK_AREA_Y, JOYSTICK_RADIUS, JOYSTICK_KNOB_RADIUS,
+    FIRE_BUTTON_X, FIRE_BUTTON_Y, FIRE_BUTTON_RADIUS, FIRE_BUTTON_COLOR,
+    ROCKET_BUTTON_X, ROCKET_BUTTON_Y, ROCKET_BUTTON_RADIUS, ROCKET_BUTTON_COLOR,
+    AMMO_BUTTON_SIZE, AMMO_BUTTON_SPACING, AMMO_BUTTONS_X, AMMO_BUTTONS_Y,
+    PAUSE_BUTTON_X, PAUSE_BUTTON_Y, PAUSE_BUTTON_SIZE,
+    TOUCH_CONTROL_COLOR, TOUCH_CONTROL_ACTIVE, TOUCH_DEAD_ZONE
+)
 
 # Use negative ID for mouse events to distinguish from touch finger IDs
 MOUSE_TOUCH_ID = -1

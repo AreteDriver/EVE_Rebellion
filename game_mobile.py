@@ -1,13 +1,16 @@
 """Mobile game logic for Minmatar Rebellion - Touch Controls Edition"""
 import pygame
 import random
-import math
 import asyncio
-from constants import *
-from mobile_constants import *
-from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
-                     RefugeePod, Powerup, Explosion, Star)
-from sounds import get_sound_manager, get_music_manager, play_sound
+from constants import (SHAKE_DECAY, SHAKE_SMALL, SHAKE_MEDIUM, SHAKE_LARGE,
+                      COLOR_AMARR_ACCENT, COLOR_MINMATAR_ACCENT, COLOR_SHIELD,
+                      COLOR_ARMOR, COLOR_HULL, COLOR_TEXT,
+                      DIFFICULTY_SETTINGS, STAGES, UPGRADE_COSTS, POWERUP_TYPES,
+                      AMMO_TYPES, FPS)
+from mobile_constants import (MOBILE_SCREEN_WIDTH, MOBILE_SCREEN_HEIGHT,
+                              MOBILE_PLAYER_SPEED_MULT, MOBILE_FIRE_RATE_MULT)
+from sprites import (Player, Enemy, RefugeePod, Powerup, Explosion, Star)
+from sounds import get_sound_manager, get_music_manager
 from touch_controls import TouchControls
 
 # Mobile-specific event and timing constants
@@ -303,8 +306,8 @@ class MobileGame:
     def _handle_shop_touch(self, x, y):
         """Handle shop touch interactions"""
         # Calculate which upgrade was tapped based on y position
-        base_y = self.screen_height * 0.2
-        item_height = self.screen_height * 0.08
+        base_y = 120  # Match draw_shop starting y position
+        item_height = 45  # Match draw_shop spacing
         
         relative_y = y - base_y
         if relative_y > 0:
@@ -618,6 +621,13 @@ class MobileGame:
         for enemy in hits:
             self.shake.add(SHAKE_MEDIUM)
             self.play_sound('hull_hit', 0.8)
+            # Create collision explosion effect
+            explosion = Explosion(enemy.rect.centerx, enemy.rect.centery, 40, COLOR_MINMATAR_ACCENT)
+            self.effects.add(explosion)
+            self.all_sprites.add(explosion)
+            # Destroy the enemy on collision
+            enemy.kill()
+            
             if self.player.take_damage(30):
                 self.play_sound('explosion_large')
                 self.shake.add(SHAKE_LARGE)
