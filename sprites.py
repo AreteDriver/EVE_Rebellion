@@ -426,7 +426,7 @@ class EscortShip(pygame.sprite.Sprite):
             dy = bullet.rect.centery - self.player.rect.centery
             dist_to_player = math.sqrt(dx * dx + dy * dy)
             
-            if dist_to_player < ESCORT_INTERCEPT_DISTANCE:  # Bullet is close to player
+            if dist_to_player < intercept_range:  # Bullet is close to player
                 dx = bullet.rect.centerx - self.rect.centerx
                 dy = bullet.rect.centery - self.rect.centery
                 dist = math.sqrt(dx * dx + dy * dy)

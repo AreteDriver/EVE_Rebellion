@@ -213,6 +213,9 @@ class Game:
                             self.play_sound('ammo_switch')
                         elif self.player.is_jaguar and not self.player.can_switch_formation():
                             self.play_sound('error')
+                        elif not self.player.is_jaguar:
+                            self.show_message("Requires Jaguar upgrade", 60)
+                            self.play_sound('error')
                     else:
                         # Check ammo hotkeys
                         for ammo_type, data in AMMO_TYPES.items():
@@ -777,9 +780,10 @@ class Game:
             # Cooldown indicator
             if not self.player.can_switch_formation():
                 cooldown_remaining = (self.player.formation_cooldown_until - pygame.time.get_ticks()) / max(FORMATION_COOLDOWN, 1)
-                cooldown_width = int(60 * max(0, cooldown_remaining))
-                pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y + 14, 60, 4))
-                pygame.draw.rect(self.render_surface, (150, 150, 150), (x, y + 14, 60 - cooldown_width, 4))
+                cooldown_progress = 1 - cooldown_remaining  # Progress from 0 to 1
+                progress_width = int(60 * max(0, min(1, cooldown_progress)))
+                pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y + 14, 60, 4))  # Background
+                pygame.draw.rect(self.render_surface, (150, 150, 150), (x, y + 14, progress_width, 4))  # Progress
             
             # Escort count
             y += 22
@@ -877,7 +881,13 @@ class Game:
         for key, name, cost, owned, desc in upgrades:
             if owned:
                 color = (80, 80, 80)
-                status = "[OWNED]" if (name == "WOLF UPGRADE" and player.is_wolf) or (name == "JAGUAR UPGRADE" and player.is_jaguar) else "[N/A]"
+                # Determine if truly owned vs blocked
+                if name == "WOLF UPGRADE":
+                    status = "[OWNED]" if player.is_wolf else "[N/A]"
+                elif name == "JAGUAR UPGRADE":
+                    status = "[OWNED]" if player.is_jaguar else "[N/A]"
+                else:
+                    status = "[OWNED]"
             elif player.refugees >= cost:
                 color = (100, 255, 100)
                 status = f"[{cost} refugees]"

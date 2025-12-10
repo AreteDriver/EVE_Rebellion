@@ -188,7 +188,7 @@ FORMATION_TYPES = {
         ],
         'orbit_radius': 20,
         'orbit_speed': 3.0,
-        'fire_spread': -10,  # Wider spread for area denial
+        'fire_spread': 10,  # Wider spread for area denial
         'intercept_range': 60,  # Can intercept projectiles within this range
     },
 }
