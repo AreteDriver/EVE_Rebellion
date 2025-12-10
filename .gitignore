@@ -50,3 +50,35 @@ htmlcov/
 /tmp/
 *.tmp
 *.bak
+
+# Build artifacts
+*.zip
+*.tar.gz
+*.exe
+*.app
+*.dmg
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+
+# Game save files (if any)
+saves/
+*.sav
+
+# PyInstaller spec files
+*.spec
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Environments
+.env
+.env.local
