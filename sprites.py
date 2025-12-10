@@ -191,13 +191,6 @@ class Player(pygame.sprite.Sprite):
         self.skill_points += amount
         self.total_skill_points += amount
     
-    def spend_skill_points(self, amount):
-        """Spend skill points, returns True if successful"""
-        if self.skill_points >= amount:
-            self.skill_points -= amount
-            return True
-        return False
-    
     def unlock_ammo(self, ammo_type):
         """Unlock new ammo type"""
         if ammo_type not in self.unlocked_ammo:
