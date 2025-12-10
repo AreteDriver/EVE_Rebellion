@@ -188,6 +188,10 @@ class Player(pygame.sprite.Sprite):
         if variant_type not in RIFTER_T2_VARIANTS:
             return False
         
+        # Prevent upgrading if already has a ship upgrade
+        if self.is_wolf or self.t2_variant is not None:
+            return False
+        
         variant = RIFTER_T2_VARIANTS[variant_type]
         self.t2_variant = variant_type
         self.is_wolf = False  # T2 variants are not Wolf
@@ -198,7 +202,8 @@ class Player(pygame.sprite.Sprite):
         self.max_hull += variant['hull_bonus']
         self.armor = min(self.armor + variant['armor_bonus'], self.max_armor)
         self.hull = min(self.hull + variant['hull_bonus'], self.max_hull)
-        self.fire_rate_mult *= variant['fire_rate_mult']
+        # Set fire rate mult directly to avoid compounding with Gyrostabilizer
+        self.fire_rate_mult = variant['fire_rate_mult']
         self.rocket_cooldown_mult = variant['rocket_cooldown_mult']
         self.rocket_salvo = variant['rocket_salvo']
         self.spread_bonus += variant['spread_bonus']
@@ -390,7 +395,9 @@ class Rocket(pygame.sprite.Sprite):
         if angle != 0:
             self.image = pygame.transform.rotate(self.image, -angle)
         
-        self.rect = self.image.get_rect(center=(x, y))
+        # Always set the rect center to (x, y) after rotation
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
         self.damage = ROCKET_DAMAGE
         self.shield_mult = 1.2
         self.armor_mult = 1.2
@@ -672,8 +679,15 @@ class Enemy(pygame.sprite.Sprite):
             # React to autocannon variant - increase aggression (fire faster)
             # This makes them prioritize attacking the high-threat autocannon
             if self.fire_rate > 0 and random.random() < 0.01:
-                # Occasionally fire faster when facing autocannon rifter
-                self.last_shot -= 200
+                # Reduce cooldown by 30% (fire 30% faster), but never allow negative cooldown
+                now = pygame.time.get_ticks()
+                time_since_last_shot = now - self.last_shot
+                normal_cooldown = self.fire_rate
+                reduced_cooldown = int(self.fire_rate * 0.7)
+                # If enough time has not passed, reduce the cooldown
+                if time_since_last_shot < normal_cooldown:
+                    # Set last_shot so next shot is allowed after reduced_cooldown
+                    self.last_shot = now - (normal_cooldown - reduced_cooldown)
     
     def _move_evasive(self, player_rect):
         """Evasive movement pattern when facing rocket specialist"""
