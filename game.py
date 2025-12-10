@@ -484,6 +484,7 @@ class Game:
                 return
         
         # Enemy bullets vs fleet ships
+        # Note: list() copy needed since bullet.kill() modifies the group during iteration
         for bullet in list(self.enemy_bullets):
             # Iterate in reverse to safely remove ships during iteration
             for i in range(len(self.player.fleet_ships) - 1, -1, -1):

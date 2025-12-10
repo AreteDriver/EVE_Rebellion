@@ -415,6 +415,10 @@ class FleetShip:
         self.max_hull = FLEET_SHIP_HULL
         
         # Position offset from main ship
+        # Alternating pattern: center (0), right (+45), left (-45), right (+90), left (-90), ...
+        # Formula: distance * direction, where:
+        #   - distance = SPACING * ((index+1)//2) gives 0, 45, 45, 90, 90, ...
+        #   - direction = +1 for odd indices (right), -1 for even indices (left)
         self.offset_x = FLEET_SHIP_SPACING * ((index + 1) // 2) * (1 if index % 2 == 1 else -1)
         self.offset_y = 10  # Slightly behind
         
