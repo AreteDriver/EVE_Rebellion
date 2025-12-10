@@ -255,6 +255,14 @@ class Player(pygame.sprite.Sprite):
     def activate_fleet_upgrade(self):
         """Activate fleet upgrade - expand to max ships with volleys"""
         now = pygame.time.get_ticks()
+        
+        # If fleet is already active, only refresh timer and volleys without recreating ships
+        if self.is_fleet_active():
+            self.fleet_upgrade_until = now + FLEET_UPGRADE_DURATION
+            self.fleet_volleys_remaining = FLEET_VOLLEY_COUNT
+            return
+        
+        # First activation - create new fleet
         self.fleet_count = FLEET_MAX_SHIPS
         self.fleet_upgrade_until = now + FLEET_UPGRADE_DURATION
         self.fleet_volleys_remaining = FLEET_VOLLEY_COUNT
