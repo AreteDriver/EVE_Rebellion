@@ -147,13 +147,34 @@ Sound gracefully disables if no audio device is available.
 ## File Structure
 
 ```
-minmatar_rebellion/
-├── main.py          # Entry point
-├── game.py          # Main game logic, states, rendering
-├── sprites.py       # All game entities (player, enemies, bullets)
-├── constants.py     # Configuration, stats, stage definitions
-├── sounds.py        # Procedural sound generation
-└── README.md        # This file
+EVE_Rebellion/
+├── main.py              # Entry point
+├── game.py              # Main game logic, states, rendering
+├── sprites.py           # All game entities (player, enemies, bullets)
+├── constants.py         # Configuration, stats, stage definitions
+├── sounds.py            # Procedural sound generation
+├── core/                # Core utilities
+│   ├── __init__.py
+│   └── loader.py        # JSON data loader (for future expansion)
+├── enemies/             # Enemy implementations (reserved for expansion)
+│   └── __init__.py
+├── stages/              # Stage implementations (reserved for expansion)
+│   └── __init__.py
+├── powerups/            # Powerup implementations (reserved for expansion)
+│   └── __init__.py
+├── expansion/           # Experimental/future features
+│   ├── capital_ship_enemy.py    # Capital ship boss class
+│   └── upgrade_screen.py        # Skill point upgrade system (WIP)
+├── data/                # JSON data files for expansion content
+│   ├── enemies/         # Enemy definitions (*.json)
+│   ├── stages/          # Stage definitions (*.json)
+│   ├── powerups/        # Power-up definitions (*.json)
+│   └── upgrades.json    # Upgrade tree definitions
+├── docs/                # Documentation
+│   ├── development.md   # Development guide
+│   └── CONTRIBUTING.md  # Contribution guidelines
+├── README.md            # This file
+└── LICENSE              # License information
 ```
 
 ## Graphics
@@ -251,6 +272,19 @@ If the game runs slowly:
 ## IP Notice
 
 This is a personal/fan project. Ship designs and names are inspired by CCP Games' EVE Online. For any commercial use, original designs would need to be created or licensing obtained.
+
+## Future Features & Expansion
+
+The repository includes experimental features and content for future development:
+
+- **Data-Driven Content System**: The `data/` directory contains JSON definitions for enemies, stages, and powerups that can be loaded dynamically (see `core/loader.py`)
+- **Skill Point Progression**: A work-in-progress upgrade system (`expansion/upgrade_screen.py`) for persistent player progression
+- **Capital Ship Bosses**: Enhanced boss enemy with multiple turrets (`expansion/capital_ship_enemy.py`)
+- **Additional Enemy Types**: JSON definitions for expanded enemy roster including pirate factions and Sisters of EVE ships
+- **New Powerups**: Triple shot, enhanced shields, and other tactical powerups
+- **Jaguar T2 Upgrade**: Planned advanced assault frigate upgrade beyond the Wolf
+
+These features are not yet integrated into the main game but are available for contributors to develop further. See `CONTRIBUTING.md` for details on the data-driven architecture.
 
 ---
 
