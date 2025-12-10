@@ -306,7 +306,7 @@ class Player(pygame.sprite.Sprite):
             self.rockets -= 1
             # Spread rockets for multi-rocket salvos
             if self.rocket_salvo > 1:
-                angle = (i - (self.rocket_salvo - 1) / 2) * 15  # 15 degree spread
+                angle = (i - (self.rocket_salvo - 1) // 2) * 15  # 15 degree spread
                 rockets.append(Rocket(self.rect.centerx, self.rect.top, angle))
             else:
                 rockets.append(Rocket(self.rect.centerx, self.rect.top))
