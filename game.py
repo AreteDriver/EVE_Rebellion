@@ -942,7 +942,7 @@ class Game:
         sp_bar_width = 150
         sp_bar_height = 10
         # Calculate progress towards next T2 unlock using actual cost from constants
-        next_unlock_cost = min(T2_SHIP_COSTS.values())
+        next_unlock_cost = min(T2_SHIP_COSTS.values()) if T2_SHIP_COSTS else 1
         sp_progress = min(self.player.skill_points / next_unlock_cost, 1.0)
         
         pygame.draw.rect(self.render_surface, (30, 30, 50), (x, y, sp_bar_width, sp_bar_height))
