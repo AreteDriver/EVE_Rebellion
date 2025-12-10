@@ -683,11 +683,11 @@ class Enemy(pygame.sprite.Sprite):
                 now = pygame.time.get_ticks()
                 time_since_last_shot = now - self.last_shot
                 normal_cooldown = self.fire_rate
-                reduced_cooldown = int(self.fire_rate * 0.7)
+                faster_fire_rate = int(self.fire_rate * 0.7)
                 # If enough time has not passed, reduce the cooldown
                 if time_since_last_shot < normal_cooldown:
-                    # Set last_shot so next shot is allowed after reduced_cooldown
-                    self.last_shot = now - (normal_cooldown - reduced_cooldown)
+                    # Set last_shot so next shot is allowed after faster_fire_rate
+                    self.last_shot = now - (normal_cooldown - faster_fire_rate)
     
     def _move_evasive(self, player_rect):
         """Evasive movement pattern when facing rocket specialist"""

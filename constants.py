@@ -141,7 +141,7 @@ RIFTER_T2_VARIANTS = {
         'armor_bonus': 30,
         'hull_bonus': 20,
         'fire_rate_mult': 1.4,      # 40% faster autocannon fire
-        'rocket_cooldown_mult': 0.77, # 30% faster rockets
+        'rocket_cooldown_mult': 0.77, # ~30% faster rockets
         'rocket_salvo': 1,          # Fires 1 rocket at a time
         'spread_bonus': 1,          # +1 gun spread
         'color_accent': (255, 140, 0),  # Orange accent
@@ -153,7 +153,7 @@ RIFTER_T2_VARIANTS = {
         'armor_bonus': 40,
         'hull_bonus': 30,
         'fire_rate_mult': 1.0,      # Normal autocannon fire
-        'rocket_cooldown_mult': 0.67, # 50% faster rockets
+        'rocket_cooldown_mult': 0.67, # ~50% faster rockets
         'rocket_salvo': 2,          # Fires 2 rockets in a spread
         'spread_bonus': 0,          # No gun spread bonus
         'max_rockets_bonus': 10,    # +10 max rockets
