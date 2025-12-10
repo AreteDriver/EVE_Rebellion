@@ -757,9 +757,12 @@ class Game:
                 lock_rect = lock_text.get_rect(center=(x, y + 115))
                 self.render_surface.blit(lock_text, lock_rect)
         
-        # Draw info bubble for selected ship
+        # Get selected ship for instructions
         selected_ship = ships[self.ship_select_index]
-        self.draw_ship_info_bubble(selected_ship)
+        
+        # Draw info bubble for selected ship (if toggled on)
+        if self.show_ship_info:
+            self.draw_ship_info_bubble(selected_ship)
         
         # Instructions
         y = 620
@@ -775,7 +778,7 @@ class Game:
         self.render_surface.blit(text, rect)
         
         y += 30
-        text = self.font_small.render("[LEFT/RIGHT] Select Ship    [ESC] Back", True, (150, 150, 150))
+        text = self.font_small.render("[LEFT/RIGHT] Select    [I] Info    [ESC] Back", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
     
@@ -941,17 +944,19 @@ class Game:
         y += bar_height + 8
         sp_bar_width = 150
         sp_bar_height = 10
-        # Calculate progress towards next T2 unlock using actual cost from constants
+        # Calculate progress towards next T2 unlock using persistent total SP
         next_unlock_cost = min(T2_SHIP_COSTS.values()) if T2_SHIP_COSTS else 1
-        sp_progress = min(self.player.skill_points / next_unlock_cost, 1.0)
+        # Show total persistent SP (used for unlocks) in progress bar
+        total_sp = self.total_skill_points + self.player.skill_points
+        sp_progress = min(total_sp / next_unlock_cost, 1.0)
         
         pygame.draw.rect(self.render_surface, (30, 30, 50), (x, y, sp_bar_width, sp_bar_height))
         pygame.draw.rect(self.render_surface, (200, 150, 255), (x, y, int(sp_bar_width * sp_progress), sp_bar_height))
         pygame.draw.rect(self.render_surface, (100, 80, 150), (x, y, sp_bar_width, sp_bar_height), 1)
         
-        # Skill points text
+        # Skill points text - show current game SP and total
         y += sp_bar_height + 2
-        text = self.font_small.render(f"SP: {self.player.skill_points}", True, (200, 150, 255))
+        text = self.font_small.render(f"SP: {self.player.skill_points} (+{self.total_skill_points})", True, (200, 150, 255))
         self.render_surface.blit(text, (x, y))
         
         # Ammo indicator

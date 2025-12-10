@@ -76,9 +76,8 @@ class Player(pygame.sprite.Sprite):
         self.total_refugees = 0
         self.score = 0
         
-        # Skill Points
+        # Skill Points (current game only)
         self.skill_points = 0
-        self.total_skill_points = 0
     
     def _create_ship_image(self):
         """Create Rifter/Wolf/Jaguar sprite"""
@@ -187,9 +186,8 @@ class Player(pygame.sprite.Sprite):
         self.image = self._create_ship_image()
     
     def add_skill_points(self, amount):
-        """Add skill points from enemy kills"""
+        """Add skill points from enemy kills (current game only)"""
         self.skill_points += amount
-        self.total_skill_points += amount
     
     def unlock_ammo(self, ammo_type):
         """Unlock new ammo type"""
