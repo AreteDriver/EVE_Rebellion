@@ -216,6 +216,9 @@ class Game:
                         elif not self.player.is_jaguar:
                             self.show_message("Requires Jaguar upgrade", 60)
                             self.play_sound('error')
+                        elif not self.player.is_jaguar:
+                            self.show_message("Requires Jaguar upgrade", 60)
+                            self.play_sound('error')
                     else:
                         # Check ammo hotkeys
                         for ammo_type, data in AMMO_TYPES.items():
