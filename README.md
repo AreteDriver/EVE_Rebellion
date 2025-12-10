@@ -43,6 +43,7 @@ chmod +x main.py
 | Move | WASD or Arrow Keys |
 | Fire Autocannons | Space or Left Mouse Button |
 | Fire Rockets | Shift or Right Mouse Button |
+| Fleet Volley | V (when fleet upgrade active) |
 | Select Ammo | 1-5 |
 | Cycle Ammo | Q or Tab |
 | Pause | ESC |
@@ -105,6 +106,17 @@ Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees al
 | Fusion Ammo | 45 | Unlock Fusion rounds |
 | Barrage Ammo | 55 | Unlock Barrage rounds |
 | **Wolf Upgrade** | 50 | T2 Assault Frigate! |
+| **Fleet Upgrade** | 40 | Enables 5-ship fleet ability! |
+
+### Fleet System
+
+Purchase the Fleet Upgrade to unlock the fleet system:
+- **Fleet Beacon** powerup activates 5 Rifter Frigates for 15 seconds
+- Each fleet ship fires alongside your main ship
+- **Fleet Volley (V key)**: Fire 5 devastating volleys during the upgrade
+- After the timer expires, fleet downgrades to 3 ships
+- Each fleet ship has individual health and can be destroyed
+- Fleet ships follow your movement in formation
 
 ### Power-ups (dropped by enemies)
 
@@ -112,6 +124,7 @@ Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees al
 - **Capacitor Booster** (blue) - Refills rockets
 - **Overdrive** (yellow) - Temporary speed boost
 - **Shield Booster** (light blue) - Temporary damage reduction + shield repair
+- **Fleet Beacon** (orange) - Activates fleet upgrade (requires Fleet Upgrade purchase)
 
 ## Enemy Types
 
@@ -156,20 +169,6 @@ minmatar_rebellion/
 └── README.md        # This file
 ```
 
-## Graphics
-
-All ship graphics and visual effects are **procedurally generated** using Pygame's drawing primitives. The game does not use or require any external image files (PNG, JPG, etc.). Ships, bullets, explosions, and UI elements are all drawn programmatically at runtime.
-
-This design choice means:
-- ✓ No missing image files
-- ✓ No path configuration needed
-- ✓ Lightweight distribution
-- ✓ Easy customization via code
-
-Ship designs are created in `sprites.py`:
-- Player ships (Rifter/Wolf): `Player._create_ship_image()`
-- Enemy ships: `Enemy._create_image()`
-
 ## Customization
 
 Edit `constants.py` to adjust:
@@ -180,73 +179,6 @@ Edit `constants.py` to adjust:
 - Upgrade costs
 - Difficulty multipliers
 - Screen shake intensity
-
-Edit `sprites.py` to modify ship visuals:
-- Change ship colors by modifying `COLOR_*` constants
-- Adjust ship shapes in the `_create_ship_image()` and `_create_image()` methods
-- Modify bullet, explosion, and powerup visuals
-
-## Troubleshooting
-
-### Ships or graphics not displaying
-
-If you don't see ships or other graphics:
-
-1. **Check Pygame version**: Ensure you have Pygame 2.0+ installed
-   ```bash
-   python3 -c "import pygame; print(pygame.__version__)"
-   ```
-
-2. **Verify display initialization**: Make sure your system can create a display window
-   ```bash
-   python3 -c "import pygame; pygame.init(); pygame.display.set_mode((100,100))"
-   ```
-
-3. **Update graphics drivers**: Outdated graphics drivers can cause rendering issues
-   - Linux: Update mesa/graphics drivers via your package manager
-   - Windows: Update via Device Manager or GPU manufacturer's site
-   - macOS: Keep system updated
-
-4. **Try software rendering** (if hardware acceleration fails):
-   ```bash
-   SDL_VIDEODRIVER=software python3 main.py    # Linux/macOS
-   set SDL_VIDEODRIVER=software && python3 main.py  # Windows
-   ```
-
-### Audio warnings (ALSA errors on Linux)
-
-ALSA warnings like "cannot find card '0'" are harmless and don't affect gameplay. They occur when audio hardware is unavailable. The game will continue with audio disabled. To suppress these warnings:
-
-```bash
-SDL_AUDIODRIVER=dummy python3 main.py
-```
-
-Or disable sound in-game by pressing 'S' in the menu.
-
-### Performance issues
-
-If the game runs slowly:
-- Lower `FPS` in `constants.py` (default: 60)
-- Reduce `SCREEN_WIDTH` and `SCREEN_HEIGHT` for lower resolution
-- Disable screen shake by setting shake constants to 0
-
-### Black screen or crash on startup
-
-1. **Ensure dependencies are installed**:
-   ```bash
-   pip install --upgrade pygame numpy
-   ```
-
-2. **Check Python version**: Requires Python 3.8 or higher
-   ```bash
-   python3 --version
-   ```
-
-3. **Run from the correct directory**: Always run from the game's root directory
-   ```bash
-   cd /path/to/EVE_Rebellion
-   python3 main.py
-   ```
 
 ## IP Notice
 
