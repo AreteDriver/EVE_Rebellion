@@ -133,6 +133,7 @@ The executable will be created in the `dist/` directory.
 | Move | WASD or Arrow Keys |
 | Fire Autocannons | Space or Left Mouse Button |
 | Fire Rockets | Shift or Right Mouse Button |
+| Fleet Volley | V (when fleet upgrade active) |
 | Select Ammo | 1-5 |
 | Cycle Ammo | Q or Tab |
 | Pause | ESC |
@@ -222,6 +223,17 @@ Ammo types must be unlocked at the Rebel Station between stages.
 | Fusion Ammo | 45 | Unlock Fusion rounds |
 | Barrage Ammo | 55 | Unlock Barrage rounds |
 | **Wolf Upgrade** | 50 | T2 Assault Frigate! |
+| **Fleet Upgrade** | 40 | Enables 5-ship fleet ability! |
+
+### Fleet System
+
+Purchase the Fleet Upgrade to unlock the fleet system:
+- **Fleet Beacon** powerup activates 5 Rifter Frigates for 15 seconds
+- Each fleet ship fires alongside your main ship
+- **Fleet Volley (V key)**: Fire 5 devastating volleys during the upgrade
+- After the timer expires, fleet downgrades to 3 ships
+- Each fleet ship has individual health and can be destroyed
+- Fleet ships follow your movement in formation
 
 ## 💊 Power-ups
 
@@ -231,6 +243,7 @@ Dropped by enemies during combat:
 - **Capacitor Booster** (blue) - Refills rockets
 - **Overdrive** (yellow) - Temporary speed boost
 - **Shield Booster** (light blue) - Temporary damage reduction + shield repair
+- **Fleet Beacon** (orange) - Activates fleet upgrade (requires Fleet Upgrade purchase)
 
 ## 👾 Enemy Types
 
