@@ -38,6 +38,8 @@ pip install -r requirements.txt
 ```
 
 Or install manually:
+Or install minimal dependencies for gameplay only:
+
 ```bash
 pip install pygame numpy
 ```
@@ -183,13 +185,47 @@ Sound gracefully disables if no audio device is available.
 
 ```
 minmatar_rebellion/
-├── main.py          # Entry point
-├── game.py          # Main game logic, states, rendering
-├── sprites.py       # All game entities (player, enemies, bullets)
-├── constants.py     # Configuration, stats, stage definitions
-├── sounds.py        # Procedural sound generation
-└── README.md        # This file
+├── main.py              # Entry point
+├── game.py              # Main game logic, states, rendering
+├── sprites.py           # All game entities (player, enemies, bullets)
+├── constants.py         # Configuration, stats, stage definitions
+├── sounds.py            # Procedural sound generation
+├── requirements.txt     # Python dependencies
+├── tests/               # Unit tests
+├── .github/workflows/   # CI/CD workflows
+└── README.md            # This file
 ```
+
+## Development & CI/CD
+
+This project uses GitHub Actions for automated testing and deployment:
+
+- **Continuous Integration**: Tests run automatically on every push and pull request
+- **Continuous Deployment**: Releases are built automatically when you push a tag
+
+For more information, see [docs/WORKFLOWS.md](docs/WORKFLOWS.md).
+
+### Running Tests
+
+```bash
+pip install -r requirements.txt
+pytest -v
+```
+
+### Code Linting
+
+```bash
+flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+```
+
+### Building Standalone Executables
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name MinmatarRebellion main.py
+```
+
+The executable will be in the `dist/` directory.
 
 ## Graphics
 
