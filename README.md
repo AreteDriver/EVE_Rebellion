@@ -100,6 +100,24 @@ python main.py
 
 ### Installation via setup.py
 
+### Option 1: Quick Install (Global)
+
+```bash
+pip install pygame numpy
+```
+
+### Option 2: Virtual Environment (Recommended)
+
+Using a virtual environment keeps your project dependencies isolated:
+
+**On Windows:**
+```bash
+python -m venv venv
+venv\Scripts\activate
+pip install pygame numpy
+```
+
+**On macOS/Linux:**
 ```bash
 # Clone or download the repository
 git clone https://github.com/AreteDriver/EVE_Rebellion.git
@@ -138,6 +156,8 @@ run.bat
 ```
 
 ### Direct execution
+
+Make sure you have activated your virtual environment (if using one), then run:
 
 ```bash
 python main.py
@@ -393,7 +413,7 @@ Edit `constants.py` to adjust:
 - Difficulty multipliers
 - Screen shake intensity
 
-Edit `sprites.py` to modify ship visuals:
+vEdit `sprites.py` to modify ship visuals:
 - Change ship colors by modifying `COLOR_*` constants
 - Adjust ship shapes in the `_create_ship_image()` and `_create_image()` methods
 - Modify bullet, explosion, and powerup visuals
