@@ -159,6 +159,7 @@ run.bat
 
 Make sure you have activated your virtual environment (if using one), then run:
 
+### Desktop Version
 ```bash
 python main.py
 ```
@@ -194,6 +195,8 @@ The executable will be created in the `dist/` directory.
 
 ## Controls
 
+### Desktop Controls
+
 | Action | Keys |
 |--------|------|
 | Move | WASD or Arrow Keys |
@@ -204,6 +207,16 @@ The executable will be created in the `dist/` directory.
 | Cycle Ammo | Q or Tab |
 | Switch Formation | F (Jaguar only) |
 | Pause | ESC |
+
+### Mobile/Touch Controls
+
+| Action | Control |
+|--------|---------|
+| Move | Virtual Joystick (bottom-left) |
+| Fire Autocannons | FIRE Button (bottom-right) |
+| Fire Rockets | RKT Button (above fire) |
+| Select Ammo | Ammo Buttons 1-5 (top-right) |
+| Pause | Pause Button (top-left) |
 
 ### Menu Controls
 
