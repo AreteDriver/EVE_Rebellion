@@ -304,7 +304,7 @@ class Game:
             else:
                 self.play_sound('error')
         
-        elif key == pygame.K_8 and not player.is_wolf:
+        elif key == pygame.K_8 and not player.is_wolf and player.t2_variant is None:
             if player.refugees >= costs['wolf_upgrade']:
                 player.refugees -= costs['wolf_upgrade']
                 player.upgrade_to_wolf()
@@ -378,11 +378,12 @@ class Game:
         
         # Rockets
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2]:
-            rocket = self.player.shoot_rocket()
-            if rocket:
+            rockets = self.player.shoot_rocket()
+            if rockets:
                 self.play_sound('rocket', 0.5)
-                self.player_bullets.add(rocket)
-                self.all_sprites.add(rocket)
+                for rocket in rockets:
+                    self.player_bullets.add(rocket)
+                    self.all_sprites.add(rocket)
         
         # Update stars
         for star in self.stars:
@@ -392,9 +393,9 @@ class Game:
         self.player_bullets.update()
         self.enemy_bullets.update()
         
-        # Update enemies with player position for AI
+        # Update enemies with player position and variant for AI
         for enemy in self.enemies:
-            enemy.update(self.player.rect)
+            enemy.update(self.player.rect, self.player.t2_variant)
         
         self.pods.update()
         self.powerups.update()
@@ -889,6 +890,9 @@ class Game:
         costs = UPGRADE_COSTS
         player = self.player
         
+        # Check if player already has a ship upgrade
+        has_ship_upgrade = player.is_wolf or player.t2_variant is not None
+        
         upgrades = [
             ("1", "Gyrostabilizer", costs['gyrostabilizer'], player.has_gyro, "+30% Fire Rate"),
             ("2", "Armor Plate", costs['armor_plate'], False, "+30 Max Armor"),
@@ -967,7 +971,15 @@ class Game:
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
         self.render_surface.blit(text, rect)
         
-        ship_type = "Wolf Assault Frigate" if self.player.is_wolf else "Rifter Frigate"
+        # Determine ship type for display
+        if self.player.is_wolf:
+            ship_type = "Wolf Assault Frigate"
+        elif self.player.t2_variant == 'autocannon':
+            ship_type = "Autocannon Rifter T2"
+        elif self.player.t2_variant == 'rocket':
+            ship_type = "Rocket Specialist T2"
+        else:
+            ship_type = "Rifter Frigate"
         text = self.font.render(f"Ship: {ship_type}", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 80))
         self.render_surface.blit(text, rect)
