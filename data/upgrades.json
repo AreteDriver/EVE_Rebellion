@@ -1,0 +1,26 @@
+{
+  "shield_boost_1": {
+    "name": "Reinforced Shielding I",
+    "description": "Increase your max shields by 20 points.",
+    "cost": 50,
+    "effect": {"shields": 20}
+  },
+  "armor_plate_1": {
+    "name": "Alloy Armor Plating I",
+    "description": "Reinforce your armor with extra plates to gain 30 armor points.",
+    "cost": 50,
+    "effect": {"armor": 30}
+  },
+  "fire_rate_upgrade": {
+    "name": "Gyrostabilizer",
+    "description": "Improve your autocannon gyros to increase the rate of fire by 10%.",
+    "cost": 75,
+    "effect": {"fire_rate_mult": 1.1}
+  },
+  "rocket_capacity": {
+    "name": "Expanded Rocket Bays",
+    "description": "Install expanded rocket bays to carry 5 extra rockets.",
+    "cost": 50,
+    "effect": {"rocket_capacity": 5}
+  }
+}

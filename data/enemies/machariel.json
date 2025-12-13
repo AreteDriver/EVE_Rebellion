@@ -1,0 +1,16 @@
+{
+    "name": "Machariel",
+    "description": "A massive Angel Cartel battleship known for its speed and firepower.",
+    "shields": 200,
+    "armor": 400,
+    "hull": 300,
+    "speed": 1.0,
+    "fire_rate": 800,
+    "score": 2000,
+    "size": [80, 120],
+    "boss": true,
+    "tier": "pirate_battleship",
+    "sp_value": 100,
+    "special_ability": "barrage",
+    "ability_desc": "Unleashes a devastating barrage of autocannon fire."
+}

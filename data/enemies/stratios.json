@@ -1,0 +1,16 @@
+{
+    "name": "Stratios",
+    "description": "A Sisters of EVE cruiser equipped for exploration and combat, combining Gallente drone technology with Amarr lasers.",
+    "shields": 150,
+    "armor": 150,
+    "hull": 100,
+    "speed": 1.2,
+    "fire_rate": 1000,
+    "score": 1500,
+    "size": [60, 80],
+    "boss": true,
+    "tier": "soe_cruiser",
+    "sp_value": 80,
+    "special_ability": "cloak_and_drones",
+    "ability_desc": "Deploys a flight of drones and temporarily cloaks to evade damage."
+}
