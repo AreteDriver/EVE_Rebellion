@@ -1,16 +1,59 @@
 # MINMATAR REBELLION
 
-A top-down arcade space shooter inspired by EVE Online, featuring the iconic Rifter frigate in a fight for freedom against the Amarr Empire.
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![Pygame](https://img.shields.io/badge/pygame-2.0%2B-green.svg)](https://www.pygame.org/)
+[![NumPy](https://img.shields.io/badge/numpy-1.20%2B-orange.svg)](https://numpy.org/)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
 
-## Features
+> *"We were slaves once. Never again."* — Minmatar Rebellion motto
 
-- **Procedural Sound Effects** - Retro-style synthesized sounds for weapons, explosions, pickups
-- **Ambient Music** - Generated space ambient background music
-- **Screen Shake** - Impact feedback for explosions and damage
+A complete arcade space shooter game with **procedural audio synthesis**, **advanced AI state machines**, and **capital ship boss battles**. Inspired by EVE Online, featuring the iconic Rifter frigate in a fight for freedom against the Amarr Empire.
+
+<!-- Screenshot placeholders - Actual screenshots to be added -->
+<details>
+<summary>📸 Click to view screenshots (to be added)</summary>
+
+*Screenshots will showcase:*
+- Main menu and difficulty selection
+- In-game combat with procedurally generated ships
+- Boss battle sequences
+- Upgrade screen interface
+
+*All graphics are procedurally generated at runtime!*
+</details>
+
+## 🎮 Features
+
+### Core Gameplay
+- **5 Story-Driven Stages** - Progressive difficulty with unique boss encounters
 - **4 Difficulty Levels** - Easy, Normal, Hard, Nightmare
-- **Advanced Enemy AI** - Multiple movement patterns (sine wave, zigzag, swoop, flank, circle)
-- **5 Ammo Types** - Swappable ammunition with tactical rock-paper-scissors mechanics
 - **Upgrade System** - Spend rescued refugees on ship improvements
+- **5 Ammo Types** - Swappable ammunition with tactical rock-paper-scissors mechanics
+- **Refugee Rescue Mechanic** - Save enslaved Minmatar to fund your rebellion
+
+### Advanced Technical Features
+- **Procedural Audio Synthesis** - All sound effects generated in real-time using NumPy waveform synthesis
+  - Dynamic ADSR envelopes
+  - Frequency modulation
+  - No external audio files required
+- **Advanced Enemy AI** - State machine-based behaviors with multiple movement patterns:
+  - Sine wave oscillation
+  - Zigzag evasion
+  - Swoop attacks
+  - Flanking maneuvers
+  - Circular strafing
+- **100% Procedural Graphics** - All visuals generated programmatically
+  - No external image assets
+  - Ships, bullets, explosions drawn with Pygame primitives
+  - Lightweight and portable
+- **Event-Driven Architecture** - Performance-optimized game loop
+  - Frame-rate independent physics
+  - Efficient collision detection
+  - Object pooling for projectiles
+- **Dynamic Visual Effects** - Screen shake, particle systems, animated explosions
+
+## 📦 Requirements
 
 ## Getting Started
 
@@ -29,8 +72,13 @@ The executable includes all necessary dependencies and game assets bundled into 
 **Requirements:**
 - Python 3.8+
 - Pygame 2.0+
-- NumPy (for sound generation)
+- NumPy 1.20+
 
+## 🚀 Quick Start
+
+**New to the game?** See the [Quick Start Guide](QUICKSTART.md) for a complete beginner-friendly walkthrough.
+
+### Installation
 **Installation:**
 
 ```bash
@@ -41,7 +89,12 @@ Or install manually:
 Or install minimal dependencies for gameplay only:
 
 ```bash
-pip install pygame numpy
+# Clone the repository
+git clone https://github.com/AreteDriver/EVE_Rebellion.git
+cd EVE_Rebellion
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 **Running the Game:**
@@ -50,7 +103,7 @@ pip install pygame numpy
 python main.py
 ```
 
-Or on Linux:
+Or on Linux/macOS:
 ```bash
 chmod +x main.py
 ./main.py
@@ -91,7 +144,39 @@ The executable will be created in the `dist/` directory.
 | Toggle Sound | S |
 | Toggle Music | M |
 
-## Difficulty Levels
+## 🎯 Gameplay
+
+### Objective
+Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees along the way. Refugees serve as currency for upgrades at the Rebel Station.
+
+### Screenshots & Visuals
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="assets/screenshots/menu.png" alt="Main Menu" />
+      <p align="center"><em>Main Menu - Difficulty Selection</em></p>
+    </td>
+    <td width="50%">
+      <img src="assets/screenshots/combat.png" alt="Combat" />
+      <p align="center"><em>Intense Combat with Multiple Enemy Types</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="assets/screenshots/boss.png" alt="Boss Battle" />
+      <p align="center"><em>Apocalypse Battleship Boss Fight</em></p>
+    </td>
+    <td width="50%">
+      <img src="assets/screenshots/upgrade.png" alt="Upgrade Screen" />
+      <p align="center"><em>Upgrade Screen - Spend Rescued Refugees</em></p>
+    </td>
+  </tr>
+</table>
+
+*Note: All graphics are procedurally generated - no image files required!*
+
+### Difficulty Levels
 
 | Level | Description |
 |-------|-------------|
@@ -99,23 +184,6 @@ The executable will be created in the `dist/` directory.
 | Normal | Standard experience |
 | Hard | 30% more enemy health/damage, faster attacks |
 | Nightmare | 60% more health, 50% more damage, very fast attacks |
-
-## Ammo Types
-
-| Type | Key | Color | Best Against |
-|------|-----|-------|--------------|
-| Titanium Sabot | 1 | Gray | Starter ammo |
-| EMP | 2 | Blue | Shields |
-| Phased Plasma | 3 | Orange | Armor |
-| Fusion | 4 | Red | High damage (slower fire) |
-| Barrage | 5 | Yellow | Range/accuracy (fast fire) |
-
-Ammo types must be unlocked at the Rebel Station between stages.
-
-## Gameplay
-
-### Objective
-Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees along the way. Refugees serve as currency for upgrades.
 
 ### Refugee System
 - Destroy Amarr industrial ships (Bestowers, Sigils) to release escape pods
@@ -130,7 +198,19 @@ Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees al
 4. **Gate Assault** - Boss: Apocalypse Battleship
 5. **Final Push** - Boss: Abaddon Dreadnought
 
-### Upgrades
+## ⚔️ Ammo Types
+
+| Type | Key | Color | Best Against |
+|------|-----|-------|--------------|
+| Titanium Sabot | 1 | Gray | Starter ammo |
+| EMP | 2 | Blue | Shields |
+| Phased Plasma | 3 | Orange | Armor |
+| Fusion | 4 | Red | High damage (slower fire) |
+| Barrage | 5 | Yellow | Range/accuracy (fast fire) |
+
+Ammo types must be unlocked at the Rebel Station between stages.
+
+## 🔧 Upgrades
 
 | Upgrade | Cost | Effect |
 |---------|------|--------|
@@ -143,14 +223,16 @@ Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees al
 | Barrage Ammo | 55 | Unlock Barrage rounds |
 | **Wolf Upgrade** | 50 | T2 Assault Frigate! |
 
-### Power-ups (dropped by enemies)
+## 💊 Power-ups
+
+Dropped by enemies during combat:
 
 - **Nanite Paste** (green) - Repairs hull
 - **Capacitor Booster** (blue) - Refills rockets
 - **Overdrive** (yellow) - Temporary speed boost
 - **Shield Booster** (light blue) - Temporary damage reduction + shield repair
 
-## Enemy Types
+## 👾 Enemy Types
 
 ### Frigates
 - **Executioner** - Fast, shield-heavy. Use EMP. Aggressive movement patterns.
@@ -374,6 +456,36 @@ If the game runs slowly:
    cd /path/to/EVE_Rebellion
    python3 main.py
    ```
+
+## 📚 Documentation
+
+### Technical Documentation
+- **[Architecture Overview](assets/ARCHITECTURE.md)** - Detailed system architecture and design patterns
+- **[Technical Highlights](assets/TECHNICAL_HIGHLIGHTS.md)** - Deep dive into advanced features and design decisions
+- **[Game Flow Diagrams](assets/diagrams/game-flow.md)** - Visual diagrams of game loop, AI, and audio synthesis
+- **[Build Guide](build-notes/BUILD.md)** - Comprehensive build and development instructions
+- **[Project Metrics](build-notes/METRICS.md)** - Code statistics, performance metrics, and benchmarks
+
+### Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## 🎯 Use Cases
+
+This project demonstrates:
+- ✅ Complete game development with Pygame
+- ✅ Procedural audio synthesis and DSP
+- ✅ AI state machines and movement patterns
+- ✅ Event-driven architecture
+- ✅ Frame-rate independent physics
+- ✅ Clean code and modular design
+- ✅ Zero external asset dependencies
+
+Perfect as a reference for:
+- Game development portfolios
+- Python/Pygame learning
+- Audio synthesis exploration
+- AI programming examples
+- Software architecture studies
 
 ## IP Notice
 
