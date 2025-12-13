@@ -8,7 +8,7 @@ from constants import *
 class Player(pygame.sprite.Sprite):
     """Player ship - Rifter/Wolf/T2 Variants"""
     
-    def __init__(self):
+    def __init__(self, ship_type='rifter'):
         super().__init__()
         self.is_wolf = False
         self.t2_variant = None  # None, 'autocannon', or 'rocket'
@@ -19,10 +19,22 @@ class Player(pygame.sprite.Sprite):
         self.rect.centerx = SCREEN_WIDTH // 2
         self.rect.bottom = SCREEN_HEIGHT - 50
         
-        # Stats
+        # Base stats
         self.max_shields = PLAYER_START_SHIELDS
         self.max_armor = PLAYER_START_ARMOR
         self.max_hull = PLAYER_START_HULL
+        self.damage_mult = 1.0
+        
+        # Apply T2 bonuses based on ship type
+        if self.is_wolf:
+            self.max_armor += WOLF_ARMOR_BONUS
+            self.max_hull += WOLF_HULL_BONUS
+            self.damage_mult = WOLF_DAMAGE_BONUS
+        elif self.is_jaguar:
+            self.max_shields += JAGUAR_SHIELD_BONUS
+            self.max_hull += JAGUAR_HULL_BONUS
+            self.damage_mult = JAGUAR_DAMAGE_BONUS
+        
         self.shields = self.max_shields
         self.armor = self.max_armor
         self.hull = self.max_hull
@@ -41,8 +53,16 @@ class Player(pygame.sprite.Sprite):
         self.fire_rate_mult = 1.0
         self.spread_bonus = 0
         
+        # Apply T2 spread bonus
+        if self.is_wolf:
+            self.spread_bonus += 1
+        
         # Movement
         self.speed = PLAYER_SPEED
+        if self.is_wolf:
+            self.speed *= WOLF_SPEED_BONUS
+        elif self.is_jaguar:
+            self.speed *= JAGUAR_SPEED_BONUS
         
         # Upgrades
         self.has_gyro = False
@@ -121,7 +141,7 @@ class Player(pygame.sprite.Sprite):
                 (self.width-10, self.height//2),
                 (self.width-10, self.height-5)
             ])
-            # Engine glow
+            # Engine glow (orange for Wolf)
             pygame.draw.circle(surf, (255, 150, 50), (self.width//2, self.height-8), 5)
         elif self.t2_variant == 'autocannon' and 'autocannon' in RIFTER_T2_VARIANTS:
             # Autocannon Rifter - wider wings with visible gun ports
@@ -211,7 +231,10 @@ class Player(pygame.sprite.Sprite):
         return surf
     
     def upgrade_to_wolf(self):
-        """Upgrade to Wolf assault frigate"""
+        """Upgrade to Wolf assault frigate (legacy method for shop)"""
+        if self.is_wolf or self.is_jaguar:
+            return  # Already a T2 ship
+        self.ship_type = 'wolf'
         self.is_wolf = True
         self.t2_variant = None  # Wolf replaces T2 variants
         self.speed *= WOLF_SPEED_BONUS
@@ -220,6 +243,21 @@ class Player(pygame.sprite.Sprite):
         self.armor = min(self.armor + WOLF_ARMOR_BONUS, self.max_armor)
         self.hull = min(self.hull + WOLF_HULL_BONUS, self.max_hull)
         self.spread_bonus += 1
+        self.damage_mult = WOLF_DAMAGE_BONUS
+        self.image = self._create_ship_image()
+    
+    def upgrade_to_jaguar(self):
+        """Upgrade to Jaguar assault frigate"""
+        if self.is_wolf or self.is_jaguar:
+            return  # Already a T2 ship
+        self.ship_type = 'jaguar'
+        self.is_jaguar = True
+        self.speed *= JAGUAR_SPEED_BONUS
+        self.max_shields += JAGUAR_SHIELD_BONUS
+        self.max_hull += JAGUAR_HULL_BONUS
+        self.shields = min(self.shields + JAGUAR_SHIELD_BONUS, self.max_shields)
+        self.hull = min(self.hull + JAGUAR_HULL_BONUS, self.max_hull)
+        self.damage_mult = JAGUAR_DAMAGE_BONUS
         self.image = self._create_ship_image()
     
     def upgrade_to_t2_variant(self, variant_type):
@@ -311,6 +349,9 @@ class Player(pygame.sprite.Sprite):
         num_shots = 2 + self.spread_bonus
         spread = 15 + (self.spread_bonus * 5)
         
+        # Apply damage multiplier from T2 ships
+        bullet_damage = int(BULLET_DAMAGE * self.damage_mult)
+        
         for i in range(num_shots):
             offset = (i - (num_shots - 1) / 2) * spread
             bullet = Bullet(
@@ -318,7 +359,7 @@ class Player(pygame.sprite.Sprite):
                 self.rect.top,
                 0, -BULLET_SPEED,
                 ammo['tracer'],
-                BULLET_DAMAGE,
+                bullet_damage,
                 ammo['shield_mult'],
                 ammo['armor_mult']
             )
