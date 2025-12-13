@@ -1,2 +1,6 @@
+# EVE Rebellion - Minmatar Rebellion
+# Complete arcade space shooter game with procedural audio and advanced AI
+
+# Core dependencies
 pygame>=2.0.0
 numpy>=1.20.0
