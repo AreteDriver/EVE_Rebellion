@@ -51,6 +51,8 @@ A complete arcade space shooter game with **procedural audio synthesis**, **adva
 
 ## 🚀 Quick Start
 
+**New to the game?** See the [Quick Start Guide](QUICKSTART.md) for a complete beginner-friendly walkthrough.
+
 ### Installation
 
 ```bash
