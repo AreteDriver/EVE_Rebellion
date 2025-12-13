@@ -127,10 +127,70 @@ PLAYER_START_SHIELDS = 100
 PLAYER_START_ARMOR = 100
 PLAYER_START_HULL = 50
 
-# Wolf upgrade bonuses
+# Wolf upgrade bonuses (T2 Assault Frigate - offensive focus)
 WOLF_SPEED_BONUS = 1.2
 WOLF_ARMOR_BONUS = 50
 WOLF_HULL_BONUS = 25
+WOLF_DAMAGE_BONUS = 1.25
+
+# Jaguar upgrade bonuses (T2 Assault Frigate - defensive focus)
+JAGUAR_SPEED_BONUS = 1.3
+JAGUAR_SHIELD_BONUS = 50
+JAGUAR_HULL_BONUS = 15
+JAGUAR_DAMAGE_BONUS = 1.1
+
+# Skill Point System
+SKILL_POINTS_PER_ENEMY = {
+    'executioner': 5,
+    'punisher': 8,
+    'omen': 20,
+    'maller': 25,
+    'bestower': 10,
+    'apocalypse': 100,
+    'abaddon': 200
+}
+
+# T2 Ship Unlock Costs (in skill points)
+T2_SHIP_COSTS = {
+    'wolf': 500,      # Offensive focused T2
+    'jaguar': 500     # Defensive focused T2
+}
+
+# T2 Ship descriptions for info bubbles
+T2_SHIP_INFO = {
+    'rifter': {
+        'name': 'Rifter',
+        'type': 'T1 Frigate',
+        'description': 'Standard Minmatar frigate with balanced stats.',
+        'attributes': ['Balanced shields and armor', 'Standard speed', 'Base damage output'],
+        'strategy': 'Good all-around ship for learning the game.'
+    },
+    'wolf': {
+        'name': 'Wolf',
+        'type': 'T2 Assault Frigate',
+        'description': 'Offensive powerhouse with enhanced firepower.',
+        'attributes': ['+25% damage bonus', '+20% speed', '+50 armor', '+25 hull', '+1 gun spread'],
+        'strategy': 'Aggressive playstyle. Best for dealing heavy damage quickly.'
+    },
+    'jaguar': {
+        'name': 'Jaguar',
+        'type': 'T2 Assault Frigate', 
+        'description': 'Defensive tank with superior shields and speed.',
+        'attributes': ['+10% damage bonus', '+30% speed', '+50 shields', '+15 hull'],
+        'strategy': 'Hit-and-run tactics. Superior survivability and evasion.'
+    }
+}
+
+# Fleet upgrade settings
+FLEET_MAX_SHIPS = 5                     # Maximum ships in fleet
+FLEET_DOWNGRADE_SHIPS = 3               # Ships remaining after timer expires
+FLEET_UPGRADE_DURATION = 15000          # Duration in ms (15 seconds)
+FLEET_SHIP_SHIELDS = 40                 # Shields per fleet ship
+FLEET_SHIP_ARMOR = 40                   # Armor per fleet ship
+FLEET_SHIP_HULL = 20                    # Hull per fleet ship
+FLEET_VOLLEY_COUNT = 5                  # Max volleys during upgrade
+FLEET_VOLLEY_DAMAGE_MULT = 2.0          # Volley damage multiplier
+FLEET_SHIP_SPACING = 45                 # Horizontal spacing between fleet ships
 
 # Bullet stats
 BULLET_SPEED = 12
@@ -424,7 +484,8 @@ UPGRADE_COSTS = {
     'plasma_ammo': 35,
     'fusion_ammo': 45,
     'barrage_ammo': 55,
-    'wolf_upgrade': 50
+    'wolf_upgrade': 50,
+    'fleet_upgrade': 40
 }
 
 # Powerup types
@@ -432,7 +493,8 @@ POWERUP_TYPES = {
     'nanite': {'name': 'Nanite Paste', 'color': (100, 255, 100), 'heal': 50},
     'capacitor': {'name': 'Capacitor Booster', 'color': (100, 100, 255), 'rockets': 5},
     'overdrive': {'name': 'Overdrive', 'color': (255, 255, 100), 'duration': 5000},
-    'shield_boost': {'name': 'Shield Booster', 'color': (150, 200, 255), 'duration': 3000}
+    'shield_boost': {'name': 'Shield Booster', 'color': (150, 200, 255), 'duration': 3000},
+    'fleet_beacon': {'name': 'Fleet Beacon', 'color': (255, 150, 50), 'fleet_upgrade': True}
 }
 
 # Stage definitions with progressive wave system and sequential boss battles

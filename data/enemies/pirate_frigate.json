@@ -1,0 +1,32 @@
+{
+    "name": "Pirate Frigate",
+    "description": "A fast, lightly armed frigate used by space pirates for raiding.",
+    "health": 80,
+    "shields": 30,
+    "armor": 30,
+    "hull": 20,
+    "speed": 2.5,
+    "fire_rate": 1500,
+    "score": 100,
+    "size": [30, 40],
+    "behavior": {
+        "pattern": "zigzag",
+        "aggressive": true,
+        "shoots": true,
+        "preferred_range": 200
+    },
+    "drops": {
+        "powerup_chance": 0.15,
+        "refugees": 0
+    },
+    "visual": {
+        "sprite": "pirate_frigate",
+        "color": [180, 60, 60],
+        "accent_color": [100, 100, 100]
+    },
+    "weapons": {
+        "type": "autocannon",
+        "damage": 10,
+        "projectile_speed": 5
+    }
+}

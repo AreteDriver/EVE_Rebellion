@@ -1,0 +1,38 @@
+{
+  "name": "Pirate Invasion",
+  "description": "Repel an Angel Cartel invasion fleet and defeat their flagship Machariel.",
+  "waves": [
+    {
+      "enemies": [
+        {"type": "executioner", "count": 10},
+        {"type": "punisher", "count": 6}
+      ]
+    },
+    {
+      "enemies": [
+        {"type": "omen", "count": 4},
+        {"type": "dragoon", "count": 2}
+      ]
+    },
+    {
+      "enemies": [
+        {"type": "harbinger", "count": 2}
+      ]
+    },
+    {
+      "boss": "machariel"
+    }
+  ],
+  "boss": {
+    "type": "machariel",
+    "name": "Machariel",
+    "health": 2000,
+    "shields": 200,
+    "armor": 400,
+    "hull": 300,
+    "speed": 1.0,
+    "special_ability": "barrage"
+  },
+  "background": "images/pirate_background.png",
+  "music": "music/pirate_theme.mp3"
+}

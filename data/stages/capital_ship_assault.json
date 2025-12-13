@@ -1,0 +1,38 @@
+{
+  "name": "Capital Ship Assault",
+  "description": "A secret mission to take down an Amarr capital ship in orbit. Expect heavy resistance and multiple phases.",
+  "waves": [
+    {
+      "enemies": [
+        {"type": "executioner", "count": 12},
+        {"type": "punisher", "count": 6}
+      ]
+    },
+    {
+      "enemies": [
+        {"type": "omen", "count": 4},
+        {"type": "dragoon", "count": 2}
+      ]
+    },
+    {
+      "enemies": [
+        {"type": "harbinger", "count": 2}
+      ]
+    },
+    {
+      "boss": "amarr_capital"
+    }
+  ],
+  "boss": {
+    "type": "amarr_capital",
+    "name": "Golden Supercarrier",
+    "health": 2000,
+    "shields": 500,
+    "armor": 1500,
+    "hull": 1000,
+    "speed": 0.3,
+    "special_ability": "broadside"
+  },
+  "background": "images/capital_ship_background.png",
+  "music": "music/capital_assault.mp3"
+}
