@@ -23,52 +23,75 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # PyInstaller
 *.manifest
 *.spec
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Environments
-.env
-.venv
-env/
+# Virtual environments
 venv/
 ENV/
-env.bak/
-venv.bak/
+env/
+.venv/
 
-# IDE
+# IDE settings
 .idea/
 .vscode/
 *.swp
+.swp
 *.swo
 *~
 
 # OS generated files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Temporary files
+/tmp/
+*.tmp
+*.bak
+
+# Build artifacts
+*.zip
+*.tar.gz
+*.exe
+*.app
+*.dmg
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+
+# Game save files (if any)
+saves/
+*.sav
+
+# PyInstaller spec files
+*.spec
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Environments
+.env
+.env.local
+# PyInstaller
+*.spec.bak
+build/
+dist/
+*.exe
+*.app

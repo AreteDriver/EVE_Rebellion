@@ -1,0 +1,30 @@
+{
+    "name": "Golden Supercarrier",
+    "description": "A massive Amarr supercarrier armed with multiple batteries and fighter bays.",
+    "shields": 500,
+    "armor": 1500,
+    "hull": 1000,
+    "speed": 0.3,
+    "fire_rate": 1500,
+    "score": 5000,
+    "size": [200, 300],
+    "boss": true,
+    "tier": "capital",
+    "sp_value": 200,
+    "special_ability": "broadside",
+    "ability_desc": "Unleashes a barrage of heavy lasers along its hull.",
+    "behavior": {
+        "pattern": "strafe",
+        "aggressive": true,
+        "shoots": true
+    },
+    "drops": {
+        "powerup_chance": 0.5,
+        "refugees": 10
+    },
+    "visual": {
+        "sprite": "amarr_supercarrier",
+        "color": [218, 165, 32],
+        "rotation_speed": 0.0
+    }
+}
