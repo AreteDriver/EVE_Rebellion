@@ -55,6 +55,21 @@ A complete arcade space shooter game with **procedural audio synthesis**, **adva
 
 ## 📦 Requirements
 
+## Getting Started
+
+### Option 1: Windows Executable (Recommended for Windows Users)
+
+**No Python installation required!**
+
+1. Download the latest `EVE_Rebellion-Windows.zip` from the [Releases](https://github.com/AreteDriver/EVE_Rebellion/releases) page
+2. Extract the ZIP file
+3. Double-click `EVE_Rebellion.exe` to play!
+
+The executable includes all necessary dependencies and game assets bundled into a single file.
+
+### Option 2: Run from Source
+
+**Requirements:**
 - Python 3.8+
 - Pygame 2.0+
 - NumPy 1.20+
@@ -64,6 +79,14 @@ A complete arcade space shooter game with **procedural audio synthesis**, **adva
 **New to the game?** See the [Quick Start Guide](QUICKSTART.md) for a complete beginner-friendly walkthrough.
 
 ### Installation
+**Installation:**
+
+```bash
+pip install -r requirements.txt
+```
+
+Or install manually:
+Or install minimal dependencies for gameplay only:
 
 ```bash
 # Clone the repository
@@ -74,7 +97,7 @@ cd EVE_Rebellion
 pip install -r requirements.txt
 ```
 
-### Running the Game
+**Running the Game:**
 
 ```bash
 python main.py
@@ -86,9 +109,24 @@ chmod +x main.py
 ./main.py
 ```
 
-## ⌨️ Controls
+### Building Your Own Executable
 
-### In-Game Controls
+If you want to build the Windows executable yourself:
+
+**On Windows:**
+```bash
+build_exe.bat
+```
+
+**On Linux/Mac:**
+```bash
+chmod +x build_exe.sh
+./build_exe.sh
+```
+
+The executable will be created in the `dist/` directory.
+
+## Controls
 
 | Action | Keys |
 |--------|------|
@@ -228,152 +266,48 @@ Sound gracefully disables if no audio device is available.
 ## File Structure
 
 ```
-EVE_Rebellion/
+minmatar_rebellion/
 ├── main.py              # Entry point
-├── game.py              # Main game loop, state management
+├── game.py              # Main game logic, states, rendering
 ├── sprites.py           # All game entities (player, enemies, bullets)
 ├── constants.py         # Configuration, stats, stage definitions
 ├── sounds.py            # Procedural sound generation
-├── upgrade_screen.py    # Between-stage upgrade interface
 ├── requirements.txt     # Python dependencies
-├── core/                # Core game modules
-│   ├── loader.py        # Resource loading utilities
-│   └── __init__.py
-├── data/                # Game data
-│   ├── enemies/         # Enemy type definitions
-│   ├── powerups/        # Powerup configurations
-│   ├── stages/          # Stage layouts
-│   └── upgrades.json    # Upgrade tree
-├── assets/              # Documentation assets
-│   ├── ARCHITECTURE.md  # Technical architecture
-│   └── diagrams/        # System diagrams
-├── build-notes/         # Build and development docs
-│   └── BUILD.md         # Build guide
-└── docs/                # Additional documentation
-    └── development.md   # Development notes
+├── tests/               # Unit tests
+├── .github/workflows/   # CI/CD workflows
+└── README.md            # This file
 ```
 
-## 🔧 Technical Deep Dive
+## Development & CI/CD
 
-### Architecture Overview
+This project uses GitHub Actions for automated testing and deployment:
 
-EVE Rebellion uses an **event-driven, state-machine architecture** with emphasis on performance and modularity.
+- **Continuous Integration**: Tests run automatically on every push and pull request
+- **Continuous Deployment**: Releases are built automatically when you push a tag
 
-For detailed architecture documentation, see [ARCHITECTURE.md](assets/ARCHITECTURE.md).
+For more information, see [docs/WORKFLOWS.md](docs/WORKFLOWS.md).
 
-#### Game Loop Design
+### Running Tests
 
-```
-┌─────────────────────────────────────────────────┐
-│         GAME LOOP (60 FPS default)              │
-├─────────────────────────────────────────────────┤
-│  1. INPUT   → Handle keyboard/mouse events      │
-│  2. UPDATE  → Delta-time based physics          │
-│  3. RENDER  → Layered sprite rendering          │
-│  4. LIMIT   → Frame rate capping                │
-└─────────────────────────────────────────────────┘
+```bash
+pip install -r requirements.txt
+pytest -v
 ```
 
-**Key Features:**
-- Frame-rate independent physics using delta time
-- Efficient sprite group management
-- Spatial partitioning for collision detection
-- Object pooling for bullets to reduce GC pressure
+### Code Linting
 
-#### Procedural Audio Synthesis
-
-All sound effects are generated programmatically using NumPy:
-
-**Pipeline:**
-1. **Waveform Generation** - Create base signal (sine, sawtooth, noise)
-2. **ADSR Envelope** - Apply Attack-Decay-Sustain-Release shaping
-3. **Effects Processing** - Add frequency sweeps, modulation
-4. **Conversion** - Convert NumPy array to Pygame Sound object
-
-**Example: Autocannon Sound**
-```python
-# Pseudocode
-noise = generate_white_noise(duration=0.08)
-filtered = bandpass_filter(noise, 200, 800)  # Low-frequency punch
-enveloped = apply_adsr(filtered, attack=0.01, release=0.05)
-sweep = apply_frequency_sweep(enveloped, high_to_low)
-sound = convert_to_pygame_sound(sweep)
+```bash
+flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 ```
 
-**Benefits:**
-- No external audio files required
-- Infinite variation through randomization
-- Lightweight (<1MB for entire game)
-- Customizable in real-time
+### Building Standalone Executables
 
-#### AI State Machine
-
-Enemy AI uses a hierarchical state machine:
-
-```
-SPAWN → ENTER_SCREEN
-          ↓
-    [COMBAT LOOP]
-    ↓           ↓
-  ATTACK    EVADE/FLANK
-    ↓           ↓
-  CHECK_HEALTH → EXIT_SCREEN
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name MinmatarRebellion main.py
 ```
 
-**Movement Patterns:**
-- **Sine Wave**: Smooth side-to-side oscillation
-- **Zigzag**: Sharp direction changes
-- **Swoop**: Dive toward player, then retreat
-- **Flank**: Approach from sides
-- **Circle**: Orbital strafing around player
-
-**Decision Factors:**
-- Distance to player
-- Current health percentage
-- Attack cooldown timers
-- Formation position (for waves)
-
-#### Performance Optimizations
-
-1. **Sprite Culling** - Off-screen entities skip update logic
-2. **Collision Optimization** - Broad phase with rect collision before pixel-perfect
-3. **Lazy Rendering** - Static backgrounds cached
-4. **Sound Caching** - Generated once at startup, not per-play
-5. **Delta Time Physics** - Smooth gameplay regardless of FPS variations
-
-### Procedural Graphics System
-
-All visuals are drawn using Pygame's primitive drawing functions:
-
-**Ship Rendering:**
-- Hull: Polygon primitives
-- Details: Lines and circles for engines, weapons
-- Colors: Faction-based color schemes (Minmatar rust/gold, Amarr white/gold)
-
-**Visual Effects:**
-- Explosions: Expanding circles with alpha fade
-- Bullets: Colored rectangles with motion blur
-- Shields: Transparent blue circles on hit
-- Screen shake: Camera offset on impact
-
-**Performance:** Procedural rendering is faster than blitting pre-made images at this scale.
-
-### Code Quality Highlights
-
-- **Type Hints**: Modern Python type annotations throughout
-- **Modular Design**: Clear separation of concerns (sprites, sounds, game logic)
-- **Configuration-Driven**: All balance values in `constants.py`
-- **Extensible**: Easy to add new enemies, weapons, stages
-- **Documented**: Comprehensive inline comments
-
-### Metrics
-
-- **Lines of Code**: ~3,500
-- **Dependencies**: 2 (Pygame, NumPy)
-- **Asset Files**: 0 (fully procedural)
-- **Load Time**: <2 seconds
-- **Memory Usage**: ~50MB
-- **Supported Platforms**: Windows, Linux, macOS
+The executable will be in the `dist/` directory.
 
 ## Graphics
 
@@ -406,6 +340,62 @@ Edit `sprites.py` to modify ship visuals:
 - Modify bullet, explosion, and powerup visuals
 
 ## Troubleshooting
+
+### Windows Executable Issues
+
+#### "Windows protected your PC" SmartScreen warning
+
+This is normal for unsigned applications. To run the game:
+
+1. Click "More info"
+2. Click "Run anyway"
+
+The game is open source - you can review the code on GitHub or build it yourself to verify it's safe.
+
+#### Anti-virus blocking the executable
+
+Some anti-virus software may flag PyInstaller executables as suspicious. This is a false positive. You can:
+
+1. Add an exception for `EVE_Rebellion.exe` in your anti-virus settings
+2. Download the source code and build the executable yourself
+3. Run from source using Python (see "Option 2: Run from Source")
+
+#### Executable won't start or crashes immediately
+
+1. **Check system requirements**: Windows 7 or later, 64-bit
+2. **Run as Administrator**: Right-click `EVE_Rebellion.exe` and select "Run as administrator"
+3. **Install Visual C++ Redistributable**: Download from [Microsoft](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+4. **Check the error**: If running from command prompt shows an error message, it can help diagnose the issue:
+   ```
+   cmd
+   cd path\to\game
+   EVE_Rebellion.exe
+   ```
+
+#### Missing DLL errors
+
+The executable should be self-contained, but if you get missing DLL errors:
+
+1. Install [Visual C++ Redistributable 2015-2022](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+2. Update Windows to the latest version
+3. Try running from source instead
+
+#### Game runs but no sound
+
+1. Check Windows sound settings - ensure output device is working
+2. Press 'S' in the game menu to toggle sound
+3. Press 'M' to toggle music
+4. Update audio drivers
+
+#### Performance issues with the executable
+
+The executable may run slightly slower than Python source due to unpacking overhead:
+
+1. Close other applications to free up resources
+2. Update graphics drivers
+3. For best performance, run from source (see "Option 2: Run from Source")
+
+### Python Source Code Issues
 
 ### Ships or graphics not displaying
 

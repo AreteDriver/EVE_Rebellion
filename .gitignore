@@ -58,12 +58,9 @@ htmlcov/
 *.tmp
 *.bak
 
-# Game-specific
-*.zip
-!minmatar_rebellion_v2_updated.zip
-
-# Build artifacts
-*.pyc
-*.pyo
-.cache/
-
+# PyInstaller
+*.spec.bak
+build/
+dist/
+*.exe
+*.app
