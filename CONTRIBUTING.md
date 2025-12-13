@@ -5,34 +5,67 @@ Thank you for your interest in contributing to Minmatar Rebellion! This document
 ## Project Structure
 
 ```
-minmatar_rebellion/
+EVE_Rebellion/
 ├── main.py              # Entry point
 ├── game.py              # Main game logic, states, rendering
 ├── sprites.py           # All game entities (player, enemies, bullets)
 ├── constants.py         # Configuration, stats, stage definitions
 ├── sounds.py            # Procedural sound generation
-├── core/                # Core utilities and loaders
+├── core/                # Core utilities
 │   ├── __init__.py
 │   └── loader.py        # JSON data loader for game content
-├── enemies/             # Enemy class implementations
+├── enemies/             # Enemy class implementations (reserved for expansion)
 │   └── __init__.py
-├── stages/              # Stage class implementations
+├── stages/              # Stage class implementations (reserved for expansion)
 │   └── __init__.py
-├── powerups/            # Power-up class implementations
+├── powerups/            # Power-up class implementations (reserved for expansion)
 │   └── __init__.py
-├── data/                # JSON data files for game content
+├── expansion/           # Experimental/future features
+│   ├── capital_ship_enemy.py    # Capital ship boss class
+│   └── upgrade_screen.py        # Skill point upgrade system (WIP)
+├── data/                # JSON data files for expansion content
 │   ├── enemies/         # Enemy definitions (*.json)
 │   ├── stages/          # Stage definitions (*.json)
-│   └── powerups/        # Power-up definitions (*.json)
+│   ├── powerups/        # Power-up definitions (*.json)
+│   └── upgrades.json    # Upgrade tree definitions
 ├── docs/                # Documentation
 │   └── development.md   # Development guide
 ├── CONTRIBUTING.md      # This file
 └── README.md            # Project overview
 ```
 
+## Current Game Architecture
+
+The main game currently runs from Python files in the root directory:
+- `constants.py` defines all enemy stats, stages, and game parameters
+- `sprites.py` contains all sprite classes (Player, Enemy, Bullet, etc.)
+- `game.py` implements the game loop and state management
+- `sounds.py` generates procedural sound effects
+
+## Expansion Architecture
+
+The `data/` directory and `core/loader.py` provide infrastructure for a future data-driven architecture where game content can be defined in JSON files rather than hardcoded. This system is **not yet integrated** into the main game but is available for development:
+
+- JSON files in `data/` define enemies, stages, and powerups
+- `core/loader.py` provides functions to load these definitions
+- The expansion content uses a different schema than the current game
+
 ## Adding New Content
 
-The game uses a data-driven approach where game content (enemies, stages, power-ups) is defined in JSON files. This makes it easy to add new content without modifying Python code.
+The game supports two approaches for adding content:
+
+### 1. Direct Python Implementation (Current Game)
+
+To add features to the currently running game, modify the Python files directly:
+
+- **Add enemies**: Edit `ENEMY_STATS` dictionary in `constants.py`
+- **Add stages**: Edit `STAGES` list in `constants.py`
+- **Add powerups**: Edit `POWERUP_TYPES` dictionary in `constants.py`
+- **Add upgrades**: Edit `UPGRADE_COSTS` dictionary in `constants.py`
+
+### 2. Data-Driven Approach (Future Expansion)
+
+The game includes infrastructure for a data-driven approach where content is defined in JSON files. This system is **not yet integrated** with the main game but provides a foundation for future development and modding support.
 
 ### Adding a New Enemy
 
