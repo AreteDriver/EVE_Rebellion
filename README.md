@@ -504,6 +504,19 @@ Perfect as a reference for:
 
 This is a personal/fan project. Ship designs and names are inspired by CCP Games' EVE Online. For any commercial use, original designs would need to be created or licensing obtained.
 
+## Future Features & Expansion
+
+The repository includes experimental features and content for future development:
+
+- **Data-Driven Content System**: The `data/` directory contains JSON definitions for enemies, stages, and powerups that can be loaded dynamically (see `core/loader.py`)
+- **Skill Point Progression**: A work-in-progress upgrade system (`expansion/upgrade_screen.py`) for persistent player progression
+- **Capital Ship Bosses**: Enhanced boss enemy with multiple turrets (`expansion/capital_ship_enemy.py`)
+- **Additional Enemy Types**: JSON definitions for expanded enemy roster including pirate factions and Sisters of EVE ships
+- **New Powerups**: Triple shot, enhanced shields, and other tactical powerups
+- **Jaguar T2 Upgrade**: Planned advanced assault frigate upgrade beyond the Wolf
+
+These features are not yet integrated into the main game but are available for contributors to develop further. See `CONTRIBUTING.md` for details on the data-driven architecture.
+
 ---
 
 *"We were slaves once. Never again."*
