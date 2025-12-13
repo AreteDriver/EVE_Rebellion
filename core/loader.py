@@ -7,7 +7,7 @@ definitions from JSON files in the data/ directory structure.
 
 import json
 import os
-from typing import Any
+from typing import Any, Dict
 
 
 def get_data_path() -> str:
@@ -15,7 +15,7 @@ def get_data_path() -> str:
     return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
 
-def load_json_file(filepath: str) -> dict[str, Any]:
+def load_json_file(filepath: str) -> Dict[str, Any]:
     """
     Load a single JSON file and return its contents.
 
@@ -33,7 +33,7 @@ def load_json_file(filepath: str) -> dict[str, Any]:
         return json.load(f)
 
 
-def load_all_from_directory(directory: str) -> dict[str, dict[str, Any]]:
+def load_all_from_directory(directory: str) -> Dict[str, Dict[str, Any]]:
     """
     Load all JSON files from a directory.
 
@@ -56,7 +56,7 @@ def load_all_from_directory(directory: str) -> dict[str, dict[str, Any]]:
     return data
 
 
-def load_enemies() -> dict[str, dict[str, Any]]:
+def load_enemies() -> Dict[str, Dict[str, Any]]:
     """
     Load all enemy definitions from data/enemies/.
 
@@ -67,7 +67,7 @@ def load_enemies() -> dict[str, dict[str, Any]]:
     return load_all_from_directory(enemies_dir)
 
 
-def load_stages() -> dict[str, dict[str, Any]]:
+def load_stages() -> Dict[str, Dict[str, Any]]:
     """
     Load all stage definitions from data/stages/.
 
@@ -78,7 +78,7 @@ def load_stages() -> dict[str, dict[str, Any]]:
     return load_all_from_directory(stages_dir)
 
 
-def load_powerups() -> dict[str, dict[str, Any]]:
+def load_powerups() -> Dict[str, Dict[str, Any]]:
     """
     Load all power-up definitions from data/powerups/.
 
@@ -89,7 +89,7 @@ def load_powerups() -> dict[str, dict[str, Any]]:
     return load_all_from_directory(powerups_dir)
 
 
-def load_all_game_data() -> dict[str, dict[str, dict[str, Any]]]:
+def load_all_game_data() -> Dict[str, Dict[str, Dict[str, Any]]]:
     """
     Load all game data (enemies, stages, power-ups) at once.
 

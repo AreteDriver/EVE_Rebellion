@@ -1,29 +1,27 @@
 """
-Player progression and save file management for Minmatar Rebellion.
+Progression and save system for Minmatar Rebellion.
 
-This module handles saving and loading player progress including:
-- Skill points (SP)
-- Purchased upgrades
+Tracks player progression across play sessions including:
+- Skill points earned
 - Unlocked ships
-- Total kills
-- Highest stage reached
+- Purchased upgrades
+- Game statistics
 """
 
 import json
 import os
-from typing import List
+from typing import Dict, List, Any
 
-# Default save file location
-SAVE_FILE = 'player_progress.json'
+# Save file location
+SAVE_FILE = os.path.expanduser('~/.minmatar_rebellion_save.json')
 
 
-def load_progress() -> dict:
+def load_progress() -> Dict[str, Any]:
     """
-    Load player progress from the save file.
+    Load player progression data from save file.
     
     Returns:
-        Dictionary containing player progress data. Returns default values
-        if save file doesn't exist or is invalid.
+        Dictionary containing progression data with default values if file doesn't exist.
     """
     default_data = {
         'total_sp': 0,
@@ -36,72 +34,61 @@ def load_progress() -> dict:
     }
     
     if not os.path.exists(SAVE_FILE):
-        return default_data.copy()
+        return default_data
     
     try:
         with open(SAVE_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # Ensure all required fields exist
-            for key, value in default_data.items():
-                if key not in data:
-                    data[key] = value
-            return data
+        # Merge with defaults to ensure all keys exist
+        for key, value in default_data.items():
+            if key not in data:
+                data[key] = value
+        return data
     except (json.JSONDecodeError, IOError):
-        # If file is corrupted or can't be read, return defaults
-        return default_data.copy()
+        return default_data
 
 
-def save_progress(sp: int = 0, 
-                  unlocked_ships: List[str] = None,
-                  wolf_unlocked: bool = False,
-                  jaguar_unlocked: bool = False,
-                  total_kills: int = 0,
-                  highest_stage: int = 0,
-                  purchased_upgrades: List[str] = None) -> None:
+def save_progress(sp: int = 0, unlocked_ships: List[str] = None,
+                 wolf_unlocked: bool = False, jaguar_unlocked: bool = False,
+                 total_kills: int = 0, highest_stage: int = 0) -> None:
     """
-    Save player progress to the save file.
+    Save player progression data to save file.
     
     Args:
-        sp: Total skill points available
-        unlocked_ships: List of unlocked ship names
+        sp: Total skill points earned
+        unlocked_ships: List of unlocked ship IDs
         wolf_unlocked: Whether Wolf assault frigate is unlocked
         jaguar_unlocked: Whether Jaguar assault frigate is unlocked
-        total_kills: Total number of enemies killed
+        total_kills: Total enemy kills across all sessions
         highest_stage: Highest stage reached
-        purchased_upgrades: List of purchased upgrade IDs (if None, preserves existing)
     """
     if unlocked_ships is None:
         unlocked_ships = []
     
-    # Load existing data to preserve purchased_upgrades if not specified
+    # Load existing data to preserve purchased_upgrades
     existing_data = load_progress()
-    if purchased_upgrades is None:
-        purchased_upgrades = existing_data.get('purchased_upgrades', [])
     
-    data = {
+    save_data = {
         'total_sp': sp,
-        'purchased_upgrades': purchased_upgrades,
         'unlocked_ships': unlocked_ships,
         'wolf_unlocked': wolf_unlocked,
         'jaguar_unlocked': jaguar_unlocked,
         'total_kills': total_kills,
-        'highest_stage': highest_stage
+        'highest_stage': highest_stage,
+        'purchased_upgrades': existing_data.get('purchased_upgrades', [])
     }
     
     try:
         with open(SAVE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2)
-    except IOError:
-        # Silently fail if we can't write (e.g., permissions issue)
-        pass
+            json.dump(save_data, f, indent=2)
+    except IOError as e:
+        print(f"Warning: Could not save progress: {e}")
 
 
 def reset_progress() -> None:
-    """
-    Reset player progress by removing the save file.
-    """
+    """Reset all progression data by removing the save file."""
     if os.path.exists(SAVE_FILE):
         try:
             os.remove(SAVE_FILE)
-        except OSError:
-            pass
+        except IOError as e:
+            print(f"Warning: Could not reset progress: {e}")

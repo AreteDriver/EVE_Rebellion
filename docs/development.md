@@ -1,10 +1,26 @@
 # Development Guide
 
-This document explains the data-driven architecture and conventions used in Minmatar Rebellion.
+This document explains the **expansion architecture** being developed for Minmatar Rebellion.
+
+## Current vs. Expansion Architecture
+
+### Current Game (Integrated)
+The main game runs from Python files in the root directory:
+- All content is defined in `constants.py` (enemies, stages, powerups, upgrades)
+- Sprite classes are in `sprites.py`
+- Game logic is in `game.py`
+
+### Expansion Architecture (Future)
+The `data/` directory and `core/loader.py` provide infrastructure for a data-driven approach:
+- Content defined in JSON files rather than Python code
+- Designed to support modding and easier content creation
+- **Not yet integrated** with the main game
+
+This guide focuses on the expansion architecture for future development.
 
 ## Data-Driven Design
 
-Minmatar Rebellion uses a **data-driven approach** for defining game content. This means that enemies, stages, and power-ups are defined in JSON files rather than hardcoded in Python. This architecture provides several benefits:
+Minmatar Rebellion includes a **data-driven architecture** for defining game content in the future. This system is designed to provide several benefits:
 
 - **Easy content creation**: Add new content by creating JSON files without modifying code.
 - **Modding support**: Players can create custom content by adding their own JSON files.
@@ -206,9 +222,14 @@ When adding new functionality:
 
 ## Future Improvements
 
-Planned enhancements to the data system:
+Planned enhancements to integrate the data system with the main game:
 
+- Integration of JSON-based content loading into main game loop
 - JSON schema validation
 - Hot-reloading of data files during development
 - Data file encryption for distribution builds
 - Custom sprite loading from data definitions
+- Migration of `constants.py` content to JSON format
+- Implementation of skill point progression system
+- Capital ship boss mechanics
+- Additional ship upgrades (Jaguar T2 assault frigate)
