@@ -283,28 +283,35 @@ class SaveManager:
             return False
         
         try:
-            player.score = state.get('score', 0)
-            player.refugees = state.get('refugees', 0)
-            player.total_refugees = state.get('total_refugees', 0)
-            player.shields = state.get('shields', 100)
-            player.armor = state.get('armor', 100)
-            player.hull = state.get('hull', 50)
-            player.max_shields = state.get('max_shields', 100)
-            player.max_armor = state.get('max_armor', 100)
-            player.max_hull = state.get('max_hull', 50)
-            player.rockets = state.get('rockets', 10)
-            player.current_ammo = state.get('current_ammo', 'sabot')
-            player.unlocked_ammo = list(state.get('unlocked_ammo', ['sabot']))
-            player.has_gyro = state.get('has_gyro', False)
-            player.has_tracking = state.get('has_tracking', False)
-            
+            # Only set attributes if they exist on the player object
+            for attr, default in [
+                ('score', 0),
+                ('refugees', 0),
+                ('total_refugees', 0),
+                ('shields', 100),
+                ('armor', 100),
+                ('hull', 50),
+                ('max_shields', 100),
+                ('max_armor', 100),
+                ('max_hull', 50),
+                ('rockets', 10),
+                ('current_ammo', 'sabot'),
+                ('unlocked_ammo', ['sabot']),
+                ('has_gyro', False),
+                ('has_tracking', False),
+            ]:
+                if hasattr(player, attr):
+                    value = state.get(attr, default)
+                    # Ensure unlocked_ammo is always a list
+                    if attr == 'unlocked_ammo':
+                        value = list(value)
+                    setattr(player, attr, value)
             # Handle wolf upgrade specially since it affects ship appearance
             if state.get('is_wolf', False) and not getattr(player, 'is_wolf', False):
                 if hasattr(player, 'upgrade_to_wolf'):
                     player.upgrade_to_wolf()
-                else:
+                elif hasattr(player, 'is_wolf'):
                     player.is_wolf = True
-            
             return True
         except (AttributeError, TypeError):
             return False
