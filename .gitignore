@@ -50,3 +50,10 @@ htmlcov/
 /tmp/
 *.tmp
 *.bak
+
+# PyInstaller
+*.spec.bak
+build/
+dist/
+*.exe
+*.app

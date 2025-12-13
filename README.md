@@ -12,25 +12,39 @@ A top-down arcade space shooter inspired by EVE Online, featuring the iconic Rif
 - **5 Ammo Types** - Swappable ammunition with tactical rock-paper-scissors mechanics
 - **Upgrade System** - Spend rescued refugees on ship improvements
 
-## Requirements
+## Getting Started
 
+### Option 1: Windows Executable (Recommended for Windows Users)
+
+**No Python installation required!**
+
+1. Download the latest `EVE_Rebellion-Windows.zip` from the [Releases](https://github.com/AreteDriver/EVE_Rebellion/releases) page
+2. Extract the ZIP file
+3. Double-click `EVE_Rebellion.exe` to play!
+
+The executable includes all necessary dependencies and game assets bundled into a single file.
+
+### Option 2: Run from Source
+
+**Requirements:**
 - Python 3.8+
 - Pygame 2.0+
 - NumPy (for sound generation)
 
-## Installation
+**Installation:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
+Or install manually:
 Or install minimal dependencies for gameplay only:
 
 ```bash
 pip install pygame numpy
 ```
 
-## Running the Game
+**Running the Game:**
 
 ```bash
 python main.py
@@ -41,6 +55,23 @@ Or on Linux:
 chmod +x main.py
 ./main.py
 ```
+
+### Building Your Own Executable
+
+If you want to build the Windows executable yourself:
+
+**On Windows:**
+```bash
+build_exe.bat
+```
+
+**On Linux/Mac:**
+```bash
+chmod +x build_exe.sh
+./build_exe.sh
+```
+
+The executable will be created in the `dist/` directory.
 
 ## Controls
 
@@ -227,6 +258,62 @@ Edit `sprites.py` to modify ship visuals:
 - Modify bullet, explosion, and powerup visuals
 
 ## Troubleshooting
+
+### Windows Executable Issues
+
+#### "Windows protected your PC" SmartScreen warning
+
+This is normal for unsigned applications. To run the game:
+
+1. Click "More info"
+2. Click "Run anyway"
+
+The game is open source - you can review the code on GitHub or build it yourself to verify it's safe.
+
+#### Anti-virus blocking the executable
+
+Some anti-virus software may flag PyInstaller executables as suspicious. This is a false positive. You can:
+
+1. Add an exception for `EVE_Rebellion.exe` in your anti-virus settings
+2. Download the source code and build the executable yourself
+3. Run from source using Python (see "Option 2: Run from Source")
+
+#### Executable won't start or crashes immediately
+
+1. **Check system requirements**: Windows 7 or later, 64-bit
+2. **Run as Administrator**: Right-click `EVE_Rebellion.exe` and select "Run as administrator"
+3. **Install Visual C++ Redistributable**: Download from [Microsoft](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+4. **Check the error**: If running from command prompt shows an error message, it can help diagnose the issue:
+   ```
+   cmd
+   cd path\to\game
+   EVE_Rebellion.exe
+   ```
+
+#### Missing DLL errors
+
+The executable should be self-contained, but if you get missing DLL errors:
+
+1. Install [Visual C++ Redistributable 2015-2022](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+2. Update Windows to the latest version
+3. Try running from source instead
+
+#### Game runs but no sound
+
+1. Check Windows sound settings - ensure output device is working
+2. Press 'S' in the game menu to toggle sound
+3. Press 'M' to toggle music
+4. Update audio drivers
+
+#### Performance issues with the executable
+
+The executable may run slightly slower than Python source due to unpacking overhead:
+
+1. Close other applications to free up resources
+2. Update graphics drivers
+3. For best performance, run from source (see "Option 2: Run from Source")
+
+### Python Source Code Issues
 
 ### Ships or graphics not displaying
 
