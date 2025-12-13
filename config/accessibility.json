@@ -1,0 +1,25 @@
+{
+    "version": "1.0",
+    "colorblind_mode": {
+        "enabled": false,
+        "type": "none",
+        "options": ["none", "protanopia", "deuteranopia", "tritanopia"]
+    },
+    "high_contrast_ui": {
+        "enabled": false,
+        "text_scale": 1.0,
+        "outline_thickness": 1
+    },
+    "screen_shake": {
+        "enabled": true,
+        "intensity": 1.0
+    },
+    "flash_effects": {
+        "enabled": true,
+        "intensity": 1.0
+    },
+    "audio_cues": {
+        "enabled": true,
+        "volume": 1.0
+    }
+}
