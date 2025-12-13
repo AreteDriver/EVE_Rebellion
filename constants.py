@@ -132,66 +132,16 @@ WOLF_SPEED_BONUS = 1.2
 WOLF_ARMOR_BONUS = 50
 WOLF_HULL_BONUS = 25
 
-# Jaguar upgrade bonuses (T2 variant with escort ships)
-JAGUAR_SPEED_BONUS = 1.15
-JAGUAR_ARMOR_BONUS = 40
-JAGUAR_HULL_BONUS = 20
-
-# Formation system
-FORMATION_COOLDOWN = 2000  # ms cooldown between formation switches
-FORMATION_SWITCH_KEY = pygame.K_f
-ESCORT_INTERCEPT_DISTANCE = 200  # Distance to player for escort interception check
-
-# Formation types with positioning and behavior configurations
-# Positions are offsets from player (x, y) - ships orbit these points
-FORMATION_TYPES = {
-    'standard': {
-        'name': 'Standard',
-        'description': 'Balanced distribution around main ship',
-        'color': (180, 180, 180),
-        # Positions for up to 4 escort ships (relative to player)
-        'positions': [
-            (-50, 20),   # Left-rear
-            (50, 20),    # Right-rear
-            (-70, -10),  # Left-forward
-            (70, -10),   # Right-forward
-        ],
-        'orbit_radius': 15,
-        'orbit_speed': 2.0,
-        'fire_spread': 0,  # Degrees offset from forward
-        'intercept_range': 0,  # No special interception
-    },
-    'offensive': {
-        'name': 'Offensive',
-        'description': 'Forward formation for concentrated firepower',
-        'color': (255, 100, 100),
-        'positions': [
-            (-30, -40),  # Left-front
-            (30, -40),   # Right-front
-            (-50, -20),  # Left-mid
-            (50, -20),   # Right-mid
-        ],
-        'orbit_radius': 10,
-        'orbit_speed': 1.5,
-        'fire_spread': 5,  # Slight convergence toward center
-        'intercept_range': 0,
-    },
-    'defensive': {
-        'name': 'Defensive',
-        'description': 'Close protection with projectile interception',
-        'color': (100, 150, 255),
-        'positions': [
-            (-35, 0),    # Left
-            (35, 0),     # Right
-            (-25, 30),   # Left-rear
-            (25, 30),    # Right-rear
-        ],
-        'orbit_radius': 20,
-        'orbit_speed': 3.0,
-        'fire_spread': 10,  # Wider spread for area denial
-        'intercept_range': 60,  # Can intercept projectiles within this range
-    },
-}
+# Fleet upgrade settings
+FLEET_MAX_SHIPS = 5                     # Maximum ships in fleet
+FLEET_DOWNGRADE_SHIPS = 3               # Ships remaining after timer expires
+FLEET_UPGRADE_DURATION = 15000          # Duration in ms (15 seconds)
+FLEET_SHIP_SHIELDS = 40                 # Shields per fleet ship
+FLEET_SHIP_ARMOR = 40                   # Armor per fleet ship
+FLEET_SHIP_HULL = 20                    # Hull per fleet ship
+FLEET_VOLLEY_COUNT = 5                  # Max volleys during upgrade
+FLEET_VOLLEY_DAMAGE_MULT = 2.0          # Volley damage multiplier
+FLEET_SHIP_SPACING = 45                 # Horizontal spacing between fleet ships
 
 # Bullet stats
 BULLET_SPEED = 12
@@ -286,7 +236,7 @@ UPGRADE_COSTS = {
     'fusion_ammo': 45,
     'barrage_ammo': 55,
     'wolf_upgrade': 50,
-    'jaguar_upgrade': 60,  # T2 variant with escort ships
+    'fleet_upgrade': 40
 }
 
 # Powerup types
@@ -294,7 +244,8 @@ POWERUP_TYPES = {
     'nanite': {'name': 'Nanite Paste', 'color': (100, 255, 100), 'heal': 50},
     'capacitor': {'name': 'Capacitor Booster', 'color': (100, 100, 255), 'rockets': 5},
     'overdrive': {'name': 'Overdrive', 'color': (255, 255, 100), 'duration': 5000},
-    'shield_boost': {'name': 'Shield Booster', 'color': (150, 200, 255), 'duration': 3000}
+    'shield_boost': {'name': 'Shield Booster', 'color': (150, 200, 255), 'duration': 3000},
+    'fleet_beacon': {'name': 'Fleet Beacon', 'color': (255, 150, 50), 'fleet_upgrade': True}
 }
 
 # Stage definitions
