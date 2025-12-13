@@ -1,196 +1,194 @@
 # Contributing to Minmatar Rebellion
 
-Thank you for your interest in contributing to Minmatar Rebellion! This document provides guidelines for extending the game's quality-of-life systems.
+Thank you for your interest in contributing to Minmatar Rebellion! This document provides guidelines and instructions for contributing to the project.
 
-## Table of Contents
+## Project Structure
 
-- [Getting Started](#getting-started)
-- [Extending the Options System](#extending-the-options-system)
-- [Extending the Save System](#extending-the-save-system)
-- [Extending the Tutorial System](#extending-the-tutorial-system)
-- [Code Style](#code-style)
-- [Submitting Changes](#submitting-changes)
-
-## Getting Started
-
-1. Fork the repository
-2. Clone your fork locally
-3. Install dependencies:
-   ```bash
-   pip install pygame numpy
-   ```
-4. Run the game to ensure everything works:
-   ```bash
-   python main.py
-   ```
-
-## Extending the Options System
-
-The options system is implemented in `core/pause_menu.py` and stores settings in `config/options.json`.
-
-### Adding a New Option
-
-1. **Update the default options** in `core/pause_menu.py`:
-   ```python
-   DEFAULT_OPTIONS = {
-       "music_volume": 0.5,
-       "sfx_volume": 0.7,
-       "difficulty": "normal",
-       "your_new_option": default_value  # Add your option here
-   }
-   ```
-
-2. **Add validation** in the `load_options()` and `save_options()` functions to ensure your option is properly validated and sanitized.
-
-3. **Update the PauseMenu class**:
-   - Add an attribute for your option in `__init__()`
-   - Add getter/setter methods as needed
-   - Update `options_list` if it should appear in the menu
-   - Add handling in `handle_input()` for user interaction
-
-4. **Update `config/options.json`** with the new default value.
-
-### Example: Adding a Screen Shake Toggle
-
-```python
-# In DEFAULT_OPTIONS:
-"screen_shake": True
-
-# In PauseMenu.__init__():
-self.screen_shake = options['screen_shake']
-
-# Add setter method:
-def set_screen_shake(self, enabled):
-    self.screen_shake = bool(enabled)
+```
+EVE_Rebellion/
+├── main.py              # Entry point
+├── game.py              # Main game logic, states, rendering
+├── sprites.py           # All game entities (player, enemies, bullets)
+├── constants.py         # Configuration, stats, stage definitions
+├── sounds.py            # Procedural sound generation
+├── core/                # Core utilities
+│   ├── __init__.py
+│   └── loader.py        # JSON data loader for game content
+├── enemies/             # Enemy class implementations (reserved for expansion)
+│   └── __init__.py
+├── stages/              # Stage class implementations (reserved for expansion)
+│   └── __init__.py
+├── powerups/            # Power-up class implementations (reserved for expansion)
+│   └── __init__.py
+├── expansion/           # Experimental/future features
+│   ├── capital_ship_enemy.py    # Capital ship boss class
+│   └── upgrade_screen.py        # Skill point upgrade system (WIP)
+├── data/                # JSON data files for expansion content
+│   ├── enemies/         # Enemy definitions (*.json)
+│   ├── stages/          # Stage definitions (*.json)
+│   ├── powerups/        # Power-up definitions (*.json)
+│   └── upgrades.json    # Upgrade tree definitions
+├── docs/                # Documentation
+│   └── development.md   # Development guide
+├── CONTRIBUTING.md      # This file
+└── README.md            # Project overview
 ```
 
-## Extending the Save System
+## Current Game Architecture
 
-The save system is implemented in `core/save_manager.py` and stores save files in the `saves/` directory.
+The main game currently runs from Python files in the root directory:
+- `constants.py` defines all enemy stats, stages, and game parameters
+- `sprites.py` contains all sprite classes (Player, Enemy, Bullet, etc.)
+- `game.py` implements the game loop and state management
+- `sounds.py` generates procedural sound effects
 
-### Adding New Player State Fields
+## Expansion Architecture
 
-1. **Update `extract_player_state()`** in `SaveManager` class to include your new field:
-   ```python
-   def extract_player_state(self, player):
-       return {
-           # ... existing fields ...
-           'your_new_field': getattr(player, 'your_new_field', default_value)
-       }
-   ```
+The `data/` directory and `core/loader.py` provide infrastructure for a future data-driven architecture where game content can be defined in JSON files rather than hardcoded. This system is **not yet integrated** into the main game but is available for development:
 
-2. **Update `apply_player_state()`** to restore your field:
-   ```python
-   player.your_new_field = state.get('your_new_field', default_value)
-   ```
+- JSON files in `data/` define enemies, stages, and powerups
+- `core/loader.py` provides functions to load these definitions
+- The expansion content uses a different schema than the current game
 
-### Adding New Game State Fields
+## Adding New Content
 
-1. When calling `save_game()`, include your new fields in the `game_state` dictionary:
-   ```python
-   game_state = {
-       'current_stage': self.current_stage,
-       'current_wave': self.current_wave,
-       'difficulty': self.difficulty,
-       'your_new_field': self.your_new_field  # Add here
-   }
-   ```
+The game supports two approaches for adding content:
 
-2. When loading, retrieve your field from the `game_state` dictionary returned by `load_game()`.
+### 1. Direct Python Implementation (Current Game)
 
-### Save File Format
+To add features to the currently running game, modify the Python files directly:
 
-Save files are JSON with this structure:
-```json
-{
-    "player": {
-        "score": 1500,
-        "refugees": 25,
-        ...
-    },
-    "game": {
-        "current_stage": 1,
-        "current_wave": 3,
-        "difficulty": "normal"
-    },
-    "timestamp": "2024-01-15T10:30:00Z"
-}
-```
+- **Add enemies**: Edit `ENEMY_STATS` dictionary in `constants.py`
+- **Add stages**: Edit `STAGES` list in `constants.py`
+- **Add powerups**: Edit `POWERUP_TYPES` dictionary in `constants.py`
+- **Add upgrades**: Edit `UPGRADE_COSTS` dictionary in `constants.py`
 
-## Extending the Tutorial System
+### 2. Data-Driven Approach (Future Expansion)
 
-The tutorial system is implemented in `core/tutorial.py` and loads data from `data/tutorial.json`.
+The game includes infrastructure for a data-driven approach where content is defined in JSON files. This system is **not yet integrated** with the main game but provides a foundation for future development and modding support.
 
-### Adding New Tutorial Steps
+### Adding a New Enemy
 
-Edit `data/tutorial.json` to add new steps:
+1. Create a new JSON file in `data/enemies/` (e.g., `data/enemies/my_enemy.json`)
+2. Define the enemy properties following this structure:
 
 ```json
 {
-    "steps": [
-        {
-            "id": "unique_step_id",
-            "message": "Your tutorial message here",
-            "duration": 4.0
-        }
-    ]
+    "name": "Enemy Name",
+    "description": "Brief description of the enemy.",
+    "health": 100,
+    "shields": 30,
+    "armor": 40,
+    "hull": 30,
+    "speed": 2.0,
+    "fire_rate": 1500,
+    "score": 100,
+    "size": [30, 40],
+    "behavior": {
+        "pattern": "zigzag",
+        "aggressive": true,
+        "shoots": true
+    },
+    "drops": {
+        "powerup_chance": 0.15,
+        "refugees": 0
+    },
+    "visual": {
+        "sprite": "enemy_sprite_name",
+        "color": [180, 60, 60]
+    }
 }
 ```
 
-Each step requires:
-- `id` (string): Unique identifier for the step
-- `message` (string): Text displayed to the player
-- `duration` (float): How long the message displays in seconds
+### Adding a New Stage
 
-### Adding Tutorial Features
+1. Create a new JSON file in `data/stages/` (e.g., `data/stages/my_stage.json`)
+2. Define the stage properties:
 
-To add features like conditions or triggers:
-
-1. **Extend the step schema** in `data/tutorial.json`:
-   ```json
-   {
-       "id": "rockets_unlocked",
-       "message": "You've unlocked rockets! Press SHIFT to fire.",
-       "duration": 4.0,
-       "trigger": "rockets_unlocked"
-   }
-   ```
-
-2. **Update validation** in `load_tutorial_data()` to include new fields.
-
-3. **Update the Tutorial class** to handle the new features in `update()` or add new methods.
-
-### Conditional Tutorial Steps
-
-To implement conditional steps:
-
-```python
-# In Tutorial class:
-def should_show_step(self, step_id):
-    """Check if a step should be shown based on game state."""
-    # Add your conditions here
-    return True
-
-def update(self, delta_time, game_state=None):
-    """Update with optional game state for conditional logic."""
-    # ... existing update logic ...
-    # Add conditional checks as needed
+```json
+{
+    "name": "Stage Name",
+    "description": "Stage description.",
+    "waves": 5,
+    "enemies": ["enemy_id_1", "enemy_id_2"],
+    "industrial_chance": 0.1,
+    "boss": null,
+    "background": "background_name",
+    "difficulty_modifier": 1.0,
+    "rewards": {
+        "base_score": 500,
+        "refugee_bonus": 10
+    }
+}
 ```
+
+### Adding a New Power-up
+
+1. Create a new JSON file in `data/powerups/` (e.g., `data/powerups/my_powerup.json`)
+2. Define the power-up properties:
+
+```json
+{
+    "name": "Power-up Name",
+    "description": "What this power-up does.",
+    "effect": "effect_id",
+    "duration": 5000,
+    "color": [255, 200, 50],
+    "stats": {
+        "custom_stat": "value"
+    },
+    "rarity": "common",
+    "drop_weight": 1.0
+}
+```
+
+## Adding New Features
+
+When adding new features that require Python code changes:
+
+1. **Follow existing code style**: Match the formatting and naming conventions used in the existing codebase.
+2. **Keep modules focused**: Place enemy-related code in `enemies/`, stage-related code in `stages/`, etc.
+3. **Use the loader**: Leverage `core/loader.py` for loading any new JSON data.
+4. **Update documentation**: Add relevant documentation to `docs/` if needed.
+
+## Pull Request Guidelines
+
+### Before Submitting
+
+1. **Test your changes**: Run the game and verify your additions work correctly.
+2. **Check for errors**: Ensure there are no Python syntax errors or runtime exceptions.
+3. **Validate JSON**: Make sure all JSON files are valid (use a JSON validator if needed).
+
+### Submitting a PR
+
+1. **Fork the repository** and create a new branch for your feature.
+2. **Make your changes** following the guidelines above.
+3. **Write a clear PR description** explaining:
+   - What the PR adds or changes
+   - Why the change is needed
+   - How to test the changes
+4. **Keep PRs focused**: One feature or fix per PR is preferred.
+5. **Reference any related issues** in your PR description.
+
+### PR Title Format
+
+Use a descriptive title that summarizes the change:
+- `Add new enemy: Destroyer class ship`
+- `Add power-up: Speed boost`
+- `Fix bug in stage transition`
+- `Update documentation for enemy creation`
 
 ## Code Style
 
-- Follow PEP 8 guidelines
+- Use 4 spaces for indentation (no tabs)
 - Use descriptive variable and function names
-- Add docstrings to all public functions and classes
-- Include type hints where beneficial
-- Keep functions focused and single-purpose
+- Add docstrings to new functions and classes
+- Keep lines under 100 characters when practical
 
-## Submitting Changes
+## Questions?
 
-1. Create a new branch for your changes
-2. Make your changes with clear commit messages
-3. Test your changes thoroughly
-4. Update documentation if needed
-5. Submit a pull request with a description of your changes
+If you have questions about contributing, feel free to open an issue for discussion.
 
-Thank you for contributing!
+---
+
+*"We were slaves once. Never again."* — Minmatar Rebellion motto

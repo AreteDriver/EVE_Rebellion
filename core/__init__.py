@@ -1,1 +1,1 @@
-"""Core game modules for quality-of-life features."""
+# Core module - contains core utilities and loaders

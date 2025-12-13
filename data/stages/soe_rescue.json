@@ -1,0 +1,33 @@
+{
+  "name": "Sisters Rescue",
+  "description": "Assist the Sisters of EVE in rescuing refugees and fend off pirate attackers.",
+  "waves": [
+    {
+      "enemies": [
+        {"type": "punisher", "count": 8},
+        {"type": "dragoon", "count": 3}
+      ]
+    },
+    {
+      "enemies": [
+        {"type": "coercer", "count": 3},
+        {"type": "omen", "count": 2}
+      ]
+    },
+    {
+      "boss": "stratios"
+    }
+  ],
+  "boss": {
+    "type": "stratios",
+    "name": "Stratios",
+    "health": 1500,
+    "shields": 150,
+    "armor": 150,
+    "hull": 100,
+    "speed": 1.2,
+    "special_ability": "cloak_and_drones"
+  },
+  "background": "images/soe_background.png",
+  "music": "music/soe_theme.mp3"
+}
