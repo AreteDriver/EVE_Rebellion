@@ -23,6 +23,11 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
 
 # Virtual environments
 venv/
@@ -34,6 +39,7 @@ env/
 .idea/
 .vscode/
 *.swp
+.swp
 *.swo
 *~
 
@@ -45,8 +51,16 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
 
 # Temporary files
 /tmp/
 *.tmp
 *.bak
+
+# PyInstaller
+*.spec.bak
+build/
+dist/
+*.exe
+*.app
