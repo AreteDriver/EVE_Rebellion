@@ -1,0 +1,15 @@
+{
+    "name": "Shield Booster",
+    "description": "Temporarily boosts shield strength and provides damage reduction.",
+    "effect": "shield_boost",
+    "duration": 5000,
+    "color": [150, 200, 255],
+    "icon": "shield_icon",
+    "stats": {
+        "shield_restore": 30,
+        "damage_reduction": 0.3
+    },
+    "rarity": "common",
+    "drop_weight": 1.0,
+    "sound": "pickup_powerup"
+}
