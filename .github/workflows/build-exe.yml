@@ -1,0 +1,51 @@
+name: Build Windows Executable
+
+on:
+  release:
+    types: [created, published]
+  workflow_dispatch:  # Allow manual trigger
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags
+
+jobs:
+  build:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller --clean EVE_Rebellion.spec
+        
+    - name: Create distribution archive
+      run: |
+        cd dist
+        Compress-Archive -Path EVE_Rebellion.exe -DestinationPath EVE_Rebellion-Windows.zip
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: EVE_Rebellion-Windows
+        path: dist/EVE_Rebellion-Windows.zip
+        
+    - name: Upload to release
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/EVE_Rebellion-Windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
