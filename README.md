@@ -202,6 +202,7 @@ The executable will be created in the `dist/` directory.
 | Fleet Volley | V (when fleet upgrade active) |
 | Select Ammo | 1-5 |
 | Cycle Ammo | Q or Tab |
+| Switch Formation | F (Jaguar only) |
 | Pause | ESC |
 
 ### Menu Controls

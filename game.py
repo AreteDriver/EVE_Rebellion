@@ -83,6 +83,7 @@ class Game:
         self.pods = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
+        self.escort_ships = pygame.sprite.Group()
         
         # Player
         self.player = Player()
@@ -204,6 +205,17 @@ class Game:
                     elif event.key == pygame.K_q or event.key == pygame.K_TAB:
                         self.player.cycle_ammo()
                         self.play_sound('ammo_switch')
+                    elif event.key == FORMATION_SWITCH_KEY:
+                        # Formation switching (only for Jaguar upgrade)
+                        if self.player.is_jaguar and self.player.switch_formation():
+                            formation = self.player.get_formation_info()
+                            self.show_message(f"Formation: {formation['name']}", 60)
+                            self.play_sound('ammo_switch')
+                        elif self.player.is_jaguar and not self.player.can_switch_formation():
+                            self.play_sound('error')
+                        elif not self.player.is_jaguar:
+                            self.show_message("Requires Jaguar upgrade", 60)
+                            self.play_sound('error')
                     else:
                         # Check ammo hotkeys
                         for ammo_type, data in AMMO_TYPES.items():
@@ -384,6 +396,19 @@ class Game:
                 for rocket in rockets:
                     self.player_bullets.add(rocket)
                     self.all_sprites.add(rocket)
+        
+        # Update escort ships (Jaguar formation)
+        if self.player.is_jaguar:
+            for escort in list(self.player.escort_ships):
+                # Update escort position with enemy bullets for interception
+                escort.update(self.enemy_bullets)
+                
+                # Escort shooting (when player is shooting)
+                if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0]:
+                    escort_bullets = escort.shoot()
+                    for bullet in escort_bullets:
+                        self.player_bullets.add(bullet)
+                        self.all_sprites.add(bullet)
         
         # Update stars
         for star in self.stars:
@@ -819,6 +844,31 @@ class Game:
         ))
         text = self.font_small.render(f"[{self.difficulty_settings['name']}]", True, diff_color)
         self.render_surface.blit(text, (x, y))
+        
+        # Formation indicator (for Jaguar upgrade)
+        if self.player.is_jaguar:
+            y += 25
+            formation = self.player.get_formation_info()
+            
+            # Formation name with color indicator
+            pygame.draw.rect(self.render_surface, formation['color'], (x, y, 12, 12))
+            text = self.font_small.render(f"[F] {formation['name']}", True, formation['color'])
+            self.render_surface.blit(text, (x + 16, y - 2))
+            
+            # Cooldown indicator
+            if not self.player.can_switch_formation():
+                cooldown_remaining = (self.player.formation_cooldown_until - pygame.time.get_ticks()) / max(FORMATION_COOLDOWN, 1)
+                cooldown_progress = 1 - cooldown_remaining  # Progress from 0 to 1
+                progress_width = int(60 * max(0, min(1, cooldown_progress)))
+                pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y + 14, 60, 4))  # Background
+                pygame.draw.rect(self.render_surface, (150, 150, 150), (x, y + 14, progress_width, 4))  # Progress
+            
+            # Escort count
+            y += 22
+            escort_count = len(self.player.escort_ships)
+            escort_color = (100, 200, 255) if escort_count > 0 else (150, 100, 100)
+            text = self.font_small.render(f"Escorts: {escort_count}", True, escort_color)
+            self.render_surface.blit(text, (x, y))
     
     def draw_menu(self):
         """Draw main menu"""
@@ -908,7 +958,13 @@ class Game:
         for key, name, cost, owned, desc in upgrades:
             if owned:
                 color = (80, 80, 80)
-                status = "[OWNED]"
+                # Determine if truly owned vs blocked
+                if name == "WOLF UPGRADE":
+                    status = "[OWNED]" if player.is_wolf else "[N/A]"
+                elif name == "JAGUAR UPGRADE":
+                    status = "[OWNED]" if player.is_jaguar else "[N/A]"
+                else:
+                    status = "[OWNED]"
             elif player.refugees >= cost:
                 color = (100, 255, 100)
                 status = f"[{cost} refugees]"
