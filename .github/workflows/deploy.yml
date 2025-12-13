@@ -1,0 +1,92 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: MinmatarRebellion-Linux
+            asset_name: MinmatarRebellion-Linux.tar.gz
+          - os: windows-latest
+            artifact_name: MinmatarRebellion-Windows
+            asset_name: MinmatarRebellion-Windows.zip
+          - os: macos-latest
+            artifact_name: MinmatarRebellion-macOS
+            asset_name: MinmatarRebellion-macOS.zip
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed --name MinmatarRebellion main.py
+    
+    - name: Package Linux artifact
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        cd dist
+        tar -czf ${{ matrix.asset_name }} MinmatarRebellion
+    
+    - name: Package Windows artifact
+      if: matrix.os == 'windows-latest'
+      run: |
+        cd dist
+        Compress-Archive -Path MinmatarRebellion.exe -DestinationPath ${{ matrix.asset_name }}
+      shell: pwsh
+    
+    - name: Package macOS artifact
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd dist
+        zip -r ${{ matrix.asset_name }} MinmatarRebellion
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: dist/${{ matrix.asset_name }}
+  
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ./artifacts/MinmatarRebellion-Linux/*.tar.gz
+          ./artifacts/MinmatarRebellion-Windows/*.zip
+          ./artifacts/MinmatarRebellion-macOS/*.zip
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
