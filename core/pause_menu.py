@@ -3,7 +3,6 @@
 Settings are stored in config/options.json.
 """
 import json
-import os
 from pathlib import Path
 
 
