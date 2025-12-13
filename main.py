@@ -16,6 +16,12 @@ Controls:
 
 from game import Game
 
-if __name__ == "__main__":
+
+def main():
+    """Main entry point for the game"""
     game = Game()
     game.run()
+
+
+if __name__ == "__main__":
+    main()

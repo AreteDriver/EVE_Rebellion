@@ -88,6 +88,32 @@ pip install -r requirements.txt
 Or install manually:
 Or install minimal dependencies for gameplay only:
 
+### Quick Start (Manual)
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the game
+python main.py
+```
+
+### Installation via setup.py
+
+```bash
+# Clone or download the repository
+git clone https://github.com/AreteDriver/EVE_Rebellion.git
+cd EVE_Rebellion
+
+# Install the game and dependencies
+pip install -e .
+
+# Run from anywhere
+minmatar-rebellion
+```
+
+### Direct Dependency Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/AreteDriver/EVE_Rebellion.git
@@ -99,6 +125,20 @@ pip install -r requirements.txt
 
 **Running the Game:**
 
+### Using the convenience scripts
+
+Linux/macOS:
+```bash
+./run.sh
+```
+
+Windows:
+```bash
+run.bat
+```
+
+### Direct execution
+
 ```bash
 python main.py
 ```
@@ -107,6 +147,12 @@ Or on Linux/macOS:
 ```bash
 chmod +x main.py
 ./main.py
+```
+
+### After installation via setup.py
+
+```bash
+minmatar-rebellion
 ```
 
 ### Building Your Own Executable
