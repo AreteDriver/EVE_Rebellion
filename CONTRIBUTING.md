@@ -1,135 +1,194 @@
 # Contributing to Minmatar Rebellion
 
-Thank you for your interest in contributing to Minmatar Rebellion! This document provides guidelines for contributing code, documentation, and other improvements.
+Thank you for your interest in contributing to Minmatar Rebellion! This document provides guidelines and instructions for contributing to the project.
 
-## Getting Started
+## Project Structure
 
-1. Fork the repository
-2. Clone your fork locally
-3. Install dependencies: `pip install pygame numpy`
-4. Run the game: `python main.py`
+```
+EVE_Rebellion/
+├── main.py              # Entry point
+├── game.py              # Main game logic, states, rendering
+├── sprites.py           # All game entities (player, enemies, bullets)
+├── constants.py         # Configuration, stats, stage definitions
+├── sounds.py            # Procedural sound generation
+├── core/                # Core utilities
+│   ├── __init__.py
+│   └── loader.py        # JSON data loader for game content
+├── enemies/             # Enemy class implementations (reserved for expansion)
+│   └── __init__.py
+├── stages/              # Stage class implementations (reserved for expansion)
+│   └── __init__.py
+├── powerups/            # Power-up class implementations (reserved for expansion)
+│   └── __init__.py
+├── expansion/           # Experimental/future features
+│   ├── capital_ship_enemy.py    # Capital ship boss class
+│   └── upgrade_screen.py        # Skill point upgrade system (WIP)
+├── data/                # JSON data files for expansion content
+│   ├── enemies/         # Enemy definitions (*.json)
+│   ├── stages/          # Stage definitions (*.json)
+│   ├── powerups/        # Power-up definitions (*.json)
+│   └── upgrades.json    # Upgrade tree definitions
+├── docs/                # Documentation
+│   └── development.md   # Development guide
+├── CONTRIBUTING.md      # This file
+└── README.md            # Project overview
+```
+
+## Current Game Architecture
+
+The main game currently runs from Python files in the root directory:
+- `constants.py` defines all enemy stats, stages, and game parameters
+- `sprites.py` contains all sprite classes (Player, Enemy, Bullet, etc.)
+- `game.py` implements the game loop and state management
+- `sounds.py` generates procedural sound effects
+
+## Expansion Architecture
+
+The `data/` directory and `core/loader.py` provide infrastructure for a future data-driven architecture where game content can be defined in JSON files rather than hardcoded. This system is **not yet integrated** into the main game but is available for development:
+
+- JSON files in `data/` define enemies, stages, and powerups
+- `core/loader.py` provides functions to load these definitions
+- The expansion content uses a different schema than the current game
+
+## Adding New Content
+
+The game supports two approaches for adding content:
+
+### 1. Direct Python Implementation (Current Game)
+
+To add features to the currently running game, modify the Python files directly:
+
+- **Add enemies**: Edit `ENEMY_STATS` dictionary in `constants.py`
+- **Add stages**: Edit `STAGES` list in `constants.py`
+- **Add powerups**: Edit `POWERUP_TYPES` dictionary in `constants.py`
+- **Add upgrades**: Edit `UPGRADE_COSTS` dictionary in `constants.py`
+
+### 2. Data-Driven Approach (Future Expansion)
+
+The game includes infrastructure for a data-driven approach where content is defined in JSON files. This system is **not yet integrated** with the main game but provides a foundation for future development and modding support.
+
+### Adding a New Enemy
+
+1. Create a new JSON file in `data/enemies/` (e.g., `data/enemies/my_enemy.json`)
+2. Define the enemy properties following this structure:
+
+```json
+{
+    "name": "Enemy Name",
+    "description": "Brief description of the enemy.",
+    "health": 100,
+    "shields": 30,
+    "armor": 40,
+    "hull": 30,
+    "speed": 2.0,
+    "fire_rate": 1500,
+    "score": 100,
+    "size": [30, 40],
+    "behavior": {
+        "pattern": "zigzag",
+        "aggressive": true,
+        "shoots": true
+    },
+    "drops": {
+        "powerup_chance": 0.15,
+        "refugees": 0
+    },
+    "visual": {
+        "sprite": "enemy_sprite_name",
+        "color": [180, 60, 60]
+    }
+}
+```
+
+### Adding a New Stage
+
+1. Create a new JSON file in `data/stages/` (e.g., `data/stages/my_stage.json`)
+2. Define the stage properties:
+
+```json
+{
+    "name": "Stage Name",
+    "description": "Stage description.",
+    "waves": 5,
+    "enemies": ["enemy_id_1", "enemy_id_2"],
+    "industrial_chance": 0.1,
+    "boss": null,
+    "background": "background_name",
+    "difficulty_modifier": 1.0,
+    "rewards": {
+        "base_score": 500,
+        "refugee_bonus": 10
+    }
+}
+```
+
+### Adding a New Power-up
+
+1. Create a new JSON file in `data/powerups/` (e.g., `data/powerups/my_powerup.json`)
+2. Define the power-up properties:
+
+```json
+{
+    "name": "Power-up Name",
+    "description": "What this power-up does.",
+    "effect": "effect_id",
+    "duration": 5000,
+    "color": [255, 200, 50],
+    "stats": {
+        "custom_stat": "value"
+    },
+    "rarity": "common",
+    "drop_weight": 1.0
+}
+```
+
+## Adding New Features
+
+When adding new features that require Python code changes:
+
+1. **Follow existing code style**: Match the formatting and naming conventions used in the existing codebase.
+2. **Keep modules focused**: Place enemy-related code in `enemies/`, stage-related code in `stages/`, etc.
+3. **Use the loader**: Leverage `core/loader.py` for loading any new JSON data.
+4. **Update documentation**: Add relevant documentation to `docs/` if needed.
+
+## Pull Request Guidelines
+
+### Before Submitting
+
+1. **Test your changes**: Run the game and verify your additions work correctly.
+2. **Check for errors**: Ensure there are no Python syntax errors or runtime exceptions.
+3. **Validate JSON**: Make sure all JSON files are valid (use a JSON validator if needed).
+
+### Submitting a PR
+
+1. **Fork the repository** and create a new branch for your feature.
+2. **Make your changes** following the guidelines above.
+3. **Write a clear PR description** explaining:
+   - What the PR adds or changes
+   - Why the change is needed
+   - How to test the changes
+4. **Keep PRs focused**: One feature or fix per PR is preferred.
+5. **Reference any related issues** in your PR description.
+
+### PR Title Format
+
+Use a descriptive title that summarizes the change:
+- `Add new enemy: Destroyer class ship`
+- `Add power-up: Speed boost`
+- `Fix bug in stage transition`
+- `Update documentation for enemy creation`
 
 ## Code Style
 
-- Follow PEP 8 guidelines for Python code
+- Use 4 spaces for indentation (no tabs)
 - Use descriptive variable and function names
-- Add docstrings to modules, classes, and functions
-- Keep functions focused and reasonably sized
-
-## Pull Request Process
-
-1. Create a feature branch from `main`
-2. Make your changes with clear, descriptive commits
-3. Test your changes thoroughly
-4. Update documentation if needed
-5. Submit a pull request with a clear description
-
-## Adding Control Schemes
-
-The game supports customizable controls through `config/controls.json`. To add or modify control schemes:
-
-### Keyboard Bindings
-
-Edit the `keyboard` section in `config/controls.json`:
-
-```json
-{
-    "keyboard": {
-        "move_left": ["K_LEFT", "K_a"],
-        "move_right": ["K_RIGHT", "K_d"],
-        "fire": ["K_SPACE"]
-    }
-}
-```
-
-- Keys use pygame constant names (e.g., `K_LEFT`, `K_SPACE`, `K_a`)
-- Each action can have multiple keys bound to it as an array
-- See [pygame key constants](https://www.pygame.org/docs/ref/key.html) for available keys
-
-### Gamepad Bindings
-
-Edit the `gamepad` section for controller support:
-
-```json
-{
-    "gamepad": {
-        "move_left": {"type": "axis", "axis": 0, "direction": -1},
-        "fire": {"type": "button", "button": 0}
-    }
-}
-```
-
-- Use `"type": "axis"` for analog sticks with `"axis"` number and `"direction"` (-1 or 1)
-- Use `"type": "button"` for buttons with `"button"` number
-- Adjust `gamepad_deadzone` (0.0 to 1.0) for stick sensitivity
-
-### Using the Controls Manager
-
-```python
-from core.controls import ControlsManager
-
-manager = ControlsManager()
-manager.load()
-
-# Get keyboard keys for an action
-move_keys = manager.get_keyboard_keys('move_left')
-
-# Get gamepad binding
-fire_binding = manager.get_gamepad_binding('fire')
-```
-
-## Adding Accessibility Options
-
-Accessibility settings are stored in `config/accessibility.json`. To add new options:
-
-### Available Settings
-
-```json
-{
-    "colorblind_mode": {
-        "enabled": false,
-        "type": "none",
-        "options": ["none", "protanopia", "deuteranopia", "tritanopia"]
-    },
-    "high_contrast_ui": {
-        "enabled": false,
-        "text_scale": 1.0
-    },
-    "screen_shake": {
-        "enabled": true,
-        "intensity": 1.0
-    }
-}
-```
-
-### Guidelines for New Accessibility Features
-
-1. **Colorblind Support**: When adding new visual elements, consider how they appear to users with different types of color blindness. Use shape and pattern in addition to color.
-
-2. **Motion Sensitivity**: Allow users to disable or reduce screen shake and flash effects.
-
-3. **Audio Cues**: Provide audio feedback for important game events so players aren't solely dependent on visual cues.
-
-4. **Text Scaling**: Support adjustable text sizes where feasible.
-
-5. **High Contrast**: Ensure UI elements are distinguishable with high contrast settings enabled.
-
-### Implementing Accessibility Features
-
-When implementing features that use accessibility settings:
-
-1. Load settings from `config/accessibility.json`
-2. Check the relevant setting before applying effects
-3. Provide fallbacks when settings are disabled
-4. Test with various setting combinations
-
-## Reporting Issues
-
-- Use GitHub Issues for bug reports and feature requests
-- Include steps to reproduce bugs
-- Specify your operating system and Python version
-- Attach screenshots or error logs when helpful
+- Add docstrings to new functions and classes
+- Keep lines under 100 characters when practical
 
 ## Questions?
 
-Feel free to open an issue for questions about contributing.
+If you have questions about contributing, feel free to open an issue for discussion.
+
+---
+
+*"We were slaves once. Never again."* — Minmatar Rebellion motto

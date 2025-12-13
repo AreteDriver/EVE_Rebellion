@@ -1,354 +1,235 @@
 # Development Guide
 
-This document covers the technical implementation of controls and accessibility systems in Minmatar Rebellion.
+This document explains the **expansion architecture** being developed for Minmatar Rebellion.
 
-## Project Structure
+## Current vs. Expansion Architecture
+
+### Current Game (Integrated)
+The main game runs from Python files in the root directory:
+- All content is defined in `constants.py` (enemies, stages, powerups, upgrades)
+- Sprite classes are in `sprites.py`
+- Game logic is in `game.py`
+
+### Expansion Architecture (Future)
+The `data/` directory and `core/loader.py` provide infrastructure for a data-driven approach:
+- Content defined in JSON files rather than Python code
+- Designed to support modding and easier content creation
+- **Not yet integrated** with the main game
+
+This guide focuses on the expansion architecture for future development.
+
+## Data-Driven Design
+
+Minmatar Rebellion includes a **data-driven architecture** for defining game content in the future. This system is designed to provide several benefits:
+
+- **Easy content creation**: Add new content by creating JSON files without modifying code.
+- **Modding support**: Players can create custom content by adding their own JSON files.
+- **Separation of concerns**: Game logic is separate from game data.
+- **Rapid iteration**: Tweak values without recompiling or modifying code.
+
+## The Loader System
+
+The `core/loader.py` module provides utilities for loading JSON data from the `data/` directory.
+
+### Basic Usage
+
+```python
+from core.loader import load_enemies, load_stages, load_powerups, load_all_game_data
+
+# Load specific data types
+enemies = load_enemies()       # Returns dict of enemy definitions
+stages = load_stages()         # Returns dict of stage definitions
+powerups = load_powerups()     # Returns dict of power-up definitions
+
+# Or load everything at once
+all_data = load_all_game_data()
+enemies = all_data['enemies']
+stages = all_data['stages']
+powerups = all_data['powerups']
+```
+
+### Loader Functions
+
+| Function | Description |
+|----------|-------------|
+| `load_enemies()` | Load all JSON files from `data/enemies/` |
+| `load_stages()` | Load all JSON files from `data/stages/` |
+| `load_powerups()` | Load all JSON files from `data/powerups/` |
+| `load_all_game_data()` | Load all game data at once |
+| `load_json_file(path)` | Load a single JSON file |
+| `load_all_from_directory(dir)` | Load all JSON files from a directory |
+
+### Running the Loader Demo
+
+You can test the loader by running it directly:
+
+```bash
+python core/loader.py
+```
+
+This will display all loaded game data, useful for verifying your JSON files are correct.
+
+## Data Directory Structure
 
 ```
-minmatar_rebellion/
-├── main.py              # Entry point
-├── game.py              # Main game logic, states, rendering
-├── sprites.py           # All game entities (player, enemies, bullets)
-├── constants.py         # Configuration, stats, stage definitions
-├── sounds.py            # Procedural sound generation
-├── core/
-│   ├── __init__.py      # Core module exports
-│   └── controls.py      # Control bindings manager
-├── config/
-│   ├── controls.json    # Key/gamepad bindings
-│   └── accessibility.json # Accessibility settings
-└── docs/
-    └── development.md   # This file
+data/
+├── enemies/           # Enemy definitions
+│   ├── asteroid.json
+│   └── pirate_frigate.json
+├── stages/            # Stage/level definitions
+│   └── example_stage.json
+└── powerups/          # Power-up definitions
+    ├── shield.json
+    └── triple_shot.json
 ```
 
-## Controls System
+## JSON Schema Conventions
 
-### Overview
-
-The controls system (`core/controls.py`) provides a flexible way to manage keyboard, mouse, and gamepad bindings. Bindings are stored in JSON format for easy editing and user customization.
-
-### Configuration File Format
-
-The `config/controls.json` file structure:
+### Enemy Schema
 
 ```json
 {
-    "version": "1.0",
-    "keyboard": {
-        "action_name": ["KEY_CONSTANT_1", "KEY_CONSTANT_2"]
+    "name": "Display Name",
+    "description": "Description text",
+    "health": 100,                    // Total health (or use shields/armor/hull)
+    "shields": 30,                    // Shield points
+    "armor": 40,                      // Armor points
+    "hull": 30,                       // Hull points
+    "speed": 2.0,                     // Movement speed multiplier
+    "fire_rate": 1500,                // Milliseconds between shots (0 = no shooting)
+    "score": 100,                     // Points awarded on kill
+    "size": [width, height],          // Sprite dimensions
+    "behavior": {
+        "pattern": "drift|sine|zigzag|circle|swoop|flank",
+        "aggressive": true,           // Actively targets player
+        "shoots": true,               // Can fire projectiles
+        "preferred_range": 200        // Preferred combat range (optional)
     },
-    "mouse": {
-        "action_name": "BUTTON_NAME"
+    "drops": {
+        "powerup_chance": 0.15,       // Chance to drop power-up (0.0-1.0)
+        "refugees": 0                 // Number of refugee pods dropped
     },
-    "gamepad": {
-        "action_name": {"type": "button|axis", ...}
+    "visual": {
+        "sprite": "sprite_name",      // Reference to sprite asset
+        "color": [r, g, b],           // RGB color values (0-255)
+        "accent_color": [r, g, b],    // Secondary color (optional)
+        "rotation_speed": 2.0         // Rotation speed for spinning sprites (optional)
     },
-    "gamepad_deadzone": 0.15
-}
-```
-
-### Keyboard Bindings
-
-Keyboard keys use pygame constant names without the `pygame.` prefix:
-
-| Action | Default Keys | Description |
-|--------|-------------|-------------|
-| move_left | K_LEFT, K_a | Move ship left |
-| move_right | K_RIGHT, K_d | Move ship right |
-| move_up | K_UP, K_w | Move ship up |
-| move_down | K_DOWN, K_s | Move ship down |
-| fire | K_SPACE | Fire primary weapon |
-| fire_rocket | K_LSHIFT, K_RSHIFT | Fire rockets |
-| cycle_ammo | K_q, K_TAB | Cycle ammunition type |
-| pause | K_ESCAPE | Pause game |
-
-### Gamepad Bindings
-
-Gamepad bindings support two types:
-
-**Button bindings:**
-```json
-{
-    "type": "button",
-    "button": 0
-}
-```
-
-**Axis bindings (analog sticks):**
-```json
-{
-    "type": "axis",
-    "axis": 0,
-    "direction": -1
-}
-```
-
-- `axis`: The axis index (0 = left stick X, 1 = left stick Y, typically)
-- `direction`: -1 for negative direction, 1 for positive direction
-
-### API Reference
-
-#### Functions
-
-```python
-load_controls(config_path=None) -> dict
-```
-Load control bindings from config file. Returns default bindings if file is missing or invalid.
-
-```python
-save_controls(controls, config_path=None) -> bool
-```
-Save control bindings to config file. Returns True on success.
-
-```python
-get_keyboard_keys(controls, action) -> list
-```
-Get list of keyboard key names bound to an action.
-
-```python
-get_gamepad_binding(controls, action) -> dict
-```
-Get gamepad binding configuration for an action.
-
-```python
-get_gamepad_deadzone(controls) -> float
-```
-Get the analog stick deadzone value.
-
-#### ControlsManager Class
-
-```python
-from core.controls import ControlsManager
-
-manager = ControlsManager()
-manager.load()  # Load from config/controls.json
-
-# Query bindings
-keys = manager.get_keyboard_keys('fire')
-gamepad = manager.get_gamepad_binding('fire')
-deadzone = manager.get_gamepad_deadzone()
-
-# Modify bindings
-manager.set_keyboard_binding('fire', ['K_SPACE', 'K_RETURN'])
-manager.set_gamepad_binding('fire', {'type': 'button', 'button': 1})
-
-# Save changes
-manager.save()
-
-# Reset to defaults
-manager.reset_to_defaults()
-```
-
-### Integration Example
-
-To integrate the controls system with pygame:
-
-```python
-import pygame
-from core.controls import ControlsManager
-
-# Initialize
-manager = ControlsManager()
-manager.load()
-
-# Convert key names to pygame constants
-def get_pygame_keys(action):
-    key_names = manager.get_keyboard_keys(action)
-    return [getattr(pygame, name) for name in key_names]
-
-# In game loop
-keys = pygame.key.get_pressed()
-fire_keys = get_pygame_keys('fire')
-if any(keys[k] for k in fire_keys):
-    player.shoot()
-```
-
-## Accessibility System
-
-### Overview
-
-Accessibility settings in `config/accessibility.json` allow users to customize visual and audio feedback for improved accessibility.
-
-### Configuration File Format
-
-```json
-{
-    "version": "1.0",
-    "colorblind_mode": {
-        "enabled": false,
-        "type": "none",
-        "options": ["none", "protanopia", "deuteranopia", "tritanopia"]
-    },
-    "high_contrast_ui": {
-        "enabled": false,
-        "text_scale": 1.0,
-        "outline_thickness": 1
-    },
-    "screen_shake": {
-        "enabled": true,
-        "intensity": 1.0
-    },
-    "flash_effects": {
-        "enabled": true,
-        "intensity": 1.0
-    },
-    "audio_cues": {
-        "enabled": true,
-        "volume": 1.0
+    "weapons": {                      // Weapon configuration (optional)
+        "type": "autocannon|laser",   // Weapon type
+        "damage": 10,                 // Damage per hit
+        "projectile_speed": 5         // Projectile movement speed
     }
 }
 ```
 
-### Settings Reference
+### Stage Schema
 
-#### Colorblind Mode
-
-| Type | Description |
-|------|-------------|
-| none | No color adjustment |
-| protanopia | Red-blind (difficulty distinguishing red/green) |
-| deuteranopia | Green-blind (most common, red/green confusion) |
-| tritanopia | Blue-blind (difficulty with blue/yellow) |
-
-When implementing colorblind support, consider:
-- Use patterns or shapes in addition to color
-- Ensure sufficient contrast between game elements
-- Test with colorblind simulation tools
-
-**Color palette recommendations for colorblind-friendly design:**
-- Use blue and orange instead of red and green for contrasting elements
-- Add texture or pattern variations to distinguish game objects
-- Consider brightness differences, not just hue changes
-
-**Example color transformations:**
-```python
-# Protanopia-friendly palette (avoid red-green distinctions)
-COLORBLIND_PALETTES = {
-    'protanopia': {
-        'enemy': (0, 100, 255),      # Blue instead of red
-        'friendly': (255, 200, 0),   # Yellow/orange
-        'neutral': (150, 150, 150),  # Gray
-    },
-    'deuteranopia': {
-        'enemy': (220, 100, 255),    # Magenta/purple
-        'friendly': (0, 150, 255),   # Cyan/blue
-        'neutral': (200, 200, 200),  # Light gray
-    },
-    'tritanopia': {
-        'enemy': (255, 100, 100),    # Red
-        'friendly': (100, 255, 100), # Green
-        'neutral': (150, 150, 150),  # Gray
+```json
+{
+    "name": "Stage Name",
+    "description": "Stage description",
+    "waves": 5,                       // Number of enemy waves
+    "enemies": ["enemy_id", ...],     // List of enemy types that can spawn
+    "industrial_chance": 0.1,         // Chance for industrial ships (0.0-1.0)
+    "boss": "boss_enemy_id",          // Boss enemy ID (null for no boss)
+    "background": "background_name",  // Background asset reference
+    "music": "music_track_name",      // Background music track (optional)
+    "difficulty_modifier": 1.0,       // Multiplier for difficulty scaling
+    "rewards": {
+        "base_score": 500,            // Score for completing stage
+        "refugee_bonus": 10           // Bonus refugees on completion
     }
 }
 ```
 
-#### High Contrast UI
+### Power-up Schema
 
-- `enabled`: Toggle high contrast mode
-- `text_scale`: Multiplier for text size (1.0 = 100%)
-- `outline_thickness`: Pixel thickness for text/UI outlines
-
-#### Motion Settings
-
-- `screen_shake.enabled`: Enable/disable screen shake effects
-- `screen_shake.intensity`: Scale shake intensity (0.0 to 1.0)
-- `flash_effects.enabled`: Enable/disable flash effects
-- `flash_effects.intensity`: Scale flash intensity (0.0 to 1.0)
-
-#### Audio
-
-- `audio_cues.enabled`: Enable/disable accessibility audio cues
-- `audio_cues.volume`: Volume multiplier for audio cues
-
-### Implementation Guidelines
-
-When implementing features that respect accessibility settings:
-
-```python
-import json
-
-# Default accessibility settings
-DEFAULT_ACCESSIBILITY = {
-    "colorblind_mode": {"enabled": False, "type": "none"},
-    "high_contrast_ui": {"enabled": False, "text_scale": 1.0},
-    "screen_shake": {"enabled": True, "intensity": 1.0},
-    "flash_effects": {"enabled": True, "intensity": 1.0},
-    "audio_cues": {"enabled": True, "volume": 1.0}
+```json
+{
+    "name": "Power-up Name",
+    "description": "What it does",
+    "effect": "effect_id",            // Effect identifier
+    "duration": 5000,                 // Duration in milliseconds
+    "color": [r, g, b],               // Display color
+    "icon": "icon_name",              // Icon asset reference
+    "stats": {                        // Effect-specific stats
+        "custom_key": "value"
+    },
+    "rarity": "common|uncommon|rare", // Drop rarity tier
+    "drop_weight": 1.0,               // Weight for random selection
+    "sound": "sound_name"             // Pickup sound effect
 }
-
-def load_accessibility_settings():
-    try:
-        with open('config/accessibility.json', 'r') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return DEFAULT_ACCESSIBILITY.copy()
-
-# Example: Conditional screen shake
-settings = load_accessibility_settings()
-if settings['screen_shake']['enabled']:
-    intensity = base_intensity * settings['screen_shake']['intensity']
-    apply_screen_shake(intensity)
 ```
 
-## Adding New Features
+## Module Organization
 
-### Adding a New Control Action
+### Code Modules
 
-1. Add the action to `config/controls.json`:
-   ```json
-   "keyboard": {
-       "new_action": ["K_x"]
-   }
-   ```
+| Module | Purpose |
+|--------|---------|
+| `core/` | Core utilities (loader, helpers) |
+| `enemies/` | Enemy class implementations |
+| `stages/` | Stage class implementations |
+| `powerups/` | Power-up class implementations |
 
-2. Add to `DEFAULT_CONTROLS` in `core/controls.py`
+### Extending the System
 
-3. Use the new action in game code:
-   ```python
-   manager.get_keyboard_keys('new_action')
-   ```
+When adding new functionality:
 
-### Adding a New Accessibility Option
+1. **Add JSON schema** for the new content type in `data/`
+2. **Add loader function** in `core/loader.py` if needed
+3. **Add Python module** in the appropriate directory
+4. **Update documentation** in `docs/`
 
-1. Add the option to `config/accessibility.json`:
-   ```json
-   "new_option": {
-       "enabled": true,
-       "value": 1.0
-   }
-   ```
+## Best Practices
 
-2. Load and check the setting in relevant game code
+### JSON Files
 
-3. Document the new option in this file and `CONTRIBUTING.md`
+- Use descriptive filenames (e.g., `pirate_frigate.json`, not `enemy1.json`)
+- Include `name` and `description` fields for clarity
+- Validate JSON syntax before committing
+- Use consistent formatting (2 or 4 space indentation)
 
-## Testing
+### Code Integration
 
-### Manual Testing Checklist
+- Load data at startup, not during gameplay
+- Cache loaded data to avoid repeated file I/O
+- Handle missing files gracefully with defaults
+- Log warnings for malformed or missing data
 
-- [ ] Controls load correctly from config file
-- [ ] Default controls work when config is missing
-- [ ] Invalid config falls back to defaults
-- [ ] Gamepad deadzone is respected
-- [ ] Accessibility settings load correctly
-- [ ] Screen shake respects intensity setting
-- [ ] High contrast mode is visually distinct
+### Testing
 
-### Testing Controls
+- Run `python core/loader.py` to verify JSON files load correctly
+- Test new content in-game before submitting
 
-```python
-from core.controls import ControlsManager
+## Troubleshooting
 
-# Test loading
-manager = ControlsManager()
-manager.load()
-assert manager.is_loaded
+### Common Issues
 
-# Test keyboard keys
-keys = manager.get_keyboard_keys('fire')
-assert 'K_SPACE' in keys
+**JSON not loading:**
+- Check for syntax errors (missing commas, quotes, brackets)
+- Ensure file extension is `.json`
+- Verify file is in the correct `data/` subdirectory
 
-# Test gamepad binding
-binding = manager.get_gamepad_binding('fire')
-assert binding['type'] == 'button'
-```
+**Enemy/Stage not appearing:**
+- Verify the enemy/stage ID matches the filename (without `.json`)
+- Check that the content is referenced in the appropriate stage or spawn system
+
+**Power-up not working:**
+- Ensure the `effect` ID matches a handler in the game code
+- Verify `duration` is a positive number
+
+## Future Improvements
+
+Planned enhancements to integrate the data system with the main game:
+
+- Integration of JSON-based content loading into main game loop
+- JSON schema validation
+- Hot-reloading of data files during development
+- Data file encryption for distribution builds
+- Custom sprite loading from data definitions
+- Migration of `constants.py` content to JSON format
+- Implementation of skill point progression system
+- Capital ship boss mechanics
+- Additional ship upgrades (Jaguar T2 assault frigate)

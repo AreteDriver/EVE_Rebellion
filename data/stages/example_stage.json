@@ -1,0 +1,15 @@
+{
+    "name": "Asteroid Belt Skirmish",
+    "description": "Navigate through a dangerous asteroid field while fending off pirate raiders.",
+    "waves": 5,
+    "enemies": ["asteroid", "pirate_frigate"],
+    "industrial_chance": 0.1,
+    "boss": null,
+    "background": "asteroid_field",
+    "music": "combat_theme_01",
+    "difficulty_modifier": 1.0,
+    "rewards": {
+        "base_score": 500,
+        "refugee_bonus": 10
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "name": "Triple Shot",
+    "description": "Temporarily fires three projectiles instead of one.",
+    "effect": "triple_shot",
+    "duration": 8000,
+    "color": [255, 200, 50],
+    "icon": "triple_shot_icon",
+    "stats": {
+        "projectile_count": 3,
+        "spread_angle": 15
+    },
+    "rarity": "uncommon",
+    "drop_weight": 0.5,
+    "sound": "pickup_powerup"
+}
