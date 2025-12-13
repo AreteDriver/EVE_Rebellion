@@ -126,8 +126,8 @@ Edit `.github/workflows/deploy.yml` to:
 You can add workflow status badges to your README:
 
 ```markdown
-![Test](https://github.com/AreteDriver/EVE_Rebellion/workflows/Test/badge.svg)
-![Deploy](https://github.com/AreteDriver/EVE_Rebellion/workflows/Deploy/badge.svg)
+![Test](https://github.com/AreteDriver/EVE_Rebellion/actions/workflows/test.yml/badge.svg)
+![Deploy](https://github.com/AreteDriver/EVE_Rebellion/actions/workflows/deploy.yml/badge.svg)
 ```
 
 ## Troubleshooting
