@@ -455,6 +455,36 @@ If the game runs slowly:
    python3 main.py
    ```
 
+## 📚 Documentation
+
+### Technical Documentation
+- **[Architecture Overview](assets/ARCHITECTURE.md)** - Detailed system architecture and design patterns
+- **[Technical Highlights](assets/TECHNICAL_HIGHLIGHTS.md)** - Deep dive into advanced features and design decisions
+- **[Game Flow Diagrams](assets/diagrams/game-flow.md)** - Visual diagrams of game loop, AI, and audio synthesis
+- **[Build Guide](build-notes/BUILD.md)** - Comprehensive build and development instructions
+- **[Project Metrics](build-notes/METRICS.md)** - Code statistics, performance metrics, and benchmarks
+
+### Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## 🎯 Use Cases
+
+This project demonstrates:
+- ✅ Complete game development with Pygame
+- ✅ Procedural audio synthesis and DSP
+- ✅ AI state machines and movement patterns
+- ✅ Event-driven architecture
+- ✅ Frame-rate independent physics
+- ✅ Clean code and modular design
+- ✅ Zero external asset dependencies
+
+Perfect as a reference for:
+- Game development portfolios
+- Python/Pygame learning
+- Audio synthesis exploration
+- AI programming examples
+- Software architecture studies
+
 ## IP Notice
 
 This is a personal/fan project. Ship designs and names are inspired by CCP Games' EVE Online. For any commercial use, original designs would need to be created or licensing obtained.
