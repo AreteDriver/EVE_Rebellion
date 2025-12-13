@@ -211,7 +211,19 @@ Output will be in `dist/` directory.
 The entire game can be distributed as source:
 
 ```bash
-zip -r minmatar_rebellion.zip *.py core/ data/ enemies/ expansion/ powerups/ stages/ README.md LICENSE requirements.txt
+# Include all necessary files
+zip -r minmatar_rebellion.zip \
+  *.py \
+  core/ \
+  data/ \
+  enemies/ \
+  expansion/ \
+  powerups/ \
+  stages/ \
+  README.md \
+  LICENSE \
+  requirements.txt \
+  QUICKSTART.md
 ```
 
 ## Contributing

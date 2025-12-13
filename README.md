@@ -10,8 +10,18 @@
 
 A complete arcade space shooter game with **procedural audio synthesis**, **advanced AI state machines**, and **capital ship boss battles**. Inspired by EVE Online, featuring the iconic Rifter frigate in a fight for freedom against the Amarr Empire.
 
-![Game Preview](assets/screenshots/gameplay.png)
-*Screenshot: In-game action with procedurally generated ships and effects*
+<!-- Screenshot placeholders - Actual screenshots to be added -->
+<details>
+<summary>📸 Click to view screenshots (to be added)</summary>
+
+*Screenshots will showcase:*
+- Main menu and difficulty selection
+- In-game combat with procedurally generated ships
+- Boss battle sequences
+- Upgrade screen interface
+
+*All graphics are procedurally generated at runtime!*
+</details>
 
 ## 🎮 Features
 

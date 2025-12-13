@@ -219,5 +219,4 @@ Each enhancement above would add approximately:
 
 ---
 
-*Metrics current as of December 2024*
-*All measurements approximate and hardware-dependent*
+*Metrics current as of repository documentation (measurements approximate and hardware-dependent)*
