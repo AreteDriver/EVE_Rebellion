@@ -1,0 +1,79 @@
+================================================================================
+                    MINMATAR REBELLION - WINDOWS GUIDE
+================================================================================
+
+QUICK START (3 STEPS):
+----------------------
+
+1. INSTALL (First Time Only)
+   - Double-click: INSTALL.bat
+   - Wait for installation to complete
+   
+2. PLAY
+   - Double-click: PLAY_GAME.bat
+   - Enjoy!
+
+3. CONTROLS
+   - WASD or Arrow Keys = Move
+   - Space or Left Click = Fire Autocannons
+   - Shift or Right Click = Fire Rockets
+   - 1-5 = Switch Ammo
+   - Q/Tab = Cycle Ammo
+   - ESC = Pause
+
+
+TROUBLESHOOTING:
+----------------
+
+Problem: "Python is not recognized"
+Solution: 
+  1. Install Python from: https://www.python.org/downloads/
+  2. During install, CHECK the box "Add Python to PATH"
+  3. Restart your computer
+  4. Run INSTALL.bat again
+
+Problem: Game window is too small/large
+Solution:
+  1. Open "constants.py" in Notepad
+  2. Change SCREEN_WIDTH and SCREEN_HEIGHT
+  3. Save and run game again
+
+Problem: No sound
+Solution:
+  - Game works fine without sound!
+  - Press S in menu to toggle sound on/off
+
+Problem: Game crashes on start
+Solution:
+  1. Open Command Prompt in game folder
+  2. Run: python main.py
+  3. Send me the error message!
+
+
+REQUIREMENTS:
+-------------
+- Windows 7 or newer
+- Python 3.8 or newer
+- 100MB free space
+- No internet needed after install
+
+
+FEATURES:
+---------
+✓ 5 Stages with boss battles
+✓ 4 Difficulty levels
+✓ 5 Ammo types with tactical advantages
+✓ Procedural sound effects
+✓ Upgrade system
+✓ 267 EVE ship silhouettes included
+✓ Modular JSON data system
+
+
+NEED HELP?
+----------
+Check out README.md for full documentation
+
+
+================================================================================
+                "We were slaves once. Never again."
+================================================================================
