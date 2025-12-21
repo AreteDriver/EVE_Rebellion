@@ -1,0 +1,394 @@
+# Minmatar Rebellion visual & gameplay upgrade patch
+
+This patch can be applied to the existing `constants.py`, `sprites.py` and `game.py` in the
+EVE_Rebellion project to add new visual effects, wingman companions and a new
+"drone" enemy. It also introduces per‑stage background colours, decorative
+background ships and improved powerup and pod visuals.  Apply with
+`patch -p0 < eve_rebellion_visual_upgrades.patch` from the repository root.
+
+```
+*** Begin Patch
+*** Update File: constants.py
+@@ ENEMY_STATS = {
+     'abaddon': {
+@@
+         'boss': True
+     },
++    # New small enemy drone to add variety
++    'drone': {
++        'name': 'Drone',
++        'shields': 10,
++        'armor': 5,
++        'hull': 10,
++        'speed': 3.5,
++        'fire_rate': 2200,
++        'score': 50,
++        'size': (20, 20)
++    }
+ }
+*** End Patch
+
+*** Begin Patch
+*** Update File: constants.py
+@@ STAGES = [
+-        'enemies': ['executioner', 'punisher'],
++        'enemies': ['executioner', 'punisher', 'drone'],
+@@
+-        'enemies': ['executioner', 'punisher', 'omen'],
++        'enemies': ['executioner', 'punisher', 'omen', 'drone'],
+@@
+-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
++        'enemies': ['executioner', 'punisher', 'omen', 'maller', 'drone'],
+@@
+-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
++        'enemies': ['executioner', 'punisher', 'omen', 'maller', 'drone'],
+@@
+-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
++        'enemies': ['executioner', 'punisher', 'omen', 'maller', 'drone'],
+*** End Patch
+
+*** Begin Patch
+*** Update File: constants.py
+@@
+ STAGES = [
+@@
+ ]
++
++# Stage background colours for each stage used for level backdrops.
++STAGE_BACKGROUNDS = [
++    (10, 10, 20),
++    (20, 10, 30),
++    (5, 5, 15),
++    (0, 5, 20),
++    (10, 0, 30)
++]
+*** End Patch
+
+*** Begin Patch
+*** Update File: sprites.py
+@@ class Enemy(pygame.sprite.Sprite):
+     def _create_image(self):
+@@
+         elif self.enemy_type in ['apocalypse', 'abaddon']:
+@@
+             if self.enemy_type == 'abaddon':
+                 pygame.draw.rect(surf, (255, 215, 0),
+                                (self.width//3, 10, self.width//3, 20))
++
++        elif self.enemy_type == 'drone':
++            # Small drone ‒ simple diamond shape
++            pygame.draw.polygon(surf, COLOR_AMARR_ACCENT, [
++                (self.width // 2, 0),
++                (self.width, self.height // 2),
++                (self.width // 2, self.height),
++                (0, self.height // 2)
++            ])
+*** End Patch
+
+*** Begin Patch
+*** Update File: sprites.py
+@@ class RefugeePod(pygame.sprite.Sprite):
+-        self.image = pygame.Surface((16, 16), pygame.SRCALPHA)
+-        pygame.draw.circle(self.image, (200, 200, 200), (8, 8), 7)
+-        pygame.draw.circle(self.image, (100, 200, 100), (8, 8), 5)
++        # Draw an escape pod as an elongated oval with inner hatch
++        self.image = pygame.Surface((20, 14), pygame.SRCALPHA)
++        pygame.draw.ellipse(self.image, (220, 220, 220), (0, 0, 20, 14))
++        pygame.draw.ellipse(self.image, (120, 220, 120), (3, 3, 14, 8))
+*** End Patch
+
+*** Begin Patch
+*** Update File: sprites.py
+@@ class Powerup(pygame.sprite.Sprite):
+-        self.image = pygame.Surface((20, 20), pygame.SRCALPHA)
+-        pygame.draw.rect(self.image, self.data['color'], (2, 2, 16, 16))
+-        pygame.draw.rect(self.image, (255, 255, 255), (2, 2, 16, 16), 2)
++        # Draw a larger powerup with a unique icon based on type
++        size = 24
++        self.image = pygame.Surface((size, size), pygame.SRCALPHA)
++        # Slightly lighter background for better contrast
++        base_color = tuple(min(255, c + 60) for c in self.data['color'])
++        pygame.draw.rect(self.image, base_color, (0, 0, size, size), border_radius=4)
++        # Draw icon
++        icon_color = self.data['color']
++        cx, cy = size // 2, size // 2
++        if powerup_type == 'nanite':
++            # Cross for repairs
++            pygame.draw.rect(self.image, icon_color, (cx - 2, cy - 8, 4, 16))
++            pygame.draw.rect(self.image, icon_color, (cx - 8, cy - 2, 16, 4))
++        elif powerup_type == 'capacitor':
++            # Battery icon
++            pygame.draw.rect(self.image, icon_color, (cx - 6, cy - 8, 12, 12))
++            pygame.draw.rect(self.image, icon_color, (cx - 2, cy - 10, 4, 2))
++        elif powerup_type == 'overdrive':
++            # Lightning bolt icon
++            points = [
++                (cx - 4, cy - 6), (cx, cy - 10), (cx - 2, cy - 2),
++                (cx + 2, cy - 2), (cx - 2, cy + 6), (cx, cy)
++            ]
++            pygame.draw.polygon(self.image, icon_color, points)
++        elif powerup_type == 'shield_boost':
++            # Shield icon
++            pygame.draw.circle(self.image, icon_color, (cx, cy - 2), 6)
++            pygame.draw.circle(self.image, base_color, (cx, cy - 2), 4)
+*** End Patch
+
+*** Begin Patch
+*** Update File: sprites.py
+@@ class Star:
+     def draw(self, surface):
+         color = (self.brightness, self.brightness, self.brightness)
+         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), self.size)
+ 
++# New classes for enhanced gameplay and visuals
++class Wingman(pygame.sprite.Sprite):
++    """Companion fighter that mirrors the player's movements and weapons."""
++
++    def __init__(self, player, offset_x=50):
++        super().__init__()
++        self.player = player
++        self.offset_x = offset_x
++        self.width = player.width
++        self.height = player.height
++        # Copy player's current image to match appearance
++        self.image = player.image.copy()
++        self.rect = self.image.get_rect()
++        # Timing for weapons
++        self.last_shot = 0
++        self.last_rocket = 0
++
++    def update(self, keys=None):
++        """Follow the player's position with an offset."""
++        self.rect.centerx = self.player.rect.centerx + self.offset_x
++        self.rect.centery = self.player.rect.centery
++
++    def can_shoot(self):
++        now = pygame.time.get_ticks()
++        ammo = AMMO_TYPES[self.player.current_ammo]
++        cooldown = PLAYER_BASE_FIRE_RATE / (ammo['fire_rate'] * self.player.fire_rate_mult)
++        return now - self.last_shot > cooldown
++
++    def shoot(self):
++        """Fire in sync with the player's weapons."""
++        if not self.can_shoot():
++            return []
++        self.last_shot = pygame.time.get_ticks()
++        bullets = []
++        ammo = AMMO_TYPES[self.player.current_ammo]
++        num_shots = 2 + self.player.spread_bonus
++        spread = 15 + (self.player.spread_bonus * 5)
++        for i in range(num_shots):
++            offset = (i - (num_shots - 1) / 2) * spread
++            bullet = Bullet(
++                self.rect.centerx + offset,
++                self.rect.top,
++                0, -BULLET_SPEED,
++                ammo['tracer'],
++                BULLET_DAMAGE,
++                ammo['shield_mult'],
++                ammo['armor_mult']
++            )
++            bullets.append(bullet)
++        return bullets
++
++    def can_rocket(self):
++        now = pygame.time.get_ticks()
++        return self.player.rockets > 0 and now - self.last_rocket > PLAYER_ROCKET_COOLDOWN
++
++    def shoot_rocket(self):
++        """Fire a rocket, sharing the player's rocket pool."""
++        if not self.can_rocket():
++            return None
++        self.last_rocket = pygame.time.get_ticks()
++        # Deduct a rocket from the player to keep counts consistent
++        self.player.rockets -= 1
++        return Rocket(self.rect.centerx, self.rect.top)
++
++
++class BackgroundShip:
++    """Non‑interactive ship flying in the background for visual depth."""
++
++    def __init__(self):
++        self.width = random.randint(20, 40)
++        self.height = random.randint(30, 60)
++        self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
++        # Use muted colours for background ships
++        colour = (80, 80, 100)
++        pygame.draw.polygon(self.image, colour, [
++            (self.width // 2, self.height),
++            (0, self.height // 3),
++            (self.width // 2, 0),
++            (self.width, self.height // 3)
++        ])
++        self.rect = self.image.get_rect()
++        self.rect.x = random.randint(0, SCREEN_WIDTH)
++        self.rect.y = random.randint(-SCREEN_HEIGHT, 0)
++        self.speed = random.uniform(0.5, 2.0)
++
++    def update(self):
++        self.rect.y += self.speed
++        if self.rect.top > SCREEN_HEIGHT:
++            self.rect.x = random.randint(0, SCREEN_WIDTH)
++            self.rect.y = random.randint(-SCREEN_HEIGHT, -20)
++
++    def draw(self, surface):
++        surface.blit(self.image, self.rect)
+*** End Patch
+
+*** Begin Patch
+*** Update File: game.py
+@@
+-from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
+-                     RefugeePod, Powerup, Explosion, Star)
++from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket,
++                     RefugeePod, Powerup, Explosion, Star, Wingman, BackgroundShip)
+*** End Patch
+
+*** Begin Patch
+*** Update File: game.py
+@@ class Game:
+     def __init__(self):
+@@
+         # Background stars
+         self.stars = [Star() for _ in range(100)]
++
++        # Decorative ships drifting in the distance
++        self.background_ships = [BackgroundShip() for _ in range(5)]
++
++        # Current background colour (set per stage)
++        self.bg_color = STAGE_BACKGROUNDS[0]
+@@
+         self.reset_game()
+*** End Patch
+
+*** Begin Patch
+*** Update File: game.py
+@@ def reset_game(self):
+         # Player
+         self.player = Player()
+         self.all_sprites.add(self.player)
++
++        # Wingmen group that holds allied fighters
++        self.wingmen_group = pygame.sprite.Group()
+@@
+         # Stage/Wave tracking
+*** End Patch
+
+*** Begin Patch
+*** Update File: game.py
+@@ def reset_game(self):
+         self.player = Player()
+         self.all_sprites.add(self.player)
++
++        # Set initial background colour for stage 0
++        self.bg_color = STAGE_BACKGROUNDS[self.current_stage]
+*** End Patch
+
+*** Begin Patch
+*** Update File: game.py
+@@ def handle_shop_input(self, key):
+             elif key == pygame.K_RETURN or key == pygame.K_SPACE:
+                 # Continue to next stage
+                 self.current_stage += 1
+                 if self.current_stage >= len(STAGES):
+                     self.state = 'victory'
+                     self.play_sound('stage_complete')
+                 else:
+                     self.current_wave = 0
+                     self.wave_delay = 60
+                     self.stage_complete = False
+                     self.state = 'playing'
+                     self.show_message(STAGES[self.current_stage]['name'], 180)
+                     self.play_sound('wave_start')
++
++                    # Update background colour for new stage
++                    self.bg_color = STAGE_BACKGROUNDS[self.current_stage]
+*** End Patch
+
+*** Begin Patch
+*** Update File: game.py
+@@ def spawn_wave(self):
+         # Check for boss wave
+         if (stage['boss'] and self.current_wave == stage['waves'] - 1):
+@@
+             self.show_message(f"WARNING: {boss.stats['name'].upper()} APPROACHING!", 180)
+             self.play_sound('warning')
++
++            # Before boss arrives, there is a chance allies will join you
++            if random.random() < 0.33:
++                num = random.randint(1, 2)
++                # Determine offsets for wingmen placement
++                offsets = [-60, 60] if num == 2 else [random.choice([-60, 60])]
++                for off in offsets:
++                    wing = Wingman(self.player, off)
++                    self.wingmen_group.add(wing)
++                    self.all_sprites.add(wing)
++                    self.show_message("ALLIED WINGMAN JOINED!", 90)
+@@
+             return
+*** End Patch
+
+*** Begin Patch
+*** Update File: game.py
+@@ def update(self):
+         # Update stars
+         for star in self.stars:
+             star.update()
++
++        # Update decorative background ships
++        for ship in self.background_ships:
++            ship.update()
++
++        # Update wingmen positions
++        for wing in self.wingmen_group:
++            wing.update(keys)
+@@
+         # Player shooting
+         if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0]:
+             bullets = self.player.shoot()
+             if bullets:
+                 self.play_sound('autocannon', 0.3)
+             for bullet in bullets:
+                 self.player_bullets.add(bullet)
+                 self.all_sprites.add(bullet)
++
++            # Wingmen fire alongside the player
++            for wing in self.wingmen_group:
++                wing_bullets = wing.shoot()
++                for wb in wing_bullets:
++                    self.player_bullets.add(wb)
++                    self.all_sprites.add(wb)
+@@
+         # Rockets
+         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2]:
+             rocket = self.player.shoot_rocket()
+             if rocket:
+                 self.play_sound('rocket', 0.5)
+                 self.player_bullets.add(rocket)
+                 self.all_sprites.add(rocket)
++
++                # Wingmen also fire rockets if available
++                for wing in self.wingmen_group:
++                    wrock = wing.shoot_rocket()
++                    if wrock:
++                        self.player_bullets.add(wrock)
++                        self.all_sprites.add(wrock)
+*** End Patch
+
+*** Begin Patch
+*** Update File: game.py
+@@ def draw(self):
+-        # Draw to render surface first (for screen shake)
+-        self.render_surface.fill((10, 10, 20))
++        # Draw to render surface first (for screen shake) with stage-specific background
++        self.render_surface.fill(self.bg_color)
+@@ def draw(self):
+         # Stars
+         for star in self.stars:
+             star.draw(self.render_surface)
++
++        # Decorative background ships fly behind gameplay
++        for ship in self.background_ships:
++            ship.draw(self.render_surface)
+*** End Patch
+```
