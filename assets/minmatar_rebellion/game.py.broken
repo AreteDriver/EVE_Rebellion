@@ -6,8 +6,7 @@ from constants import *
 from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
                      RefugeePod, Powerup, Explosion, Star)
 from sounds import get_sound_manager, get_music_manager, play_sound
-from controller_input import ControllerInput, XboxButton
-from space_background import SpaceBackground
+from controller import Controller
 
 
 class ScreenShake:
@@ -19,11 +18,9 @@ class ScreenShake:
         self.offset_y = 0
     
     def add(self, intensity):
-        """Add shake intensity"""
         self.intensity = max(self.intensity, intensity)
     
     def update(self):
-        """Update shake and get current offset"""
         if self.intensity > 0.5:
             self.offset_x = random.uniform(-self.intensity, self.intensity)
             self.offset_y = random.uniform(-self.intensity, self.intensity)
@@ -40,7 +37,6 @@ class Game:
     
     def __init__(self):
         pygame.init()
-        self.space_background = SpaceBackground(SCREEN_WIDTH, SCREEN_HEIGHT)
         pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
         
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -51,37 +47,30 @@ class Game:
         self.font_large = pygame.font.Font(None, 48)
         self.font_small = pygame.font.Font(None, 22)
         
-
-        # Controller (optional)
-        self.controller = ControllerInput()
-        # Initialize sound
         self.sound_manager = get_sound_manager()
         self.music_manager = get_music_manager()
         self.sound_enabled = True
         self.music_enabled = True
         
-        # Screen shake
+        # Initialize controller
+        self.controller = Controller()
+        
         self.shake = ScreenShake()
         
-        # Game state
-        self.state = 'menu'  # menu, difficulty, playing, shop, paused, gameover, victory
+        self.state = 'menu'
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
         
-        # Background stars
         self.stars = [Star() for _ in range(100)]
         
         self.reset_game()
     
     def play_sound(self, sound_name, volume=1.0):
-        """Play sound if enabled"""
         if self.sound_enabled:
             self.sound_manager.play(sound_name, volume)
     
     def reset_game(self):
-        """Reset all game state"""
-        # Sprite groups
         self.all_sprites = pygame.sprite.Group()
         self.player_bullets = pygame.sprite.Group()
         self.enemy_bullets = pygame.sprite.Group()
@@ -90,11 +79,9 @@ class Game:
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
         
-        # Player
         self.player = Player()
         self.all_sprites.add(self.player)
         
-        # Stage/Wave tracking
         self.current_stage = 0
         self.current_wave = 0
         self.wave_enemies = 0
@@ -103,57 +90,66 @@ class Game:
         self.wave_delay = 0
         self.stage_complete = False
         
-        # Messages
         self.message = ""
         self.message_timer = 0
     
     def show_message(self, text, duration=120):
-        """Show a temporary message"""
         self.message = text
         self.message_timer = duration
     
     def spawn_wave(self):
-        """Spawn enemies for current wave"""
         stage = STAGES[self.current_stage]
+        num_enemies = 3 + self.current_wave + seldef spawn_wave(self):
+    stage = self.stages[self.current_stage]
+
+    # Boss logic
+    boss_name = stage.get("boss")
+    waves = stage.get("waves", 0)
+
+    if boss_name and self.current_wave == waves - 1:
+        boss = Enemy(boss_name, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
+        self.enemies.add(boss)
+        self.all_sprites.add(boss)
+        self.wave_enemies = 1
+        self.wave_spawned = 1
+        self.show_message(f"WARNING: {boss.stats['name'].upper()} APPROACHING!", 180)
+        self.play_sound("warning")
+        return
+
+    # Regular wave logic
+    base_enemies = stage.get("enemies_per_wave", 3)
+    num_enemies = base_enemies + self.current_wave
+    enemy_types = stage.get("enemy_types", ["pirate_frigate"])
+
+    for _ in range(num_enemies):
+        etype = random.choice(enemy_types)
+        enemy = self.create_enemy(etype)
+        self.enemies.add(enemy)
+        self.all_sprites.add(enemy)
+f.current_stage
         
-        # Determine wave composition
-        num_enemies = 3 + self.current_wave + self.current_stage
+        if (stage.getif stage.get('boss') and self.current_wave == stage.get('waves', 0) - 1:
+    boss = Enemy(stage['boss'], SCREEN_WIDTH // 2, -100, self.difficulty_settings)
+    self.enemies.add(boss)
+    self.all_sprites.add(boss)
+    self.wave_enemies = 1
+    self.wave_spawned = 1
+    self.show_message(f"WARNING: {boss.stats['name'].upper()} APPROACHING!", 180)
+    self.play_sound('warning')
+    return
         
-        # Check for boss wave
-        if (stage['boss'] and self.current_wave == stage['waves'] - 1):
-            # Boss wave
-            boss_type = stage['boss']
-            
-            # Use specialized CapitalShipEnemy class for amarr_capital
-            if boss_type == 'amarr_capital':
-                boss = CapitalShipEnemy(SCREEN_WIDTH // 2, self.difficulty_settings)
-            else:
-                boss = Enemy(boss_type, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
-            
-            self.enemies.add(boss)
-            self.all_sprites.add(boss)
-            self.wave_enemies = 1
-            self.wave_spawned = 1
-            self.show_message(f"WARNING: {boss.stats['name'].upper()} APPROACHING!", 180)
-            self.play_sound('warning')
-            return
-        
-        # Regular wave
         self.wave_enemies = num_enemies
         self.wave_spawned = 0
         
-        # Maybe spawn industrial
         if random.random() < stage['industrial_chance']:
             self.wave_enemies += 1
     
     def spawn_enemy(self):
-        """Spawn a single enemy"""
         if self.wave_spawned >= self.wave_enemies:
             return
         
         stage = STAGES[self.current_stage]
         
-        # Chance for industrial
         if (self.wave_spawned == self.wave_enemies - 1 and 
             random.random() < stage['industrial_chance'] * 2):
             enemy_type = 'bestower'
@@ -169,7 +165,6 @@ class Game:
         self.wave_spawned += 1
     
     def spawn_powerup(self, x, y):
-        """Maybe spawn a powerup at location"""
         chance = self.difficulty_settings.get('powerup_chance', 0.15)
         if random.random() < chance:
             powerup_type = random.choice(list(POWERUP_TYPES.keys()))
@@ -178,34 +173,10 @@ class Game:
             self.all_sprites.add(powerup)
     
     def handle_events(self):
-        """Process input events"""
-        # Controller: start frame (clears edge states)
-        if self.controller:
-            if hasattr(self.controller, "start_frame"):
-                self.controller.start_frame()
-
         for event in pygame.event.get():
-            # Feed controller events first
-            if self.controller:
-                self.controller.handle_event(event)
-
             if event.type == pygame.QUIT:
                 self.running = False
             
-
-            # Controller button shortcuts (pause/ammo) while playing
-            if self.controller and self.controller.connected:
-                if self.state == 'playing':
-                    if self.controller.is_button_just_pressed(XboxButton.START):
-                        self.state = 'paused'
-                        self.play_sound('menu_select')
-                    if self.controller.is_button_just_pressed(XboxButton.RB):
-                        self.player.cycle_ammo()
-                        self.play_sound('ammo_switch')
-                elif self.state == 'paused':
-                    if self.controller.is_button_just_pressed(XboxButton.START):
-                        self.state = 'playing'
-                        self.play_sound('menu_select')
             elif event.type == pygame.KEYDOWN:
                 if self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
@@ -241,13 +212,42 @@ class Game:
                         self.player.cycle_ammo()
                         self.play_sound('ammo_switch')
                     else:
-                        # Check ammo hotkeys
                         for ammo_type, data in AMMO_TYPES.items():
                             if event.key == data['key']:
                                 if self.player.switch_ammo(ammo_type):
                                     self.show_message(f"Ammo: {data['name']}", 60)
                                     self.play_sound('ammo_switch')
                                 break
+            
+            # Controller button events
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if self.state == 'playing':
+                    if self.controller.pause_pressed():
+                        self.state = 'paused'
+                        self.play_sound('menu_select')
+                    elif event.button == self.controller.BUTTON_X or event.button == self.controller.BUTTON_LB:
+                        self.player.cycle_ammo()
+                        self.play_sound('ammo_switch')
+                
+                elif self.state == 'paused':
+                    if self.controller.pause_pressed() or self.controller.select_pressed():
+                        self.state = 'playing'
+                        self.play_sound('menu_select')
+                
+                elif self.state == 'menu':
+                    if self.controller.select_pressed():
+                        self.state = 'difficulty'
+                        self.play_sound('menu_select')
+                
+                elif self.state == 'difficulty':
+                    if event.button == self.controller.BUTTON_A:
+                        self.set_difficulty('normal')
+                
+                elif self.state in ['gameover', 'victory']:
+                    if self.controller.select_pressed():
+                        self.reset_game()
+                        self.state = 'menu'
+                        self.play_sound('menu_select')
                 
                 elif self.state == 'paused':
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
@@ -264,7 +264,6 @@ class Game:
                         self.play_sound('menu_select')
     
     def set_difficulty(self, difficulty):
-        """Set game difficulty and start"""
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
         self.reset_game()
@@ -275,7 +274,6 @@ class Game:
             self.music_manager.start_music()
     
     def handle_shop_input(self, key):
-        """Handle shop menu input"""
         costs = UPGRADE_COSTS
         player = self.player
         
@@ -350,7 +348,6 @@ class Game:
                 self.play_sound('error')
         
         elif key == pygame.K_RETURN or key == pygame.K_SPACE:
-            # Continue to next stage
             self.current_stage += 1
             if self.current_stage >= len(STAGES):
                 self.state = 'victory'
@@ -365,38 +362,34 @@ class Game:
         
         if purchased:
             self.show_message(f"Purchased: {purchased}", 90)
-            if purchased != "WOLF UPGRADE!":  # Wolf has its own sound
+            if purchased != "WOLF UPGRADE!":
                 self.play_sound('purchase')
     
     def update(self):
-        # Update scrolling background
-        if hasattr(self, "space_background"):
-            self.space_background.update(2.0)
-
-        """Update game state"""
         if self.state != 'playing':
             return
         
         keys = pygame.key.get_pressed()
         
-
-        # Controller update (dt in seconds)
-        dt = self.clock.get_time() / 1000.0
-        if self.controller:
-            self.controller.update(dt)
-        # Update player
-        self.player.update(keys)
+        # Get controller input
+        move_x, move_y = self.controller.get_movement()
         
-
-        # Add controller movement on top of keyboard (analog)
-        if self.controller and self.controller.connected:
-            move_x, move_y = self.controller.get_movement_vector()
-            self.player.rect.x += move_x * self.player.speed
-            self.player.rect.y += move_y * self.player.speed
+        # Update player with keyboard or controller
+        if self.controller.enabled and (abs(move_x) > 0 or abs(move_y) > 0):
+            # Use controller for movement
+            speed = self.player.speed
+            if pygame.time.get_ticks() < self.player.overdrive_until:
+                speed *= 1.5
+            
+            self.player.rect.x += move_x * speed
+            self.player.rect.y += move_y * speed
             self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
-        # Player shooting
-        controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
-        if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
+        else:
+            # Use keyboard
+            self.player.update(keys)
+        
+        # Shooting - keyboard or controller
+        if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or self.controller.fire_pressed():
             bullets = self.player.shoot()
             if bullets:
                 self.play_sound('autocannon', 0.3)
@@ -404,24 +397,20 @@ class Game:
                 self.player_bullets.add(bullet)
                 self.all_sprites.add(bullet)
         
-        # Rockets
-        controller_rocket = self.controller.is_alternate_fire() if (self.controller and self.controller.connected) else False
-        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2] or controller_rocket:
+        # Rockets - keyboard, mouse, or controller
+        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2] or self.controller.rocket_pressed():
             rocket = self.player.shoot_rocket()
             if rocket:
                 self.play_sound('rocket', 0.5)
                 self.player_bullets.add(rocket)
                 self.all_sprites.add(rocket)
         
-        # Update stars
         for star in self.stars:
             star.update()
         
-        # Update sprites
         self.player_bullets.update()
         self.enemy_bullets.update()
         
-        # Update enemies with player position for AI
         for enemy in self.enemies:
             enemy.update(self.player.rect)
         
@@ -429,10 +418,8 @@ class Game:
         self.powerups.update()
         self.effects.update()
         
-        # Update screen shake
         self.shake.update()
         
-        # Enemy shooting
         for enemy in self.enemies:
             bullets = enemy.shoot(self.player.rect)
             if bullets:
@@ -441,16 +428,13 @@ class Game:
                 self.enemy_bullets.add(bullet)
                 self.all_sprites.add(bullet)
         
-        # Check collisions - player bullets vs enemies
         for bullet in self.player_bullets:
             hits = pygame.sprite.spritecollide(bullet, self.enemies, False)
             for enemy in hits:
                 bullet.kill()
                 if enemy.take_damage(bullet):
-                    # Enemy destroyed
                     self.player.score += enemy.score
                     
-                    # Screen shake based on enemy size
                     if enemy.is_boss:
                         self.shake.add(SHAKE_LARGE)
                         self.play_sound('explosion_large')
@@ -461,14 +445,12 @@ class Game:
                         self.shake.add(SHAKE_SMALL)
                         self.play_sound('explosion_small', 0.6)
                     
-                    # Create explosion
                     exp_size = 30 if not enemy.is_boss else 80
                     explosion = Explosion(enemy.rect.centerx, enemy.rect.centery, 
                                         exp_size, COLOR_AMARR_ACCENT)
                     self.effects.add(explosion)
                     self.all_sprites.add(explosion)
                     
-                    # Drop refugees from industrials
                     if enemy.refugees > 0:
                         refugee_count = int(enemy.refugees * self.difficulty_settings['refugee_mult'])
                         for _ in range(max(1, refugee_count)):
@@ -479,18 +461,15 @@ class Game:
                             self.pods.add(pod)
                             self.all_sprites.add(pod)
                     
-                    # Maybe drop powerup
                     self.spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
                     
                     enemy.kill()
                 break
         
-        # Enemy bullets vs player
         hits = pygame.sprite.spritecollide(self.player, self.enemy_bullets, True)
         for bullet in hits:
             damage = int(bullet.damage * self.difficulty_settings['enemy_damage_mult'])
             
-            # Determine which layer took the hit for sound
             if self.player.shields > 0:
                 self.play_sound('shield_hit', 0.5)
             elif self.player.armor > 0:
@@ -501,7 +480,6 @@ class Game:
             self.shake.add(SHAKE_SMALL)
             
             if self.player.take_damage(damage):
-                # Player dead
                 explosion = Explosion(self.player.rect.centerx, self.player.rect.centery,
                                     50, COLOR_MINMATAR_ACCENT)
                 self.effects.add(explosion)
@@ -512,7 +490,6 @@ class Game:
                 self.music_manager.stop_music()
                 return
         
-        # Player collision with enemies
         hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
         for enemy in hits:
             self.shake.add(SHAKE_MEDIUM)
@@ -524,27 +501,22 @@ class Game:
                 self.music_manager.stop_music()
                 return
         
-        # Collect refugee pods
         hits = pygame.sprite.spritecollide(self.player, self.pods, True)
         for pod in hits:
             self.player.collect_refugee(pod.count)
             self.play_sound('pickup_refugee', 0.5)
         
-        # Collect powerups
         hits = pygame.sprite.spritecollide(self.player, self.powerups, True)
         for powerup in hits:
             self.apply_powerup(powerup)
             self.play_sound('pickup_powerup', 0.6)
         
-        # Wave/Stage logic
         self.update_waves()
         
-        # Update message timer
         if self.message_timer > 0:
             self.message_timer -= 1
     
     def apply_powerup(self, powerup):
-        """Apply powerup effect to player"""
         data = powerup.data
         now = pygame.time.get_ticks()
         
@@ -563,15 +535,12 @@ class Game:
             self.show_message("Shields Boosted!", 60)
     
     def update_waves(self):
-        """Handle wave progression"""
         stage = STAGES[self.current_stage]
         
-        # Wave delay
         if self.wave_delay > 0:
             self.wave_delay -= 1
             return
         
-        # Need to spawn wave?
         if self.wave_enemies == 0 and not self.stage_complete:
             if self.current_wave < stage['waves']:
                 self.spawn_wave()
@@ -579,39 +548,31 @@ class Game:
                     self.show_message(f"Wave {self.current_wave + 1}/{stage['waves']}", 90)
                     self.play_sound('wave_start', 0.4)
         
-        # Spawn enemies gradually
         self.spawn_timer += 1
         if self.spawn_timer >= 45 and self.wave_spawned < self.wave_enemies:
             self.spawn_timer = 0
             self.spawn_enemy()
         
-        # Wave complete?
         if len(self.enemies) == 0 and self.wave_spawned >= self.wave_enemies and self.wave_enemies > 0:
             self.current_wave += 1
             self.wave_enemies = 0
             self.wave_spawned = 0
             self.wave_delay = 90
             
-            # Stage complete?
             if self.current_wave >= stage['waves']:
                 self.stage_complete = True
                 self.wave_delay = 120
                 self.show_message("STAGE COMPLETE!", 120)
                 self.play_sound('stage_complete')
-                # Go to shop after delay
                 pygame.time.set_timer(pygame.USEREVENT + 1, 2000, 1)
         
-        # Check for shop transition
         for event in pygame.event.get(pygame.USEREVENT + 1):
             if self.stage_complete:
                 self.state = 'shop'
     
     def draw(self):
-        """Render everything"""
-        # Draw to render surface first (for screen shake)
         self.render_surface.fill((10, 10, 20))
         
-        # Stars
         for star in self.stars:
             star.draw(self.render_surface)
         
@@ -632,29 +593,25 @@ class Game:
         elif self.state == 'victory':
             self.draw_victory()
         
-        # Apply screen shake
         shake_x, shake_y = self.shake.offset_x, self.shake.offset_y
         self.screen.blit(self.render_surface, (shake_x, shake_y))
         
         pygame.display.flip()
     
     def draw_difficulty(self):
-        """Draw difficulty selection screen"""
-        # Title
         title = self.font_large.render("SELECT DIFFICULTY", True, COLOR_MINMATAR_ACCENT)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
         self.render_surface.blit(title, rect)
         
         y = 250
         difficulties = [
-            ('1', 'easy', 'Easy', 'Reduced enemy health and damage, more powerups'),
+            ('1', 'easy', 'Easy', 'Reduced enemy health and damage'),
             ('2', 'normal', 'Normal', 'Standard experience'),
-            ('3', 'hard', 'Hard', 'Tougher enemies, faster attacks, fewer powerups'),
+            ('3', 'hard', 'Hard', 'Tougher enemies, faster attacks'),
             ('4', 'nightmare', 'Nightmare', 'For veteran pilots only')
         ]
         
         for key, diff_id, name, desc in difficulties:
-            # Highlight current selection style
             color = COLOR_MINMATAR_ACCENT if diff_id == 'normal' else COLOR_TEXT
             if diff_id == 'nightmare':
                 color = (255, 100, 100)
@@ -667,76 +624,58 @@ class Game:
             
             y += 70
         
-        # Back option
         y += 30
         text = self.font.render("[ESC] Back to Menu", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
     
     def draw_game(self):
-        # Draw space background
-        if hasattr(self, "space_background"):
-            self.space_background.draw(self.render_surface)
-
-        """Draw gameplay elements"""
-        # Draw sprites
         for sprite in self.all_sprites:
             if sprite != self.player:
                 self.render_surface.blit(sprite.image, sprite.rect)
         
-        # Draw player last (on top)
         self.render_surface.blit(self.player.image, self.player.rect)
         
-        # Draw HUD
         self.draw_hud()
         
-        # Draw message
         if self.message_timer > 0:
             text = self.font_large.render(self.message, True, (255, 255, 255))
             rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 3))
             self.render_surface.blit(text, rect)
     
     def draw_hud(self):
-        """Draw heads-up display"""
-        # Health bars
         bar_width = 150
         bar_height = 12
         x = 10
         y = 10
         
-        # Shields
         pygame.draw.rect(self.render_surface, (50, 50, 80), (x, y, bar_width, bar_height))
         shield_pct = self.player.shields / self.player.max_shields
         pygame.draw.rect(self.render_surface, COLOR_SHIELD, (x, y, int(bar_width * shield_pct), bar_height))
         pygame.draw.rect(self.render_surface, (100, 100, 150), (x, y, bar_width, bar_height), 1)
         
-        # Armor
         y += bar_height + 3
         pygame.draw.rect(self.render_surface, (50, 40, 30), (x, y, bar_width, bar_height))
         armor_pct = self.player.armor / self.player.max_armor
         pygame.draw.rect(self.render_surface, COLOR_ARMOR, (x, y, int(bar_width * armor_pct), bar_height))
         pygame.draw.rect(self.render_surface, (100, 80, 60), (x, y, bar_width, bar_height), 1)
         
-        # Hull
         y += bar_height + 3
         pygame.draw.rect(self.render_surface, (40, 40, 40), (x, y, bar_width, bar_height))
         hull_pct = self.player.hull / self.player.max_hull
         pygame.draw.rect(self.render_surface, COLOR_HULL, (x, y, int(bar_width * hull_pct), bar_height))
         pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y, bar_width, bar_height), 1)
         
-        # Ammo indicator
         y += bar_height + 10
         ammo = AMMO_TYPES[self.player.current_ammo]
         pygame.draw.rect(self.render_surface, ammo['color'], (x, y, 20, 20))
         text = self.font_small.render(ammo['name'], True, COLOR_TEXT)
         self.render_surface.blit(text, (x + 25, y + 2))
         
-        # Rockets
         y += 25
         text = self.font_small.render(f"Rockets: {self.player.rockets}", True, COLOR_TEXT)
         self.render_surface.blit(text, (x, y))
         
-        # Right side - score and refugees
         x = SCREEN_WIDTH - 160
         y = 10
         
@@ -751,14 +690,12 @@ class Game:
         text = self.font_small.render(f"Liberated: {self.player.total_refugees}", True, (150, 200, 150))
         self.render_surface.blit(text, (x, y))
         
-        # Stage/Wave
         if self.current_stage < len(STAGES):
             y += 30
             stage = STAGES[self.current_stage]
             text = self.font_small.render(f"Stage {self.current_stage + 1}", True, COLOR_TEXT)
             self.render_surface.blit(text, (x, y))
         
-        # Difficulty indicator
         y += 20
         diff_color = (100, 255, 100) if self.difficulty == 'easy' else (
             COLOR_TEXT if self.difficulty == 'normal' else (
@@ -768,46 +705,53 @@ class Game:
         self.render_surface.blit(text, (x, y))
     
     def draw_menu(self):
-        """Draw main menu"""
-        # Title
         title = self.font_large.render("MINMATAR REBELLION", True, COLOR_MINMATAR_ACCENT)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 200))
         self.render_surface.blit(title, rect)
         
-        # Subtitle
         sub = self.font.render("A Top-Down Space Shooter", True, COLOR_TEXT)
         rect = sub.get_rect(center=(SCREEN_WIDTH // 2, 250))
         self.render_surface.blit(sub, rect)
         
-        # Instructions
-        y = 340
+        y = 320
+        
+        # Show controller status
+        if self.controller.enabled:
+            ctrl_text = self.font_small.render(f"Controller: {self.controller.joystick.get_name()}", True, (100, 255, 100))
+            rect = ctrl_text.get_rect(center=(SCREEN_WIDTH // 2, y))
+            self.render_surface.blit(ctrl_text, rect)
+            y += 25
+        
+        y += 15
         instructions = [
             "WASD or Arrow Keys - Move",
             "Space or Left Click - Fire Autocannons",
             "Shift or Right Click - Fire Rockets",
             "1-5 or Q/Tab - Switch Ammo",
-            "",
-            "Press ENTER to Start"
         ]
+        
+        if self.controller.enabled:
+            instructions.append("")
+            instructions.append("Left Stick - Move | A/RT - Fire")
+            instructions.append("B/LT - Rockets | X/LB - Cycle Ammo")
+        
+        instructions.append("")
+        instructions.append("Press ENTER or A to Start")
+        
         for line in instructions:
-            text = self.font.render(line, True, COLOR_TEXT)
+            text = self.font_small.render(line, True, COLOR_TEXT)
             rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
             self.render_surface.blit(text, rect)
-            y += 32
+            y += 26
         
-        # Sound options
         y += 30
         sound_status = "ON" if self.sound_enabled else "OFF"
         music_status = "ON" if self.music_enabled else "OFF"
-        sound_color = (100, 255, 100) if self.sound_enabled else (255, 100, 100)
-        music_color = (100, 255, 100) if self.music_enabled else (255, 100, 100)
-        
         text = self.font_small.render(f"[S] Sound: {sound_status}  [M] Music: {music_status}", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
     
     def draw_pause(self):
-        """Draw pause overlay"""
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         self.render_surface.blit(overlay, (0, 0))
@@ -821,18 +765,14 @@ class Game:
         self.render_surface.blit(text, rect)
     
     def draw_shop(self):
-        """Draw upgrade shop"""
-        # Title
         title = self.font_large.render("REBEL STATION", True, COLOR_MINMATAR_ACCENT)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 50))
         self.render_surface.blit(title, rect)
         
-        # Refugees
         text = self.font.render(f"Refugees Available: {self.player.refugees}", True, (100, 255, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, 100))
         self.render_surface.blit(text, rect)
         
-        # Upgrade options
         y = 160
         costs = UPGRADE_COSTS
         player = self.player
@@ -863,14 +803,12 @@ class Game:
             self.render_surface.blit(text, (50, y))
             y += 35
         
-        # Continue prompt
         y += 30
         text = self.font.render("Press ENTER to continue to next stage", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
     
     def draw_gameover(self):
-        """Draw game over screen"""
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((100, 0, 0, 150))
         self.render_surface.blit(overlay, (0, 0))
@@ -892,7 +830,6 @@ class Game:
         self.render_surface.blit(text, rect)
     
     def draw_victory(self):
-        """Draw victory screen"""
         title = self.font_large.render("VICTORY!", True, COLOR_MINMATAR_ACCENT)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
         self.render_surface.blit(title, rect)
@@ -929,7 +866,6 @@ class Game:
         self.render_surface.blit(text, rect)
     
     def run(self):
-        """Main game loop"""
         while self.running:
             self.clock.tick(FPS)
             self.handle_events()

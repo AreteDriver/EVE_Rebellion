@@ -6,7 +6,6 @@ from constants import *
 from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
                      RefugeePod, Powerup, Explosion, Star)
 from sounds import get_sound_manager, get_music_manager, play_sound
-from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground
 
 
@@ -51,9 +50,6 @@ class Game:
         self.font_large = pygame.font.Font(None, 48)
         self.font_small = pygame.font.Font(None, 22)
         
-
-        # Controller (optional)
-        self.controller = ControllerInput()
         # Initialize sound
         self.sound_manager = get_sound_manager()
         self.music_manager = get_music_manager()
@@ -122,14 +118,7 @@ class Game:
         # Check for boss wave
         if (stage['boss'] and self.current_wave == stage['waves'] - 1):
             # Boss wave
-            boss_type = stage['boss']
-            
-            # Use specialized CapitalShipEnemy class for amarr_capital
-            if boss_type == 'amarr_capital':
-                boss = CapitalShipEnemy(SCREEN_WIDTH // 2, self.difficulty_settings)
-            else:
-                boss = Enemy(boss_type, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
-            
+            boss = Enemy(stage['boss'], SCREEN_WIDTH // 2, -100, self.difficulty_settings)
             self.enemies.add(boss)
             self.all_sprites.add(boss)
             self.wave_enemies = 1
@@ -179,33 +168,10 @@ class Game:
     
     def handle_events(self):
         """Process input events"""
-        # Controller: start frame (clears edge states)
-        if self.controller:
-            if hasattr(self.controller, "start_frame"):
-                self.controller.start_frame()
-
         for event in pygame.event.get():
-            # Feed controller events first
-            if self.controller:
-                self.controller.handle_event(event)
-
             if event.type == pygame.QUIT:
                 self.running = False
             
-
-            # Controller button shortcuts (pause/ammo) while playing
-            if self.controller and self.controller.connected:
-                if self.state == 'playing':
-                    if self.controller.is_button_just_pressed(XboxButton.START):
-                        self.state = 'paused'
-                        self.play_sound('menu_select')
-                    if self.controller.is_button_just_pressed(XboxButton.RB):
-                        self.player.cycle_ammo()
-                        self.play_sound('ammo_switch')
-                elif self.state == 'paused':
-                    if self.controller.is_button_just_pressed(XboxButton.START):
-                        self.state = 'playing'
-                        self.play_sound('menu_select')
             elif event.type == pygame.KEYDOWN:
                 if self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
@@ -379,24 +345,11 @@ class Game:
         
         keys = pygame.key.get_pressed()
         
-
-        # Controller update (dt in seconds)
-        dt = self.clock.get_time() / 1000.0
-        if self.controller:
-            self.controller.update(dt)
         # Update player
         self.player.update(keys)
         
-
-        # Add controller movement on top of keyboard (analog)
-        if self.controller and self.controller.connected:
-            move_x, move_y = self.controller.get_movement_vector()
-            self.player.rect.x += move_x * self.player.speed
-            self.player.rect.y += move_y * self.player.speed
-            self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
         # Player shooting
-        controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
-        if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
+        if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0]:
             bullets = self.player.shoot()
             if bullets:
                 self.play_sound('autocannon', 0.3)
@@ -405,8 +358,7 @@ class Game:
                 self.all_sprites.add(bullet)
         
         # Rockets
-        controller_rocket = self.controller.is_alternate_fire() if (self.controller and self.controller.connected) else False
-        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2] or controller_rocket:
+        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2]:
             rocket = self.player.shoot_rocket()
             if rocket:
                 self.play_sound('rocket', 0.5)
