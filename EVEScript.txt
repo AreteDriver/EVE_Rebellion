@@ -1,0 +1,3 @@
+cd ~/EVE\ -Captain\'s\ Quarters/scripts
+./eve_tile_all.sh
+
