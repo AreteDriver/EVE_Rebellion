@@ -6,7 +6,8 @@ from constants import *
 from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
                      RefugeePod, Powerup, Explosion, Star)
 from sounds import get_sound_manager, get_music_manager, play_sound
-from expansion.capital_ship_enemy import CapitalShipEnemy
+from controller_input import ControllerInput, XboxButton
+from space_background import SpaceBackground
 
 
 class ScreenShake:
@@ -39,6 +40,7 @@ class Game:
     
     def __init__(self):
         pygame.init()
+        self.space_background = SpaceBackground(SCREEN_WIDTH, SCREEN_HEIGHT)
         pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
         
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -49,6 +51,9 @@ class Game:
         self.font_large = pygame.font.Font(None, 48)
         self.font_small = pygame.font.Font(None, 22)
         
+
+        # Controller (optional)
+        self.controller = ControllerInput()
         # Initialize sound
         self.sound_manager = get_sound_manager()
         self.music_manager = get_music_manager()
@@ -174,10 +179,33 @@ class Game:
     
     def handle_events(self):
         """Process input events"""
+        # Controller: start frame (clears edge states)
+        if self.controller:
+            if hasattr(self.controller, "start_frame"):
+                self.controller.start_frame()
+
         for event in pygame.event.get():
+            # Feed controller events first
+            if self.controller:
+                self.controller.handle_event(event)
+
             if event.type == pygame.QUIT:
                 self.running = False
             
+
+            # Controller button shortcuts (pause/ammo) while playing
+            if self.controller and self.controller.connected:
+                if self.state == 'playing':
+                    if self.controller.is_button_just_pressed(XboxButton.START):
+                        self.state = 'paused'
+                        self.play_sound('menu_select')
+                    if self.controller.is_button_just_pressed(XboxButton.RB):
+                        self.player.cycle_ammo()
+                        self.play_sound('ammo_switch')
+                elif self.state == 'paused':
+                    if self.controller.is_button_just_pressed(XboxButton.START):
+                        self.state = 'playing'
+                        self.play_sound('menu_select')
             elif event.type == pygame.KEYDOWN:
                 if self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
@@ -341,17 +369,34 @@ class Game:
                 self.play_sound('purchase')
     
     def update(self):
+        # Update scrolling background
+        if hasattr(self, "space_background"):
+            self.space_background.update(2.0)
+
         """Update game state"""
         if self.state != 'playing':
             return
         
         keys = pygame.key.get_pressed()
         
+
+        # Controller update (dt in seconds)
+        dt = self.clock.get_time() / 1000.0
+        if self.controller:
+            self.controller.update(dt)
         # Update player
         self.player.update(keys)
         
+
+        # Add controller movement on top of keyboard (analog)
+        if self.controller and self.controller.connected:
+            move_x, move_y = self.controller.get_movement_vector()
+            self.player.rect.x += move_x * self.player.speed
+            self.player.rect.y += move_y * self.player.speed
+            self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
         # Player shooting
-        if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0]:
+        controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
+        if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
             bullets = self.player.shoot()
             if bullets:
                 self.play_sound('autocannon', 0.3)
@@ -360,7 +405,8 @@ class Game:
                 self.all_sprites.add(bullet)
         
         # Rockets
-        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2]:
+        controller_rocket = self.controller.is_alternate_fire() if (self.controller and self.controller.connected) else False
+        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2] or controller_rocket:
             rocket = self.player.shoot_rocket()
             if rocket:
                 self.play_sound('rocket', 0.5)
@@ -628,6 +674,10 @@ class Game:
         self.render_surface.blit(text, rect)
     
     def draw_game(self):
+        # Draw space background
+        if hasattr(self, "space_background"):
+            self.space_background.draw(self.render_surface)
+
         """Draw gameplay elements"""
         # Draw sprites
         for sprite in self.all_sprites:

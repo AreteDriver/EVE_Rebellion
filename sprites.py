@@ -3,6 +3,7 @@ import pygame
 import math
 import random
 from constants import *
+from visual_enhancements import add_ship_glow, add_colored_tint, add_outline, add_strong_outline
 
 
 class Player(pygame.sprite.Sprite):
@@ -55,59 +56,59 @@ class Player(pygame.sprite.Sprite):
         self.score = 0
     
     def _create_ship_image(self):
-        """Create Rifter/Wolf sprite"""
-        surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        """Load ship image from SVG file"""
+        import cairosvg
+        from io import BytesIO
         
-        if self.is_wolf:
-            # Wolf - sleeker, more refined
-            color = COLOR_MINMATAR_ACCENT
-            # Main body
-            pygame.draw.polygon(surf, color, [
-                (self.width//2, 0),
-                (self.width-5, self.height-10),
-                (self.width//2, self.height-5),
-                (5, self.height-10)
-            ])
-            # Wings
-            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
-                (0, self.height-15),
-                (10, self.height//2),
-                (10, self.height-5)
-            ])
-            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
-                (self.width, self.height-15),
-                (self.width-10, self.height//2),
-                (self.width-10, self.height-5)
-            ])
-            # Engine glow
-            pygame.draw.circle(surf, (255, 150, 50), (self.width//2, self.height-8), 5)
-        else:
-            # Rifter - asymmetric, aggressive
-            color = COLOR_MINMATAR_HULL
-            # Main body (asymmetric)
-            pygame.draw.polygon(surf, color, [
-                (self.width//2 - 3, 0),
-                (self.width-8, self.height-15),
-                (self.width//2, self.height),
-                (8, self.height-15)
-            ])
-            # Left wing (larger)
-            pygame.draw.polygon(surf, COLOR_MINMATAR_DARK, [
-                (0, self.height-10),
-                (5, self.height//3),
-                (12, self.height-5)
-            ])
-            # Right wing (smaller, asymmetric)
-            pygame.draw.polygon(surf, COLOR_MINMATAR_DARK, [
-                (self.width-3, self.height-20),
-                (self.width-8, self.height//2),
-                (self.width-12, self.height-8)
-            ])
-            # Engine glow
-            pygame.draw.circle(surf, (255, 100, 0), (self.width//2, self.height-5), 4)
+        # Map ship types to SVG files
+        ship_svgs = {
+            'Rifter': 'assets/minmatar_rebellion/svg/top/rifter.svg',
+            'Wolf': 'assets/minmatar_rebellion/svg/top/Wolf.svg',
+            'Jaguar': 'assets/minmatar_rebellion/svg/top/jaguar.svg'
+        }
+        
+        ship_type = getattr(self, 'ship_class', 'Rifter')
+        svg_path = ship_svgs.get(ship_type, ship_svgs['Rifter'])
+        
+        try:
+            # Convert SVG to PNG in memory
+            png_data = cairosvg.svg2png(url=svg_path, output_width=self.width, output_height=self.height)
+            
+            # Load PNG into pygame surface
+            image = pygame.image.load(BytesIO(png_data))
+            
+            # Ensure proper alpha
+            image = image.convert_alpha()
+            
+            # Rotate to face upward (EVE ships face right by default)
+            image = pygame.transform.rotate(image, 90)
+            
+            # Add strong white outline for visibility
+            image = add_strong_outline(image, outline_color=(255, 255, 255), glow_color=(200, 150, 255), thickness=2)
+            # Add Minmatar glow (rust/orange)
+            image = add_ship_glow(image, (200, 100, 50), intensity=0.3)
+            
+            return image
+            
+        except Exception as e:
+            print(f"Warning: Could not load {svg_path}: {e}")
+            # Fallback to simple shape
+            return self._create_fallback_ship_image()
+    
+    def _create_fallback_ship_image(self):
+        """Fallback ship sprite if SVG loading fails"""
+        surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        color = (200, 100, 100)
+        
+        # Simple triangle ship
+        pygame.draw.polygon(surf, color, [
+            (self.width//2, 0),
+            (self.width-5, self.height-10),
+            (self.width//2, self.height-5),
+            (5, self.height-10)
+        ])
         
         return surf
-    
     def upgrade_to_wolf(self):
         """Upgrade to Wolf assault frigate"""
         self.is_wolf = True
@@ -331,8 +332,6 @@ class Enemy(pygame.sprite.Sprite):
         self.difficulty = difficulty or {}
         
         self.width, self.height = self.stats['size']
-        self.image = self._create_image()
-        self.rect = self.image.get_rect(center=(x, y))
         
         # Apply difficulty scaling
         health_mult = self.difficulty.get('enemy_health_mult', 1.0)
@@ -353,6 +352,10 @@ class Enemy(pygame.sprite.Sprite):
         self.score = self.stats['score']
         self.refugees = self.stats.get('refugees', 0)
         self.is_boss = self.stats.get('boss', False)
+        
+        # Create image after all attributes are set
+        self.image = self._create_image()
+        self.rect = self.image.get_rect(center=(x, y))
         
         # Movement pattern selection based on enemy type
         self._select_movement_pattern()
@@ -408,85 +411,68 @@ class Enemy(pygame.sprite.Sprite):
             return random.randint(80, 300)
     
     def _create_image(self):
-        """Create Amarr ship sprite"""
-        surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        """Load enemy ship image from SVG based on type"""
+        import cairosvg
+        from io import BytesIO
+        import random
         
-        if self.enemy_type == 'executioner':
-            # Fast, sleek frigate
-            pygame.draw.polygon(surf, COLOR_AMARR_HULL, [
-                (self.width//2, self.height),
-                (0, 10),
-                (self.width//2, 0),
-                (self.width, 10)
-            ])
-            pygame.draw.polygon(surf, COLOR_AMARR_ACCENT, [
-                (self.width//2, self.height-5),
-                (10, 15),
-                (self.width-10, 15)
-            ])
+        # Map enemy types to ship classes
+        frigate_ships = ['punisher', 'tormentor', 'crucifier', 'executioner', 'inquisitor', 'magnate']
+        destroyer_ships = ['coercer', 'dragoon', 'heretic', 'confessor']
+        cruiser_ships = ['maller', 'omen', 'arbitrator', 'augoror', 'zealot', 'sacrilege', 'curse', 'pilgrim', 'absolution']
         
-        elif self.enemy_type == 'punisher':
-            # Heavy, armored frigate
-            pygame.draw.polygon(surf, COLOR_AMARR_HULL, [
-                (self.width//2, self.height),
-                (5, self.height//3),
-                (5, 5),
-                (self.width-5, 5),
-                (self.width-5, self.height//3)
-            ])
-            pygame.draw.rect(surf, COLOR_AMARR_ACCENT, 
-                           (self.width//4, 10, self.width//2, self.height//2))
+        # Determine ship class based on enemy type
+        if self.is_boss:
+            ship_name = random.choice(cruiser_ships)
+        elif self.stats.get('tough', False) or self.max_hull > 150:
+            ship_name = random.choice(destroyer_ships)
+        else:
+            ship_name = random.choice(frigate_ships)
         
-        elif self.enemy_type == 'omen':
-            # Cruiser
-            pygame.draw.polygon(surf, COLOR_AMARR_HULL, [
-                (self.width//2, self.height),
-                (0, self.height//2),
-                (5, 5),
-                (self.width-5, 5),
-                (self.width, self.height//2)
-            ])
-            pygame.draw.ellipse(surf, COLOR_AMARR_ACCENT,
-                              (10, 10, self.width-20, self.height//2))
+        svg_path = f'assets/minmatar_rebellion/svg/top/{ship_name}.svg'
         
-        elif self.enemy_type == 'maller':
-            # Heavy cruiser - boxy
-            pygame.draw.rect(surf, COLOR_AMARR_HULL,
-                           (5, 5, self.width-10, self.height-10))
-            pygame.draw.polygon(surf, COLOR_AMARR_ACCENT, [
-                (self.width//2, self.height-5),
-                (10, self.height//2),
-                (self.width-10, self.height//2)
-            ])
-        
-        elif self.enemy_type == 'bestower':
-            # Industrial - long, boxy
-            pygame.draw.rect(surf, COLOR_AMARR_DARK,
-                           (10, 5, self.width-20, self.height-10))
-            pygame.draw.rect(surf, COLOR_AMARR_HULL,
-                           (5, self.height//3, self.width-10, self.height//3))
-        
-        elif self.enemy_type in ['apocalypse', 'abaddon']:
-            # Battleship boss
-            pygame.draw.polygon(surf, COLOR_AMARR_HULL, [
-                (self.width//2, self.height),
-                (0, self.height*2//3),
-                (0, self.height//3),
-                (self.width//4, 0),
-                (self.width*3//4, 0),
-                (self.width, self.height//3),
-                (self.width, self.height*2//3)
-            ])
-            pygame.draw.ellipse(surf, COLOR_AMARR_ACCENT,
-                              (self.width//4, self.height//4, 
-                               self.width//2, self.height//2))
-            # Extra detail for Abaddon
-            if self.enemy_type == 'abaddon':
-                pygame.draw.rect(surf, (255, 215, 0),
-                               (self.width//3, 10, self.width//3, 20))
-        
-        return surf
+        try:
+            # Convert SVG to PNG
+            png_data = cairosvg.svg2png(url=svg_path, output_width=self.width, output_height=self.height)
+            image = pygame.image.load(BytesIO(png_data)).convert_alpha()
+            
+            # Rotate to face downward (enemies come from top)
+            image = pygame.transform.rotate(image, -90)
+            
+            # Add gold outline for Amarr ships
+            image = add_strong_outline(image, outline_color=(255, 215, 0), glow_color=(255, 180, 50), thickness=2)
+            # Add Amarr gold tint and glow
+            image = add_colored_tint(image, (255, 215, 0), alpha=40)
+            image = add_ship_glow(image, (255, 215, 100), intensity=0.25)
+            
+            return image
+            
+        except Exception as e:
+            print(f"Warning: Could not load enemy ship {svg_path}: {e}")
+            return self._create_fallback_image()
     
+    def _create_fallback_image(self):
+        """Fallback enemy sprite"""
+        surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        # Gold Amarr color
+        color = (200, 180, 100)
+        pygame.draw.polygon(surf, color, [
+            (self.width//2, self.height),
+            (self.width-5, 10),
+            (self.width//2, 5),
+            (5, 10)
+        ])
+        return surf
+
+        # Gold Amarr color
+        color = (200, 180, 100)
+        pygame.draw.polygon(surf, color, [
+            (self.width//2, self.height),
+            (self.width-5, 10),
+            (self.width//2, 5),
+            (5, 10)
+        ])
+        return surf
     def update(self, player_rect=None):
         """Update enemy position and behavior with advanced patterns"""
         self.pattern_timer += 0.05
