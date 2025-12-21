@@ -122,7 +122,14 @@ class Game:
         # Check for boss wave
         if (stage['boss'] and self.current_wave == stage['waves'] - 1):
             # Boss wave
-            boss = Enemy(stage['boss'], SCREEN_WIDTH // 2, -100, self.difficulty_settings)
+            boss_type = stage['boss']
+            
+            # Use specialized CapitalShipEnemy class for amarr_capital
+            if boss_type == 'amarr_capital':
+                boss = CapitalShipEnemy(SCREEN_WIDTH // 2, self.difficulty_settings)
+            else:
+                boss = Enemy(boss_type, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
+            
             self.enemies.add(boss)
             self.all_sprites.add(boss)
             self.wave_enemies = 1
