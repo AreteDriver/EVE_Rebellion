@@ -1,1 +1,23 @@
 # [paste the contents from the file I created]
+.venv/
+
+# BFG Cleanup artifacts
+..bfg-report/
+bfg.jar
+keep_these_ships.txt
+
+# Migration scripts and documentation (temporary)
+migrate_ships_to_eve_ships.sh
+cleanup_eve_rebellion.sh
+storage_crisis_fix.sh
+verify_svgs.sh
+build_with_assets.sh
+EVE_Ships_README.md
+EXECUTION_GUIDE.md
+GITHUB_AUTH_FIX.md
+PACKAGE_SUMMARY.md
+STORAGE_CRISIS_SOLUTION.md
+gitignore_updated
+
+# Backup directories
+assets/minmatar_rebellion/svg/top_BACKUP/
