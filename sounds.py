@@ -58,6 +58,23 @@ class SoundGenerator:
         
         # Wolf upgrade
         self.sounds['upgrade'] = self._make_upgrade()
+
+        # Berserk system sounds
+        self.sounds['berserk_extreme'] = self._make_berserk_extreme()
+        self.sounds['berserk_close'] = self._make_berserk_close()
+        self.sounds['combo'] = self._make_combo()
+
+        # Boss sounds
+        self.sounds['boss_entrance'] = self._make_boss_entrance()
+        self.sounds['boss_death'] = self._make_boss_death()
+
+        # Alert sounds
+        self.sounds['low_health'] = self._make_low_health()
+        self.sounds['shield_down'] = self._make_shield_down()
+
+        # Victory/defeat
+        self.sounds['victory'] = self._make_victory_fanfare()
+        self.sounds['defeat'] = self._make_defeat()
     
     def _numpy_to_sound(self, samples):
         """Convert numpy array to pygame Sound"""
@@ -368,9 +385,197 @@ class SoundGenerator:
         
         envelope = t / duration * np.exp(-(t - duration) * 3)
         wave *= envelope * 0.5
-        
+
         return self._numpy_to_sound(wave)
-    
+
+    def _make_berserk_extreme(self):
+        """Intense sound for extreme close kill (5x multiplier)"""
+        duration = 0.3
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Aggressive distorted growl with rising pitch
+        freq = 150 + t * 400
+        wave = np.sin(2 * np.pi * freq * t) * 0.4
+        wave += np.sin(2 * np.pi * freq * 2 * t) * 0.3
+        wave += np.sin(2 * np.pi * freq * 3 * t) * 0.2
+
+        # Add distortion
+        wave = np.tanh(wave * 2) * 0.6
+
+        # Noise burst for impact
+        noise = np.random.uniform(-0.4, 0.4, len(t))
+        wave += noise * np.exp(-t * 15) * 0.3
+
+        envelope = (1 - np.exp(-t * 50)) * np.exp(-t * 6)
+        wave *= envelope * 0.5
+
+        return self._numpy_to_sound(wave)
+
+    def _make_berserk_close(self):
+        """Punchy sound for close range kill (3x multiplier)"""
+        duration = 0.2
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Quick rising tone with punch
+        freq = 200 + t * 300
+        wave = np.sin(2 * np.pi * freq * t) * 0.35
+        wave += np.sin(2 * np.pi * freq * 1.5 * t) * 0.2
+
+        # Light crunch
+        noise = np.random.uniform(-0.2, 0.2, len(t))
+        wave += noise * np.exp(-t * 25) * 0.2
+
+        envelope = (1 - np.exp(-t * 60)) * np.exp(-t * 10)
+        wave *= envelope * 0.4
+
+        return self._numpy_to_sound(wave)
+
+    def _make_combo(self):
+        """Sound for achieving kill combo"""
+        duration = 0.25
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Quick ascending arpeggio
+        wave = np.zeros_like(t)
+        notes = [600, 800, 1000, 1200]
+        note_len = len(t) // len(notes)
+
+        for i, freq in enumerate(notes):
+            start = i * note_len
+            end = min(start + note_len, len(t))
+            segment = t[start:end] - t[start]
+            note_env = np.exp(-segment * 30)
+            wave[start:end] = np.sin(2 * np.pi * freq * segment) * note_env * 0.3
+
+        wave *= 0.4
+        return self._numpy_to_sound(wave)
+
+    def _make_boss_entrance(self):
+        """Dramatic boss entrance sound"""
+        duration = 1.5
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Deep rumble building up
+        rumble_freq = 40 + t * 30
+        wave = np.sin(2 * np.pi * rumble_freq * t) * 0.3
+
+        # Add ominous drone
+        drone = np.sin(2 * np.pi * 110 * t) * 0.2
+        drone += np.sin(2 * np.pi * 165 * t) * 0.15  # Perfect fifth
+
+        # Building noise
+        noise = np.random.uniform(-0.3, 0.3, len(t))
+        noise_env = (t / duration) ** 2
+        wave += noise * noise_env * 0.3
+
+        wave += drone
+
+        # Envelope builds then cuts
+        envelope = (t / duration) ** 1.5
+        wave *= envelope * 0.5
+
+        return self._numpy_to_sound(wave)
+
+    def _make_boss_death(self):
+        """Epic boss destruction sound"""
+        duration = 1.2
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Massive explosion
+        freq = 200 * np.exp(-t * 3)
+        wave = np.sin(2 * np.pi * freq * t) * 0.5
+
+        # Heavy noise burst
+        noise = np.random.uniform(-1, 1, len(t))
+        noise_filtered = np.convolve(noise, np.ones(100)/100, mode='same')
+        wave += noise_filtered * np.exp(-t * 4) * 0.6
+
+        # Add some metallic debris sounds
+        debris_freq = 800 * np.exp(-t * 5)
+        wave += np.sin(2 * np.pi * debris_freq * t) * np.exp(-t * 8) * 0.2
+
+        envelope = (1 - np.exp(-t * 30)) * np.exp(-t * 2)
+        wave *= envelope * 0.6
+
+        return self._numpy_to_sound(wave)
+
+    def _make_low_health(self):
+        """Warning beep for low health"""
+        duration = 0.4
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Two quick warning beeps
+        wave = np.zeros_like(t)
+        half = len(t) // 2
+
+        beep1 = np.sin(2 * np.pi * 800 * t[:half]) * np.exp(-t[:half] * 15)
+        beep2 = np.sin(2 * np.pi * 600 * t[half:]) * np.exp(-(t[half:] - t[half]) * 15)
+
+        wave[:half] = beep1 * 0.3
+        wave[half:] = beep2 * 0.3
+
+        return self._numpy_to_sound(wave)
+
+    def _make_shield_down(self):
+        """Shield depleted warning"""
+        duration = 0.3
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Descending electric crackle
+        freq = 1200 - t * 800
+        wave = np.sin(2 * np.pi * freq * t) * 0.3
+
+        # Electric noise
+        noise = np.random.uniform(-0.4, 0.4, len(t))
+        wave += noise * np.exp(-t * 10) * 0.3
+
+        envelope = np.exp(-t * 8)
+        wave *= envelope * 0.4
+
+        return self._numpy_to_sound(wave)
+
+    def _make_victory_fanfare(self):
+        """Epic victory sound"""
+        duration = 1.5
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        wave = np.zeros_like(t)
+        # Triumphant chord progression
+        notes = [(400, 0.0), (500, 0.1), (600, 0.2), (800, 0.4), (1000, 0.6)]
+
+        for freq, start_time in notes:
+            start_idx = int(start_time * self.sample_rate)
+            if start_idx < len(t):
+                segment_t = t[start_idx:] - t[start_idx]
+                note = np.sin(2 * np.pi * freq * segment_t) * 0.25
+                note += np.sin(2 * np.pi * freq * 1.5 * segment_t) * 0.12
+                note *= np.exp(-segment_t * 2)
+                wave[start_idx:start_idx + len(note)] += note[:len(wave) - start_idx]
+
+        wave = np.clip(wave, -1, 1) * 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_defeat(self):
+        """Game over sound"""
+        duration = 1.0
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Descending mournful tones
+        wave = np.zeros_like(t)
+        notes = [(500, 0.0), (400, 0.25), (300, 0.5), (200, 0.75)]
+
+        for freq, start_time in notes:
+            start_idx = int(start_time * self.sample_rate)
+            if start_idx < len(t):
+                segment_t = t[start_idx:] - t[start_idx]
+                note = np.sin(2 * np.pi * freq * segment_t) * 0.3
+                note *= np.exp(-segment_t * 4)
+                end_idx = min(start_idx + len(note), len(wave))
+                wave[start_idx:end_idx] += note[:end_idx - start_idx]
+
+        wave = np.clip(wave, -1, 1) * 0.4
+        return self._numpy_to_sound(wave)
+
     def play(self, sound_name, volume=1.0):
         """Play a sound effect"""
         if not self.enabled:

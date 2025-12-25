@@ -387,28 +387,48 @@ class Enemy(pygame.sprite.Sprite):
     
     def _select_movement_pattern(self):
         """Select movement pattern based on enemy type"""
+        behavior = self.stats.get('behavior', None)
+
         if self.is_boss:
             self.pattern = self.PATTERN_DRIFT  # Bosses use simple patterns
+        elif behavior == 'swarm':
+            # Drones - fast erratic movement
+            self.pattern = random.choice([self.PATTERN_ZIGZAG, self.PATTERN_SWOOP])
+        elif behavior == 'bomber':
+            # Bombers - slow steady approach
+            self.pattern = self.PATTERN_DRIFT
+            self.speed *= 0.7
+        elif behavior == 'aggressive':
+            # Interceptors - dive at player
+            self.pattern = self.PATTERN_SWOOP
+        elif behavior == 'strafe':
+            # Coercer - circle strafe
+            self.pattern = self.PATTERN_CIRCLE
+        elif behavior == 'artillery':
+            # Harbinger - stay at range
+            self.pattern = self.PATTERN_FLANK
+        elif behavior == 'drone_carrier':
+            # Dragoon - steady with drone spawns
+            self.pattern = self.PATTERN_DRIFT
+            self.drone_timer = 0
+            self.drones_spawned = 0
+            self.max_drones = self.stats.get('drones', 2)
         elif self.enemy_type == 'executioner':
-            # Fast ships use aggressive patterns
             self.pattern = random.choice([
-                self.PATTERN_SINE, self.PATTERN_ZIGZAG, 
+                self.PATTERN_SINE, self.PATTERN_ZIGZAG,
                 self.PATTERN_SWOOP, self.PATTERN_FLANK
             ])
         elif self.enemy_type == 'punisher':
-            # Heavy ships use steady patterns
             self.pattern = random.choice([
                 self.PATTERN_DRIFT, self.PATTERN_SINE, self.PATTERN_CIRCLE
             ])
         elif self.enemy_type in ['omen', 'maller']:
-            # Cruisers use tactical patterns
             self.pattern = random.choice([
                 self.PATTERN_CIRCLE, self.PATTERN_FLANK, self.PATTERN_DRIFT
             ])
         elif self.enemy_type == 'bestower':
-            # Industrials try to escape
             self.pattern = self.PATTERN_DRIFT
-            self.speed *= 0.8  # Slightly slower
+            self.speed *= 0.8
         else:
             self.pattern = self.PATTERN_DRIFT
     

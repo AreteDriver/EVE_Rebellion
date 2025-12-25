@@ -245,6 +245,74 @@ ENEMY_STATS = {
         'score': 1500,
         'size': (60, 80),
         'boss': True
+    },
+    # New enemy types
+    'drone': {
+        'name': 'Combat Drone',
+        'shields': 15,
+        'armor': 10,
+        'hull': 5,
+        'speed': 4.0,
+        'fire_rate': 2500,
+        'score': 25,
+        'size': (15, 15),
+        'behavior': 'swarm'
+    },
+    'bomber': {
+        'name': 'Purifier Bomber',
+        'shields': 40,
+        'armor': 60,
+        'hull': 40,
+        'speed': 0.8,
+        'fire_rate': 3000,
+        'score': 300,
+        'size': (40, 55),
+        'behavior': 'bomber'
+    },
+    'interceptor': {
+        'name': 'Crusader Interceptor',
+        'shields': 80,
+        'armor': 15,
+        'hull': 15,
+        'speed': 5.0,
+        'fire_rate': 1000,
+        'score': 200,
+        'size': (25, 35),
+        'behavior': 'aggressive'
+    },
+    'coercer': {
+        'name': 'Coercer',
+        'shields': 45,
+        'armor': 45,
+        'hull': 25,
+        'speed': 2.0,
+        'fire_rate': 1200,
+        'score': 125,
+        'size': (32, 42),
+        'behavior': 'strafe'
+    },
+    'harbinger': {
+        'name': 'Harbinger',
+        'shields': 200,
+        'armor': 300,
+        'hull': 150,
+        'speed': 0.6,
+        'fire_rate': 1000,
+        'score': 800,
+        'size': (65, 90),
+        'behavior': 'artillery'
+    },
+    'dragoon': {
+        'name': 'Dragoon',
+        'shields': 100,
+        'armor': 80,
+        'hull': 50,
+        'speed': 1.5,
+        'fire_rate': 1800,
+        'score': 350,
+        'size': (45, 60),
+        'behavior': 'drone_carrier',
+        'drones': 2
     }
 }
 
@@ -278,35 +346,35 @@ STAGES = [
     {
         'name': 'Asteroid Belt Escape',
         'waves': 5,
-        'enemies': ['executioner', 'punisher'],
+        'enemies': ['executioner', 'punisher', 'drone'],
         'industrial_chance': 0.1,
         'boss': None
     },
     {
         'name': 'Amarr Patrol Interdiction',
         'waves': 7,
-        'enemies': ['executioner', 'punisher', 'omen'],
+        'enemies': ['executioner', 'punisher', 'coercer', 'drone'],
         'industrial_chance': 0.15,
         'boss': 'omen'
     },
     {
         'name': 'Slave Colony Liberation',
         'waves': 8,
-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
+        'enemies': ['executioner', 'punisher', 'coercer', 'omen', 'interceptor'],
         'industrial_chance': 0.25,
         'boss': None
     },
     {
         'name': 'Gate Assault',
         'waves': 10,
-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
+        'enemies': ['punisher', 'coercer', 'omen', 'maller', 'interceptor', 'bomber'],
         'industrial_chance': 0.15,
         'boss': 'apocalypse'
     },
     {
         'name': 'Final Push - Amarr Station',
         'waves': 12,
-        'enemies': ['executioner', 'punisher', 'omen', 'maller'],
+        'enemies': ['coercer', 'omen', 'maller', 'harbinger', 'interceptor', 'bomber', 'dragoon'],
         'industrial_chance': 0.2,
         'boss': 'abaddon'
     }

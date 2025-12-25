@@ -11,6 +11,7 @@ from space_background import SpaceBackground
 from expansion.capital_ship_enemy import CapitalShipEnemy
 from berserk_system import BerserkSystem
 from cinematic_system import CinematicManager, TribeType
+from tutorial import TutorialManager
 
 
 class ScreenShake:
@@ -74,10 +75,18 @@ class Game:
         self.screen_flash_color = (255, 50, 50)
         self.show_danger_zones = False  # Toggle with D key
 
+        # Low health warning
+        self.low_health_timer = 0
+        self.low_health_interval = 90  # Frames between warning beeps
+
         # Cinematic system
         self.cinematic = CinematicManager(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.selected_tribe = TribeType.SEBIESTOR
         self.show_cinematics = True  # Can be toggled in options
+
+        # Tutorial system
+        self.tutorial = TutorialManager()
+        self.tutorial_shown = False  # Track if player has seen tutorial
 
         # Game state
         self.state = 'menu'  # menu, ship_select, difficulty, playing, shop, paused, gameover, victory
@@ -198,6 +207,7 @@ class Game:
             self.wave_enemies = 1
             self.wave_spawned = 1
             self.show_message(f"WARNING: {boss.stats['name'].upper()} APPROACHING!", 180)
+            self.play_sound('boss_entrance', 0.7)
             self.play_sound('warning')
             return
         
@@ -258,6 +268,14 @@ class Game:
 
             # Controller button shortcuts
             if self.controller and self.controller.connected:
+                # Tutorial controller support
+                if self.tutorial.active:
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self.tutorial.skip_timer = 1
+                    elif self.controller.is_button_just_pressed(XboxButton.B):
+                        self.tutorial.tutorial_complete = True
+                        self.tutorial.active = False
+
                 if self.state == 'menu':
                     if self.controller.is_button_just_pressed(XboxButton.A):
                         self.state = 'ship_select'
@@ -300,8 +318,17 @@ class Game:
                         self.state = 'playing'
                         self.play_sound('menu_select')
             elif event.type == pygame.KEYDOWN:
+                # Pass events to tutorial if active
+                if self.tutorial.active:
+                    self.tutorial.handle_input(event)
+
                 if self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        self.state = 'ship_select'
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_t:
+                        # Start tutorial
+                        self.tutorial.start_tutorial()
                         self.state = 'ship_select'
                         self.play_sound('menu_select')
                     elif event.key == pygame.K_m:
@@ -351,12 +378,16 @@ class Game:
                     elif event.key == pygame.K_q or event.key == pygame.K_TAB:
                         self.player.cycle_ammo()
                         self.play_sound('ammo_switch')
+                        if self.tutorial.active:
+                            self.tutorial.track_ammo_switch()
                     else:
                         # Check ammo hotkeys
                         for ammo_type, data in AMMO_TYPES.items():
                             if event.key == data['key']:
                                 if self.player.switch_ammo(ammo_type):
                                     self.show_message(f"Ammo: {data['name']}", 60)
+                                    if self.tutorial.active:
+                                        self.tutorial.track_ammo_switch()
                                     self.play_sound('ammo_switch')
                                 break
                 
@@ -474,7 +505,7 @@ class Game:
             self.current_stage += 1
             if self.current_stage >= len(STAGES):
                 self.state = 'victory'
-                self.play_sound('stage_complete')
+                self.play_sound('victory', 0.8)
             else:
                 self.current_wave = 0
                 self.wave_delay = 60
@@ -506,7 +537,12 @@ class Game:
             self.controller.update(dt)
         # Update player
         self.player.update(keys)
-        
+
+        # Track movement for tutorial
+        if self.tutorial.active:
+            if keys[pygame.K_w] or keys[pygame.K_a] or keys[pygame.K_s] or keys[pygame.K_d] or \
+               keys[pygame.K_UP] or keys[pygame.K_DOWN] or keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]:
+                self.tutorial.track_move()
 
         # Add controller movement on top of keyboard (analog)
         if self.controller and self.controller.connected:
@@ -514,16 +550,20 @@ class Game:
             self.player.rect.x += move_x * self.player.speed
             self.player.rect.y += move_y * self.player.speed
             self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
+            if self.tutorial.active and (abs(move_x) > 0.1 or abs(move_y) > 0.1):
+                self.tutorial.track_move()
         # Player shooting
         controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
         if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
             bullets = self.player.shoot()
             if bullets:
                 self.play_sound('autocannon', 0.3)
+                if self.tutorial.active:
+                    self.tutorial.track_shot()
             for bullet in bullets:
                 self.player_bullets.add(bullet)
                 self.all_sprites.add(bullet)
-        
+
         # Rockets
         controller_rocket = self.controller.is_alternate_fire() if (self.controller and self.controller.connected) else False
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2] or controller_rocket:
@@ -532,6 +572,8 @@ class Game:
                 self.play_sound('rocket', 0.5)
                 self.player_bullets.add(rocket)
                 self.all_sprites.add(rocket)
+                if self.tutorial.active:
+                    self.tutorial.track_rocket()
         
         # Update stars
         for star in self.stars:
@@ -559,6 +601,28 @@ class Game:
         if self.screen_flash_alpha > 0:
             self.screen_flash_alpha = max(0, self.screen_flash_alpha - 8)
 
+        # Update tutorial
+        if self.tutorial.active:
+            self.tutorial.update()
+
+        # Low health warning
+        total_health = self.player.shields + self.player.armor + self.player.hull
+        max_health = self.player.max_shields + self.player.max_armor + self.player.max_hull
+        health_pct = total_health / max_health if max_health > 0 else 0
+
+        if health_pct < 0.25:
+            self.low_health_timer += 1
+            if self.low_health_timer >= self.low_health_interval:
+                self.play_sound('low_health', 0.5)
+                self.low_health_timer = 0
+        else:
+            self.low_health_timer = 0
+
+        # Shield down warning (plays once when shields deplete)
+        if self.player.shields <= 0 and hasattr(self, '_shields_were_up') and self._shields_were_up:
+            self.play_sound('shield_down', 0.6)
+        self._shields_were_up = self.player.shields > 0
+
         # Enemy shooting
         for enemy in self.enemies:
             bullets = enemy.shoot(self.player.rect)
@@ -583,17 +647,24 @@ class Game:
                     )
                     self.player.score += berserk_score
 
-                    # Screen flash for extreme close kills
+                    # Screen flash and sound for berserk kills
                     if self.berserk.current_range == 'EXTREME':
                         self.screen_flash_alpha = 100
                         self.screen_flash_color = (255, 50, 50)
+                        self.play_sound('berserk_extreme', 0.6)
                     elif self.berserk.current_range == 'CLOSE':
                         self.screen_flash_alpha = 50
                         self.screen_flash_color = (255, 150, 50)
+                        self.play_sound('berserk_close', 0.4)
+
+                    # Track kill for tutorial
+                    if self.tutorial.active:
+                        self.tutorial.track_kill(self.berserk.current_range)
                     
-                    # Screen shake based on enemy size
+                    # Screen shake and sounds based on enemy size
                     if enemy.is_boss:
                         self.shake.add(SHAKE_LARGE)
+                        self.play_sound('boss_death', 0.8)
                         self.play_sound('explosion_large')
                     elif enemy.enemy_type in ['omen', 'maller']:
                         self.shake.add(SHAKE_MEDIUM)
@@ -649,6 +720,7 @@ class Game:
                 self.all_sprites.add(explosion)
                 self.shake.add(SHAKE_LARGE)
                 self.play_sound('explosion_large')
+                self.play_sound('defeat', 0.7)
                 self.state = 'gameover'
                 self.music_manager.stop_music()
                 return
@@ -660,6 +732,7 @@ class Game:
             self.play_sound('hull_hit', 0.8)
             if self.player.take_damage(30):
                 self.play_sound('explosion_large')
+                self.play_sound('defeat', 0.7)
                 self.shake.add(SHAKE_LARGE)
                 self.state = 'gameover'
                 self.music_manager.stop_music()
@@ -849,7 +922,11 @@ class Game:
 
         # Draw HUD
         self.draw_hud()
-        
+
+        # Draw tutorial overlay
+        if self.tutorial.active:
+            self.tutorial.draw(self.render_surface, self.font, self.font_small, self.font_large)
+
         # Draw message
         if self.message_timer > 0:
             text = self.font_large.render(self.message, True, (255, 255, 255))
@@ -1039,6 +1116,12 @@ class Game:
         text = self.font_small.render(f"[S] Sound: {sound_status}  [M] Music: {music_status}", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
+
+        # Tutorial option
+        y += 25
+        tutorial_text = self.font_small.render("[T] Tutorial - Learn the basics", True, (150, 200, 150))
+        tutorial_rect = tutorial_text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(tutorial_text, tutorial_rect)
 
     def draw_ship_select(self):
         """Draw ship selection screen"""
