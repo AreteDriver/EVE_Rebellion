@@ -79,6 +79,12 @@ class ControllerInput:
         self.buttons_pressed = set()
         self.buttons_just_pressed = set()
         self.buttons_just_released = set()
+
+        # D-pad state (from HAT)
+        self.dpad_x = 0
+        self.dpad_y = 0
+        self.prev_dpad_x = 0
+        self.prev_dpad_y = 0
         
         # Haptic state
         self.current_rumble = 0.0
@@ -120,6 +126,7 @@ class ControllerInput:
             return  # Skip input processing while locked
         
         # Read analog sticks with deadzone
+        # Xbox Series X mapping: Axis 0=LX, 1=LY, 2=LT, 3=RX, 4=RY, 5=RT
         left_x = self._apply_deadzone(
             self.joystick.get_axis(0),
             self.config.left_stick_deadzone
@@ -128,13 +135,13 @@ class ControllerInput:
             self.joystick.get_axis(1),
             self.config.left_stick_deadzone
         )
-        
+
         right_x = self._apply_deadzone(
-            self.joystick.get_axis(2),
+            self.joystick.get_axis(3),  # Right stick X
             self.config.right_stick_deadzone
         )
         right_y = self._apply_deadzone(
-            self.joystick.get_axis(3),
+            self.joystick.get_axis(4),  # Right stick Y
             self.config.right_stick_deadzone
         )
         
@@ -147,30 +154,58 @@ class ControllerInput:
         self.aim_offset_x = right_x * self.config.aim_sensitivity * 30  # pixels
         self.aim_offset_y = right_y * self.config.aim_sensitivity * 30
         
-        # Read triggers (axis 2/5 on most controllers, but varies)
-        # Try common layouts
+        # Read triggers - Xbox Series X: Axis 2=LT, Axis 5=RT
+        # Triggers report -1.0 when released, 1.0 when fully pressed
         try:
-            # Xbox layout: axis 2 = triggers combined, or separate axes
-            rt = self._apply_deadzone(
-                self.joystick.get_axis(5),  # Right trigger
-                self.config.trigger_deadzone
-            )
-            lt = self._apply_deadzone(
-                self.joystick.get_axis(4),  # Left trigger (sometimes axis 2)
-                self.config.trigger_deadzone
-            )
+            rt_raw = self.joystick.get_axis(5)  # Right trigger
+            lt_raw = self.joystick.get_axis(2)  # Left trigger
         except:
-            rt = 0.0
-            lt = 0.0
-        
-        # Normalize trigger values (some controllers use -1 to 1, others 0 to 1)
-        rt = (rt + 1.0) / 2.0 if rt < 0 else rt
-        lt = (lt + 1.0) / 2.0 if lt < 0 else lt
+            rt_raw = -1.0
+            lt_raw = -1.0
+
+        # Normalize triggers from [-1, 1] to [0, 1]
+        rt = (rt_raw + 1.0) / 2.0
+        lt = (lt_raw + 1.0) / 2.0
+
+        # Apply deadzone after normalization
+        rt = rt if rt > self.config.trigger_deadzone else 0.0
+        lt = lt if lt > self.config.trigger_deadzone else 0.0
         
         self.primary_fire = rt > 0.1
         self.alternate_fire = lt > 0.1
         self.primary_pressure = rt
-        
+
+        # Read D-pad (HAT 0)
+        self.prev_dpad_x = self.dpad_x
+        self.prev_dpad_y = self.dpad_y
+        try:
+            if self.joystick.get_numhats() > 0:
+                self.dpad_x, self.dpad_y = self.joystick.get_hat(0)
+        except:
+            self.dpad_x, self.dpad_y = 0, 0
+
+        # Generate virtual D-pad button events
+        # Up: hat_y == 1, Down: hat_y == -1, Left: hat_x == -1, Right: hat_x == 1
+        if self.dpad_y == 1 and self.prev_dpad_y != 1:
+            self.buttons_just_pressed.add(100)  # DPAD_UP
+        elif self.dpad_y != 1 and self.prev_dpad_y == 1:
+            self.buttons_just_released.add(100)
+
+        if self.dpad_y == -1 and self.prev_dpad_y != -1:
+            self.buttons_just_pressed.add(101)  # DPAD_DOWN
+        elif self.dpad_y != -1 and self.prev_dpad_y == -1:
+            self.buttons_just_released.add(101)
+
+        if self.dpad_x == -1 and self.prev_dpad_x != -1:
+            self.buttons_just_pressed.add(102)  # DPAD_LEFT
+        elif self.dpad_x != -1 and self.prev_dpad_x == -1:
+            self.buttons_just_released.add(102)
+
+        if self.dpad_x == 1 and self.prev_dpad_x != 1:
+            self.buttons_just_pressed.add(103)  # DPAD_RIGHT
+        elif self.dpad_x != 1 and self.prev_dpad_x == 1:
+            self.buttons_just_released.add(103)
+
         # Update haptic feedback based on heat
         self._update_haptics()
     
@@ -323,6 +358,13 @@ class XboxButton:
     START = 7
     L_STICK = 8
     R_STICK = 9
+    XBOX = 10  # Xbox/Guide button
+    SHARE = 11  # Share button (Series X)
+    # D-pad virtual buttons (handled via HAT)
+    DPAD_UP = 100
+    DPAD_DOWN = 101
+    DPAD_LEFT = 102
+    DPAD_RIGHT = 103
 
 
 class PlayStationButton:
