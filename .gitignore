@@ -26,3 +26,6 @@ gitignore_updated
 
 # Backup directories
 assets/minmatar_rebellion/svg/top_BACKUP/
+# Save data
+achievements.json
+highscores.json

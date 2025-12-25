@@ -12,6 +12,8 @@ from expansion.capital_ship_enemy import CapitalShipEnemy
 from berserk_system import BerserkSystem
 from cinematic_system import CinematicManager, TribeType
 from tutorial import TutorialManager
+from high_scores import HighScoreManager, AchievementManager
+from particle_effects import ParticleEmitter, ScreenEffects
 
 
 class ScreenShake:
@@ -88,6 +90,19 @@ class Game:
         self.tutorial = TutorialManager()
         self.tutorial_shown = False  # Track if player has seen tutorial
 
+        # High scores and achievements
+        self.high_scores = HighScoreManager()
+        self.achievements = AchievementManager()
+        self.last_rank = 0  # Rank achieved in last game
+        self.new_high_score = False  # Flag for new high score
+        self.achievement_display = []  # Queue of achievements to display
+        self.achievement_timer = 0
+
+        # Particle effects system
+        self.particles = pygame.sprite.Group()
+        self.particle_emitter = ParticleEmitter(self.particles)
+        self.screen_effects = ScreenEffects()
+
         # Game state
         self.state = 'menu'  # menu, ship_select, difficulty, playing, shop, paused, gameover, victory
         self.running = True
@@ -119,6 +134,7 @@ class Game:
         self.pods = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
+        self.particles.empty()  # Clear particle effects
 
         # Player
         self.player = Player()
@@ -313,6 +329,14 @@ class Game:
                     if self.controller.is_button_just_pressed(XboxButton.RB):
                         self.player.cycle_ammo()
                         self.play_sound('ammo_switch')
+                    if self.controller.is_button_just_pressed(XboxButton.Y):
+                        # Ship special ability
+                        success, ability_name = self.player.use_ability()
+                        if success:
+                            self.play_sound('powerup')
+                            self.show_message(ability_name, 60)
+                            self.screen_flash_alpha = 40
+                            self.screen_flash_color = (100, 200, 255)
                 elif self.state == 'paused':
                     if self.controller.is_button_just_pressed(XboxButton.START):
                         self.state = 'playing'
@@ -372,6 +396,17 @@ class Game:
                     if event.key == pygame.K_ESCAPE:
                         self.state = 'paused'
                         self.play_sound('menu_select')
+                    elif event.key == pygame.K_f:
+                        # Ship special ability
+                        success, ability_name = self.player.use_ability()
+                        if success:
+                            self.play_sound('powerup')
+                            self.show_message(ability_name, 60)
+                            # Visual feedback
+                            self.screen_flash_alpha = 40
+                            self.screen_flash_color = (100, 200, 255)
+                        else:
+                            self.play_sound('error')
                     elif event.key == pygame.K_d:
                         # Toggle danger zone display
                         self.show_danger_zones = not self.show_danger_zones
@@ -506,6 +541,7 @@ class Game:
             if self.current_stage >= len(STAGES):
                 self.state = 'victory'
                 self.play_sound('victory', 0.8)
+                self._record_game_end(victory=True)
             else:
                 self.current_wave = 0
                 self.wave_delay = 60
@@ -537,6 +573,15 @@ class Game:
             self.controller.update(dt)
         # Update player
         self.player.update(keys)
+        self.player.update_ability_cooldown()
+
+        # Engine exhaust particles when moving
+        is_moving = (keys[pygame.K_w] or keys[pygame.K_UP] or keys[pygame.K_s] or keys[pygame.K_DOWN] or
+                     keys[pygame.K_a] or keys[pygame.K_LEFT] or keys[pygame.K_d] or keys[pygame.K_RIGHT])
+        if is_moving and random.random() < 0.3:
+            exhaust_x = self.player.rect.centerx + random.randint(-5, 5)
+            exhaust_y = self.player.rect.bottom - 5
+            self.particle_emitter.emit_engine_exhaust(exhaust_x, exhaust_y, COLOR_MINMATAR_ACCENT)
 
         # Track movement for tutorial
         if self.tutorial.active:
@@ -590,7 +635,9 @@ class Game:
         self.pods.update()
         self.powerups.update()
         self.effects.update()
-        
+        self.particles.update()
+        self.screen_effects.update()
+
         # Update screen shake
         self.shake.update()
 
@@ -636,6 +683,10 @@ class Game:
         for bullet in self.player_bullets:
             hits = pygame.sprite.spritecollide(bullet, self.enemies, False)
             for enemy in hits:
+                # Emit hit sparks at bullet impact point
+                self.particle_emitter.emit_sparks(
+                    bullet.rect.centerx, bullet.rect.centery,
+                    bullet.color if hasattr(bullet, 'color') else (255, 200, 100), 4)
                 bullet.kill()
                 if enemy.take_damage(bullet):
                     # Enemy destroyed - use berserk scoring
@@ -652,10 +703,14 @@ class Game:
                         self.screen_flash_alpha = 100
                         self.screen_flash_color = (255, 50, 50)
                         self.play_sound('berserk_extreme', 0.6)
+                        self.particle_emitter.emit_berserk_aura(
+                            self.player.rect.centerx, self.player.rect.centery, 'extreme')
                     elif self.berserk.current_range == 'CLOSE':
                         self.screen_flash_alpha = 50
                         self.screen_flash_color = (255, 150, 50)
                         self.play_sound('berserk_close', 0.4)
+                        self.particle_emitter.emit_berserk_aura(
+                            self.player.rect.centerx, self.player.rect.centery, 'close')
 
                     # Track kill for tutorial
                     if self.tutorial.active:
@@ -675,10 +730,24 @@ class Game:
                     
                     # Create explosion
                     exp_size = 30 if not enemy.is_boss else 80
-                    explosion = Explosion(enemy.rect.centerx, enemy.rect.centery, 
+                    explosion = Explosion(enemy.rect.centerx, enemy.rect.centery,
                                         exp_size, COLOR_AMARR_ACCENT)
                     self.effects.add(explosion)
                     self.all_sprites.add(explosion)
+
+                    # Emit particle death explosion
+                    if enemy.is_boss:
+                        self.particle_emitter.emit_death_explosion(
+                            enemy.rect.centerx, enemy.rect.centery,
+                            COLOR_AMARR_ACCENT, 'boss')
+                    elif enemy.enemy_type in ['omen', 'maller', 'harbinger']:
+                        self.particle_emitter.emit_death_explosion(
+                            enemy.rect.centerx, enemy.rect.centery,
+                            COLOR_AMARR_ACCENT, 'large')
+                    else:
+                        self.particle_emitter.emit_death_explosion(
+                            enemy.rect.centerx, enemy.rect.centery,
+                            COLOR_AMARR_ACCENT, 'small')
                     
                     # Drop refugees from industrials
                     if enemy.refugees > 0:
@@ -711,8 +780,10 @@ class Game:
                 self.play_sound('hull_hit', 0.6)
             
             self.shake.add(SHAKE_SMALL)
-            
-            if self.player.take_damage(damage):
+
+            # Apply damage resistance from abilities
+            actual_damage = int(damage * self.player.get_damage_resistance())
+            if self.player.take_damage(actual_damage):
                 # Player dead
                 explosion = Explosion(self.player.rect.centerx, self.player.rect.centery,
                                     50, COLOR_MINMATAR_ACCENT)
@@ -722,19 +793,22 @@ class Game:
                 self.play_sound('explosion_large')
                 self.play_sound('defeat', 0.7)
                 self.state = 'gameover'
+                self._record_game_end(victory=False)
                 self.music_manager.stop_music()
                 return
-        
+
         # Player collision with enemies
         hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
         for enemy in hits:
             self.shake.add(SHAKE_MEDIUM)
             self.play_sound('hull_hit', 0.8)
-            if self.player.take_damage(30):
+            collision_damage = int(30 * self.player.get_damage_resistance())
+            if self.player.take_damage(collision_damage):
                 self.play_sound('explosion_large')
                 self.play_sound('defeat', 0.7)
                 self.shake.add(SHAKE_LARGE)
                 self.state = 'gameover'
+                self._record_game_end(victory=False)
                 self.music_manager.stop_music()
                 return
         
@@ -858,6 +932,9 @@ class Game:
             flash_overlay.fill((*self.screen_flash_color, int(self.screen_flash_alpha)))
             self.screen.blit(flash_overlay, (0, 0))
 
+        # Draw achievement notifications
+        self._draw_achievement_notifications()
+
         pygame.display.flip()
     
     def draw_difficulty(self):
@@ -908,6 +985,9 @@ class Game:
 
         # Draw player last (on top)
         self.render_surface.blit(self.player.image, self.player.rect)
+
+        # Draw particle effects
+        self.particles.draw(self.render_surface)
 
         # Draw berserk score popups
         self.berserk.draw_popups(self.render_surface, self.font_small, self.font_large)
@@ -979,7 +1059,23 @@ class Game:
         ship_color = (200, 150, 100) if self.player.is_wolf else COLOR_MINMATAR_ACCENT
         text = self.font_small.render(f"[{ship_class}]", True, ship_color)
         self.render_surface.blit(text, (x, y))
-        
+
+        # Ability cooldown indicator
+        y += 20
+        ability_info = self.player.get_ability_info()
+        if self.player.can_use_ability():
+            ability_color = (100, 255, 100)
+            ability_status = f"[F] {ability_info['name']}: READY"
+        elif self.player.is_ability_active():
+            ability_color = (255, 200, 100)
+            ability_status = f"[F] {ability_info['name']}: ACTIVE"
+        else:
+            ability_color = (150, 150, 150)
+            cooldown_pct = self.player.ability_cooldown / self.player.ability_base_cooldown
+            ability_status = f"[F] {ability_info['name']}: {int(cooldown_pct * 100)}%"
+        text = self.font_small.render(ability_status, True, ability_color)
+        self.render_surface.blit(text, (x, y))
+
         # Right side - score and refugees
         x = SCREEN_WIDTH - 160
         y = 10
@@ -1078,6 +1174,92 @@ class Game:
             phase_rect = phase_text.get_rect(right=x + bar_width, centery=y - 12)
             self.render_surface.blit(phase_text, phase_rect)
 
+    def _draw_achievement_notifications(self):
+        """Draw achievement unlock notifications"""
+        if not self.achievement_display:
+            return
+
+        # Display first achievement in queue
+        achievement = self.achievement_display[0]
+        self.achievement_timer += 1
+
+        # Notification lasts 180 frames (3 seconds)
+        if self.achievement_timer > 180:
+            self.achievement_display.pop(0)
+            self.achievement_timer = 0
+            return
+
+        # Animation: slide in, hold, slide out
+        if self.achievement_timer < 20:
+            # Slide in from right
+            offset_x = int((20 - self.achievement_timer) * 15)
+            alpha = int(self.achievement_timer * 12.75)
+        elif self.achievement_timer > 160:
+            # Slide out to right
+            offset_x = int((self.achievement_timer - 160) * 15)
+            alpha = int((180 - self.achievement_timer) * 12.75)
+        else:
+            offset_x = 0
+            alpha = 255
+
+        # Draw notification box
+        box_width = 280
+        box_height = 60
+        box_x = SCREEN_WIDTH - box_width - 10 + offset_x
+        box_y = 80
+
+        # Background
+        notification_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
+        notification_surface.fill((40, 40, 50, min(alpha, 230)))
+        pygame.draw.rect(notification_surface, (255, 215, 0, alpha), (0, 0, box_width, box_height), 2)
+
+        # Trophy icon (simple rectangle for now)
+        pygame.draw.rect(notification_surface, (255, 215, 0, alpha), (10, 15, 30, 30))
+
+        # Achievement text
+        title_text = self.font_small.render("ACHIEVEMENT UNLOCKED", True, (255, 215, 0))
+        notification_surface.blit(title_text, (50, 8))
+
+        name_text = self.font.render(achievement['name'], True, (255, 255, 255))
+        notification_surface.blit(name_text, (50, 28))
+
+        self.screen.blit(notification_surface, (box_x, box_y))
+
+    def _record_game_end(self, victory=False):
+        """Record score and check achievements at end of game"""
+        ship_class = getattr(self.player, 'ship_class', 'Rifter')
+        berserk_stats = self.berserk.get_stats()
+
+        # Record high score
+        self.last_rank, self.new_high_score = self.high_scores.add_score(
+            score=self.player.score,
+            refugees=self.player.total_refugees,
+            stage=self.current_stage,
+            wave=self.current_wave,
+            ship=ship_class,
+            difficulty=self.difficulty,
+            berserk_stats=berserk_stats
+        )
+
+        # Check achievements
+        game_stats = {
+            'total_kills': berserk_stats.get('total_kills', 0),
+            'refugees': self.player.total_refugees,
+            'score': self.player.score,
+            'stage': self.current_stage,
+            'victory': victory,
+            'ship': ship_class,
+            'difficulty': self.difficulty,
+            'berserk': berserk_stats
+        }
+        newly_unlocked = self.achievements.check_achievements(game_stats)
+
+        # Queue achievement notifications
+        for achievement_id in newly_unlocked:
+            info = self.achievements.get_achievement_info(achievement_id)
+            if info:
+                self.achievement_display.append(info)
+
     def draw_menu(self):
         """Draw main menu"""
         # Title
@@ -1122,6 +1304,21 @@ class Game:
         tutorial_text = self.font_small.render("[T] Tutorial - Learn the basics", True, (150, 200, 150))
         tutorial_rect = tutorial_text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(tutorial_text, tutorial_rect)
+
+        # High score display
+        high_score = self.high_scores.get_high_score()
+        if high_score > 0:
+            y += 35
+            hs_text = self.font.render(f"High Score: {high_score:,}", True, (255, 215, 0))
+            hs_rect = hs_text.get_rect(center=(SCREEN_WIDTH // 2, y))
+            self.render_surface.blit(hs_text, hs_rect)
+
+        # Achievement progress
+        unlocked, total = self.achievements.get_progress()
+        y += 25
+        ach_text = self.font_small.render(f"Achievements: {unlocked}/{total}", True, (180, 180, 180))
+        ach_rect = ach_text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(ach_text, ach_rect)
 
     def draw_ship_select(self):
         """Draw ship selection screen"""
@@ -1311,9 +1508,22 @@ class Game:
 
         # Main stats
         y = 180
-        text = self.font_large.render(f"Final Score: {self.player.score}", True, (255, 200, 100))
+        score_color = (255, 215, 0) if self.new_high_score else (255, 200, 100)
+        text = self.font_large.render(f"Final Score: {self.player.score}", True, score_color)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
+
+        # High score / rank info
+        if self.new_high_score:
+            hs_text = self.font.render("NEW HIGH SCORE!", True, (255, 215, 0))
+            hs_rect = hs_text.get_rect(center=(SCREEN_WIDTH // 2, y + 30))
+            self.render_surface.blit(hs_text, hs_rect)
+            y += 15
+        elif self.last_rank > 0:
+            rank_text = self.font_small.render(f"Rank #{self.last_rank} on leaderboard", True, (200, 200, 100))
+            rank_rect = rank_text.get_rect(center=(SCREEN_WIDTH // 2, y + 30))
+            self.render_surface.blit(rank_text, rank_rect)
+            y += 10
 
         text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
@@ -1378,10 +1588,22 @@ class Game:
         self.render_surface.blit(text, rect)
 
         # Main stats
-        y = 220
+        y = 210
         text = self.font_large.render(f"Final Score: {self.player.score}", True, (255, 215, 0))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
+
+        # High score / rank info
+        if self.new_high_score:
+            hs_text = self.font.render("NEW HIGH SCORE!", True, (255, 255, 100))
+            hs_rect = hs_text.get_rect(center=(SCREEN_WIDTH // 2, y + 30))
+            self.render_surface.blit(hs_text, hs_rect)
+            y += 10
+        elif self.last_rank > 0 and self.last_rank <= 3:
+            rank_text = self.font.render(f"#{self.last_rank} on Leaderboard!", True, (255, 200, 100))
+            rank_rect = rank_text.get_rect(center=(SCREEN_WIDTH // 2, y + 30))
+            self.render_surface.blit(rank_text, rank_rect)
+            y += 10
 
         text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))

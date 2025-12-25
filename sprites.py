@@ -49,7 +49,13 @@ class Player(pygame.sprite.Sprite):
         # Powerup effects
         self.overdrive_until = 0
         self.shield_boost_until = 0
-        
+
+        # Ship ability system
+        self.ability_cooldown = 0
+        self.ability_active_until = 0
+        self.ability_base_cooldown = 600  # 10 seconds at 60fps
+        self.ability_duration = 180  # 3 seconds
+
         # Score/Progress
         self.refugees = 0
         self.total_refugees = 0
@@ -130,7 +136,95 @@ class Player(pygame.sprite.Sprite):
         self.max_shields += JAGUAR_SHIELD_BONUS
         self.shields = min(self.shields + JAGUAR_SHIELD_BONUS, self.max_shields)
         self.image = self._create_ship_image()
-    
+
+    def can_use_ability(self):
+        """Check if ship ability is ready"""
+        return self.ability_cooldown <= 0
+
+    def is_ability_active(self):
+        """Check if ability effect is currently active"""
+        return pygame.time.get_ticks() < self.ability_active_until
+
+    def use_ability(self):
+        """
+        Activate ship special ability.
+        Returns (success, ability_name) tuple.
+
+        Abilities:
+        - Rifter: "Minmatar Grit" - 50% damage resistance for 3s
+        - Wolf: "Overdrive" - 50% speed + 25% damage for 3s
+        - Jaguar: "Shield Overload" - Restore 50 shields instantly
+        """
+        if self.ability_cooldown > 0:
+            return False, None
+
+        ship_class = getattr(self, 'ship_class', 'Rifter')
+        current_time = pygame.time.get_ticks()
+
+        if ship_class == 'Rifter':
+            # Minmatar Grit - damage resistance
+            self.ability_active_until = current_time + 3000
+            self.ability_cooldown = self.ability_base_cooldown
+            return True, 'Minmatar Grit'
+
+        elif ship_class == 'Wolf':
+            # Overdrive - speed and damage boost
+            self.ability_active_until = current_time + 3000
+            self.overdrive_until = current_time + 3000  # Uses existing overdrive
+            self.ability_cooldown = self.ability_base_cooldown
+            return True, 'Overdrive'
+
+        elif ship_class == 'Jaguar':
+            # Shield Overload - instant shield restore
+            shield_restore = 50
+            self.shields = min(self.shields + shield_restore, self.max_shields)
+            self.ability_cooldown = self.ability_base_cooldown
+            return True, 'Shield Overload'
+
+        return False, None
+
+    def get_ability_info(self):
+        """Get info about ship's ability for HUD display"""
+        ship_class = getattr(self, 'ship_class', 'Rifter')
+
+        abilities = {
+            'Rifter': {
+                'name': 'Minmatar Grit',
+                'desc': '50% damage resistance',
+                'key': 'F'
+            },
+            'Wolf': {
+                'name': 'Overdrive',
+                'desc': 'Speed + damage boost',
+                'key': 'F'
+            },
+            'Jaguar': {
+                'name': 'Shield Overload',
+                'desc': 'Restore 50 shields',
+                'key': 'F'
+            }
+        }
+        return abilities.get(ship_class, abilities['Rifter'])
+
+    def get_damage_resistance(self):
+        """Get current damage resistance multiplier (1.0 = no resistance)"""
+        ship_class = getattr(self, 'ship_class', 'Rifter')
+        if ship_class == 'Rifter' and self.is_ability_active():
+            return 0.5  # 50% damage reduction
+        return 1.0
+
+    def get_damage_bonus(self):
+        """Get current damage bonus multiplier"""
+        ship_class = getattr(self, 'ship_class', 'Rifter')
+        if ship_class == 'Wolf' and self.is_ability_active():
+            return 1.25  # 25% damage boost
+        return 1.0
+
+    def update_ability_cooldown(self):
+        """Update ability cooldown timer (call each frame)"""
+        if self.ability_cooldown > 0:
+            self.ability_cooldown -= 1
+
     def unlock_ammo(self, ammo_type):
         """Unlock new ammo type"""
         if ammo_type not in self.unlocked_ammo:
@@ -178,15 +272,19 @@ class Player(pygame.sprite.Sprite):
         """Fire autocannons, returns list of bullets"""
         if not self.can_shoot():
             return []
-        
+
         self.last_shot = pygame.time.get_ticks()
         bullets = []
         ammo = AMMO_TYPES[self.current_ammo]
-        
+
+        # Apply damage bonus from abilities
+        damage_bonus = self.get_damage_bonus()
+        bullet_damage = int(BULLET_DAMAGE * damage_bonus)
+
         # Base shots
         num_shots = 2 + self.spread_bonus
         spread = 15 + (self.spread_bonus * 5)
-        
+
         for i in range(num_shots):
             offset = (i - (num_shots - 1) / 2) * spread
             bullet = Bullet(
@@ -194,12 +292,14 @@ class Player(pygame.sprite.Sprite):
                 self.rect.top,
                 0, -BULLET_SPEED,
                 ammo['tracer'],
-                BULLET_DAMAGE,
+                bullet_damage,
                 ammo['shield_mult'],
                 ammo['armor_mult']
             )
+            # Store color for particle effects
+            bullet.color = ammo['tracer']
             bullets.append(bullet)
-        
+
         return bullets
     
     def can_rocket(self):
@@ -211,10 +311,13 @@ class Player(pygame.sprite.Sprite):
         """Fire rocket, returns rocket or None"""
         if not self.can_rocket():
             return None
-        
+
         self.last_rocket = pygame.time.get_ticks()
         self.rockets -= 1
-        return Rocket(self.rect.centerx, self.rect.top)
+        rocket = Rocket(self.rect.centerx, self.rect.top)
+        # Apply damage bonus from abilities
+        rocket.damage = int(ROCKET_DAMAGE * self.get_damage_bonus())
+        return rocket
     
     def take_damage(self, amount):
         """Apply damage through shields -> armor -> hull"""
