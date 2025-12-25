@@ -404,10 +404,13 @@ class CinematicManager:
         """
         Render ship upgrade cinematic
         Returns True when complete
+
+        Future enhancement: Show ship in hangar with engineer dialogue
+        and visual upgrade effects (armor plates, weapon mounts, etc.)
         """
-        # TODO: Implement upgrade cinematics (Wolf, Jaguar)
-        # Would show ship in hangar, engineer message, visual upgrades
-        pass
+        # Placeholder: Skip directly to gameplay for now
+        # Full cinematic implementation deferred to future release
+        return True
     
     def render_first_ship_cinematic(self, screen: pygame.Surface, delta_time: float, tribe: TribeType) -> bool:
         """
