@@ -112,12 +112,23 @@ class Player(pygame.sprite.Sprite):
     def upgrade_to_wolf(self):
         """Upgrade to Wolf assault frigate"""
         self.is_wolf = True
+        self.ship_class = 'Wolf'
         self.speed *= WOLF_SPEED_BONUS
         self.max_armor += WOLF_ARMOR_BONUS
         self.max_hull += WOLF_HULL_BONUS
         self.armor = min(self.armor + WOLF_ARMOR_BONUS, self.max_armor)
         self.hull = min(self.hull + WOLF_HULL_BONUS, self.max_hull)
         self.spread_bonus += 1
+        self.image = self._create_ship_image()
+
+    def upgrade_to_jaguar(self):
+        """Upgrade to Jaguar assault frigate"""
+        from constants import JAGUAR_SPEED_BONUS, JAGUAR_SHIELD_BONUS
+        self.is_wolf = True  # T2 flag
+        self.ship_class = 'Jaguar'
+        self.speed *= JAGUAR_SPEED_BONUS
+        self.max_shields += JAGUAR_SHIELD_BONUS
+        self.shields = min(self.shields + JAGUAR_SHIELD_BONUS, self.max_shields)
         self.image = self._create_ship_image()
     
     def unlock_ammo(self, ammo_type):

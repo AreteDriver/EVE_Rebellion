@@ -114,7 +114,7 @@ class CapitalShipEnemy(Enemy):
             dx = random.uniform(-1.0, 1.0)
             dy = 3.0  # constant downward speed
 
-            bullet = EnemyBullet(bx, by, dx, dy, damage=int(self.damage * 1.5))
+            bullet = EnemyBullet(bx, by, dx, dy, damage=20)  # Capital ship turret damage
             group.add(bullet)
 
         # Optionally play a sound effect here (requires sound manager)

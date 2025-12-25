@@ -3,11 +3,14 @@ import pygame
 import random
 import math
 from constants import *
-from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
+from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket,
                      RefugeePod, Powerup, Explosion, Star)
 from sounds import get_sound_manager, get_music_manager, play_sound
 from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground
+from expansion.capital_ship_enemy import CapitalShipEnemy
+from berserk_system import BerserkSystem
+from cinematic_system import CinematicManager, TribeType
 
 
 class ScreenShake:
@@ -62,16 +65,29 @@ class Game:
         
         # Screen shake
         self.shake = ScreenShake()
-        
+
+        # Berserk scoring system
+        self.berserk = BerserkSystem()
+
+        # Cinematic system
+        self.cinematic = CinematicManager(SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.selected_tribe = TribeType.SEBIESTOR
+        self.show_cinematics = True  # Can be toggled in options
+
         # Game state
-        self.state = 'menu'  # menu, difficulty, playing, shop, paused, gameover, victory
+        self.state = 'menu'  # menu, ship_select, difficulty, playing, shop, paused, gameover, victory
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
-        
+
+        # Ship selection
+        self.selected_ship = 'rifter'  # rifter, wolf, jaguar
+        self.ship_options = ['rifter', 'wolf', 'jaguar']
+        self.ship_select_index = 0
+
         # Background stars
         self.stars = [Star() for _ in range(100)]
-        
+
         self.reset_game()
     
     def play_sound(self, sound_name, volume=1.0):
@@ -89,11 +105,14 @@ class Game:
         self.pods = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
-        
+
         # Player
         self.player = Player()
         self.all_sprites.add(self.player)
-        
+
+        # Apply selected ship bonuses
+        self.apply_ship_selection()
+
         # Stage/Wave tracking
         self.current_stage = 0
         self.current_wave = 0
@@ -102,10 +121,36 @@ class Game:
         self.spawn_timer = 0
         self.wave_delay = 0
         self.stage_complete = False
-        
+
+        # Reset berserk system for new game
+        self.berserk.reset_session()
+
         # Messages
         self.message = ""
         self.message_timer = 0
+
+    def apply_ship_selection(self):
+        """Apply bonuses based on selected ship"""
+        if self.selected_ship == 'wolf':
+            # Wolf: T2 Assault Frigate - armor and weapon focused
+            self.player.is_wolf = True
+            self.player.speed *= WOLF_SPEED_BONUS
+            self.player.max_armor += WOLF_ARMOR_BONUS
+            self.player.armor = self.player.max_armor
+            self.player.max_hull += WOLF_HULL_BONUS
+            self.player.hull = self.player.max_hull
+            self.player.spread_bonus += 1
+            self.player.ship_class = 'Wolf'
+            self.player.image = self.player._create_ship_image()
+        elif self.selected_ship == 'jaguar':
+            # Jaguar: T2 Assault Frigate - speed and evasion focused
+            self.player.is_wolf = True  # T2 ship flag
+            self.player.speed *= 1.4  # 40% speed bonus
+            self.player.max_shields += 30  # Better shields
+            self.player.shields = self.player.max_shields
+            self.player.ship_class = 'Jaguar'
+            self.player.image = self.player._create_ship_image()
+        # rifter is default, no changes needed
     
     def show_message(self, text, duration=120):
         """Show a temporary message"""
@@ -209,7 +254,7 @@ class Game:
             elif event.type == pygame.KEYDOWN:
                 if self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                        self.state = 'difficulty'
+                        self.state = 'ship_select'
                         self.play_sound('menu_select')
                     elif event.key == pygame.K_m:
                         self.music_enabled = not self.music_enabled
@@ -219,7 +264,22 @@ class Game:
                             self.music_manager.stop_music()
                     elif event.key == pygame.K_s:
                         self.sound_enabled = not self.sound_enabled
-                
+
+                elif self.state == 'ship_select':
+                    if event.key == pygame.K_UP or event.key == pygame.K_w:
+                        self.ship_select_index = (self.ship_select_index - 1) % len(self.ship_options)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                        self.ship_select_index = (self.ship_select_index + 1) % len(self.ship_options)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        self.selected_ship = self.ship_options[self.ship_select_index]
+                        self.state = 'difficulty'
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_ESCAPE:
+                        self.state = 'menu'
+                        self.play_sound('menu_select')
+
                 elif self.state == 'difficulty':
                     if event.key == pygame.K_1:
                         self.set_difficulty('easy')
@@ -348,7 +408,16 @@ class Game:
                 self.play_sound('upgrade')
             else:
                 self.play_sound('error')
-        
+
+        elif key == pygame.K_9 and not player.is_wolf:
+            if player.refugees >= costs['jaguar_upgrade']:
+                player.refugees -= costs['jaguar_upgrade']
+                player.upgrade_to_jaguar()
+                purchased = "JAGUAR UPGRADE!"
+                self.play_sound('upgrade')
+            else:
+                self.play_sound('error')
+
         elif key == pygame.K_RETURN or key == pygame.K_SPACE:
             # Continue to next stage
             self.current_stage += 1
@@ -431,7 +500,10 @@ class Game:
         
         # Update screen shake
         self.shake.update()
-        
+
+        # Update berserk system (for popups)
+        self.berserk.update()
+
         # Enemy shooting
         for enemy in self.enemies:
             bullets = enemy.shoot(self.player.rect)
@@ -447,8 +519,14 @@ class Game:
             for enemy in hits:
                 bullet.kill()
                 if enemy.take_damage(bullet):
-                    # Enemy destroyed
-                    self.player.score += enemy.score
+                    # Enemy destroyed - use berserk scoring
+                    berserk_score = self.berserk.register_kill(
+                        enemy.score,
+                        (self.player.rect.centerx, self.player.rect.centery),
+                        (enemy.rect.centerx, enemy.rect.centery),
+                        enemy.enemy_type
+                    )
+                    self.player.score += berserk_score
                     
                     # Screen shake based on enemy size
                     if enemy.is_boss:
@@ -617,6 +695,8 @@ class Game:
         
         if self.state == 'menu':
             self.draw_menu()
+        elif self.state == 'ship_select':
+            self.draw_ship_select()
         elif self.state == 'difficulty':
             self.draw_difficulty()
         elif self.state == 'playing':
@@ -683,10 +763,13 @@ class Game:
         for sprite in self.all_sprites:
             if sprite != self.player:
                 self.render_surface.blit(sprite.image, sprite.rect)
-        
+
         # Draw player last (on top)
         self.render_surface.blit(self.player.image, self.player.rect)
-        
+
+        # Draw berserk score popups
+        self.berserk.draw_popups(self.render_surface, self.font_small, self.font_large)
+
         # Draw HUD
         self.draw_hud()
         
@@ -766,6 +849,10 @@ class Game:
         ))
         text = self.font_small.render(f"[{self.difficulty_settings['name']}]", True, diff_color)
         self.render_surface.blit(text, (x, y))
+
+        # Berserk multiplier HUD (top right area)
+        self.berserk.draw_hud(self.render_surface, SCREEN_WIDTH - 10, 80,
+                              self.font_small, self.font_large)
     
     def draw_menu(self):
         """Draw main menu"""
@@ -801,11 +888,80 @@ class Game:
         music_status = "ON" if self.music_enabled else "OFF"
         sound_color = (100, 255, 100) if self.sound_enabled else (255, 100, 100)
         music_color = (100, 255, 100) if self.music_enabled else (255, 100, 100)
-        
+
         text = self.font_small.render(f"[S] Sound: {sound_status}  [M] Music: {music_status}", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
-    
+
+    def draw_ship_select(self):
+        """Draw ship selection screen"""
+        # Title
+        title = self.font_large.render("SELECT YOUR SHIP", True, COLOR_MINMATAR_ACCENT)
+        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        self.render_surface.blit(title, rect)
+
+        # Ship data
+        ship_data = {
+            'rifter': {
+                'name': 'Rifter',
+                'class': 'T1 Frigate',
+                'desc': 'The iconic rust bucket. Reliable but basic.',
+                'stats': 'Speed: Normal | Armor: Normal | Weapons: 2',
+                'color': COLOR_MINMATAR_ACCENT
+            },
+            'wolf': {
+                'name': 'Wolf',
+                'class': 'T2 Assault Frigate',
+                'desc': 'Upgraded hull with enhanced armor and speed.',
+                'stats': 'Speed: +20% | Armor: +50 | Weapons: 3',
+                'color': (200, 150, 100)
+            },
+            'jaguar': {
+                'name': 'Jaguar',
+                'class': 'T2 Assault Frigate',
+                'desc': 'Lightning-fast interceptor variant.',
+                'stats': 'Speed: +40% | Armor: Normal | Weapons: 2 | Evasion: +15%',
+                'color': (100, 200, 255)
+            }
+        }
+
+        # Draw ship options
+        y = 200
+        for i, ship_key in enumerate(self.ship_options):
+            ship = ship_data[ship_key]
+            is_selected = i == self.ship_select_index
+
+            # Selection box
+            box_rect = pygame.Rect(80, y, SCREEN_WIDTH - 160, 120)
+            if is_selected:
+                pygame.draw.rect(self.render_surface, ship['color'], box_rect, 0)
+                pygame.draw.rect(self.render_surface, (255, 255, 255), box_rect, 3)
+                text_color = (255, 255, 255)
+            else:
+                pygame.draw.rect(self.render_surface, (30, 30, 40), box_rect)
+                pygame.draw.rect(self.render_surface, ship['color'], box_rect, 2)
+                text_color = (180, 180, 180)
+
+            # Ship name and class
+            name_text = self.font_large.render(f"{ship['name']} - {ship['class']}", True, text_color)
+            self.render_surface.blit(name_text, (box_rect.left + 20, box_rect.top + 15))
+
+            # Description
+            desc_text = self.font_small.render(ship['desc'], True, text_color)
+            self.render_surface.blit(desc_text, (box_rect.left + 20, box_rect.top + 55))
+
+            # Stats
+            stats_text = self.font_small.render(ship['stats'], True, (150, 200, 150) if is_selected else (120, 150, 120))
+            self.render_surface.blit(stats_text, (box_rect.left + 20, box_rect.top + 85))
+
+            y += 140
+
+        # Instructions
+        y += 30
+        inst_text = self.font.render("UP/DOWN to select, ENTER to confirm, ESC to go back", True, (150, 150, 150))
+        rect = inst_text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(inst_text, rect)
+
     def draw_pause(self):
         """Draw pause overlay"""
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -845,7 +1001,8 @@ class Game:
             ("5", "Phased Plasma", costs['plasma_ammo'], 'plasma' in player.unlocked_ammo, "Strong vs Armor"),
             ("6", "Fusion Ammo", costs['fusion_ammo'], 'fusion' in player.unlocked_ammo, "High Damage"),
             ("7", "Barrage Ammo", costs['barrage_ammo'], 'barrage' in player.unlocked_ammo, "Fast Fire"),
-            ("8", "WOLF UPGRADE", costs['wolf_upgrade'], player.is_wolf, "T2 Assault Ship!")
+            ("8", "WOLF UPGRADE", costs['wolf_upgrade'], player.is_wolf, "T2 Armor/Dmg"),
+            ("9", "JAGUAR UPGRADE", costs['jaguar_upgrade'], player.is_wolf, "T2 Speed/Shield")
         ]
         
         for key, name, cost, owned, desc in upgrades:

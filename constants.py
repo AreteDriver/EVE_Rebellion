@@ -257,8 +257,13 @@ UPGRADE_COSTS = {
     'plasma_ammo': 35,
     'fusion_ammo': 45,
     'barrage_ammo': 55,
-    'wolf_upgrade': 50
+    'wolf_upgrade': 50,
+    'jaguar_upgrade': 50
 }
+
+# Jaguar upgrade bonuses
+JAGUAR_SPEED_BONUS = 1.4
+JAGUAR_SHIELD_BONUS = 30
 
 # Powerup types
 POWERUP_TYPES = {
