@@ -69,6 +69,11 @@ class Game:
         # Berserk scoring system
         self.berserk = BerserkSystem()
 
+        # Visual effects
+        self.screen_flash_alpha = 0
+        self.screen_flash_color = (255, 50, 50)
+        self.show_danger_zones = False  # Toggle with D key
+
         # Cinematic system
         self.cinematic = CinematicManager(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.selected_tribe = TribeType.SEBIESTOR
@@ -158,11 +163,24 @@ class Game:
         self.message_timer = duration
     
     def spawn_wave(self):
-        """Spawn enemies for current wave"""
+        """Spawn enemies for current wave with progressive scaling"""
         stage = STAGES[self.current_stage]
-        
-        # Determine wave composition
-        num_enemies = 3 + self.current_wave + self.current_stage
+
+        # Progressive wave scaling formula
+        # Base enemies + wave bonus + stage bonus + difficulty modifier
+        base_enemies = 3
+        wave_bonus = self.current_wave * 0.5  # +0.5 enemies per wave
+        stage_bonus = self.current_stage * 1.5  # +1.5 enemies per stage
+
+        # Difficulty modifiers
+        diff_mult = {
+            'easy': 0.7,
+            'normal': 1.0,
+            'hard': 1.3,
+            'nightmare': 1.6
+        }.get(self.difficulty, 1.0)
+
+        num_enemies = int((base_enemies + wave_bonus + stage_bonus) * diff_mult)
         
         # Check for boss wave
         if (stage['boss'] and self.current_wave == stage['waves'] - 1):
@@ -238,9 +256,39 @@ class Game:
                 self.running = False
             
 
-            # Controller button shortcuts (pause/ammo) while playing
+            # Controller button shortcuts
             if self.controller and self.controller.connected:
-                if self.state == 'playing':
+                if self.state == 'menu':
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self.state = 'ship_select'
+                        self.play_sound('menu_select')
+                elif self.state == 'ship_select':
+                    # D-pad or left stick for navigation
+                    move_x, move_y = self.controller.get_movement_vector()
+                    if self.controller.is_button_just_pressed(XboxButton.DPAD_UP) or (move_y < -0.5 and not hasattr(self, '_controller_moved')):
+                        self.ship_select_index = (self.ship_select_index - 1) % len(self.ship_options)
+                        self.play_sound('menu_select')
+                        self._controller_moved = True
+                    elif self.controller.is_button_just_pressed(XboxButton.DPAD_DOWN) or (move_y > 0.5 and not hasattr(self, '_controller_moved')):
+                        self.ship_select_index = (self.ship_select_index + 1) % len(self.ship_options)
+                        self.play_sound('menu_select')
+                        self._controller_moved = True
+                    elif abs(move_y) < 0.3:
+                        self._controller_moved = False
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self.selected_ship = self.ship_options[self.ship_select_index]
+                        self.state = 'difficulty'
+                        self.play_sound('menu_select')
+                    elif self.controller.is_button_just_pressed(XboxButton.B):
+                        self.state = 'menu'
+                        self.play_sound('menu_select')
+                elif self.state == 'difficulty':
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self.set_difficulty('normal')
+                    elif self.controller.is_button_just_pressed(XboxButton.B):
+                        self.state = 'ship_select'
+                        self.play_sound('menu_select')
+                elif self.state == 'playing':
                     if self.controller.is_button_just_pressed(XboxButton.START):
                         self.state = 'paused'
                         self.play_sound('menu_select')
@@ -297,6 +345,9 @@ class Game:
                     if event.key == pygame.K_ESCAPE:
                         self.state = 'paused'
                         self.play_sound('menu_select')
+                    elif event.key == pygame.K_d:
+                        # Toggle danger zone display
+                        self.show_danger_zones = not self.show_danger_zones
                     elif event.key == pygame.K_q or event.key == pygame.K_TAB:
                         self.player.cycle_ammo()
                         self.play_sound('ammo_switch')
@@ -504,6 +555,10 @@ class Game:
         # Update berserk system (for popups)
         self.berserk.update()
 
+        # Decay screen flash
+        if self.screen_flash_alpha > 0:
+            self.screen_flash_alpha = max(0, self.screen_flash_alpha - 8)
+
         # Enemy shooting
         for enemy in self.enemies:
             bullets = enemy.shoot(self.player.rect)
@@ -527,6 +582,14 @@ class Game:
                         enemy.enemy_type
                     )
                     self.player.score += berserk_score
+
+                    # Screen flash for extreme close kills
+                    if self.berserk.current_range == 'EXTREME':
+                        self.screen_flash_alpha = 100
+                        self.screen_flash_color = (255, 50, 50)
+                    elif self.berserk.current_range == 'CLOSE':
+                        self.screen_flash_alpha = 50
+                        self.screen_flash_color = (255, 150, 50)
                     
                     # Screen shake based on enemy size
                     if enemy.is_boss:
@@ -715,7 +778,13 @@ class Game:
         # Apply screen shake
         shake_x, shake_y = self.shake.offset_x, self.shake.offset_y
         self.screen.blit(self.render_surface, (shake_x, shake_y))
-        
+
+        # Apply screen flash overlay (for berserk kills)
+        if self.screen_flash_alpha > 0:
+            flash_overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            flash_overlay.fill((*self.screen_flash_color, int(self.screen_flash_alpha)))
+            self.screen.blit(flash_overlay, (0, 0))
+
         pygame.display.flip()
     
     def draw_difficulty(self):
@@ -770,6 +839,14 @@ class Game:
         # Draw berserk score popups
         self.berserk.draw_popups(self.render_surface, self.font_small, self.font_large)
 
+        # Draw danger zone circles (optional visual aid for berserk system)
+        if hasattr(self, 'show_danger_zones') and self.show_danger_zones:
+            self.berserk.draw_danger_zones(self.render_surface,
+                (self.player.rect.centerx, self.player.rect.centery), alpha=30)
+
+        # Draw boss health bar if fighting a boss
+        self.draw_boss_health_bar()
+
         # Draw HUD
         self.draw_hud()
         
@@ -818,6 +895,13 @@ class Game:
         y += 25
         text = self.font_small.render(f"Rockets: {self.player.rockets}", True, COLOR_TEXT)
         self.render_surface.blit(text, (x, y))
+
+        # Ship indicator
+        y += 25
+        ship_class = getattr(self.player, 'ship_class', 'Rifter')
+        ship_color = (200, 150, 100) if self.player.is_wolf else COLOR_MINMATAR_ACCENT
+        text = self.font_small.render(f"[{ship_class}]", True, ship_color)
+        self.render_surface.blit(text, (x, y))
         
         # Right side - score and refugees
         x = SCREEN_WIDTH - 160
@@ -853,7 +937,70 @@ class Game:
         # Berserk multiplier HUD (top right area)
         self.berserk.draw_hud(self.render_surface, SCREEN_WIDTH - 10, 80,
                               self.font_small, self.font_large)
-    
+
+    def draw_boss_health_bar(self):
+        """Draw boss health bar at top of screen when fighting a boss"""
+        # Find boss in enemies
+        boss = None
+        for enemy in self.enemies:
+            if enemy.is_boss:
+                boss = enemy
+                break
+
+        if not boss:
+            return
+
+        # Boss health bar dimensions
+        bar_width = SCREEN_WIDTH - 100
+        bar_height = 20
+        x = 50
+        y = 30
+
+        # Calculate total health percentage
+        total_max = boss.max_shields + boss.max_armor + boss.max_hull
+        total_current = max(0, boss.shields) + max(0, boss.armor) + max(0, boss.hull)
+        health_pct = total_current / total_max if total_max > 0 else 0
+
+        # Background
+        pygame.draw.rect(self.render_surface, (30, 30, 40), (x - 2, y - 2, bar_width + 4, bar_height + 4))
+
+        # Health bar segments (shields, armor, hull)
+        segment_width = bar_width * health_pct
+
+        # Determine color based on remaining health type
+        if boss.shields > 0:
+            bar_color = COLOR_SHIELD
+        elif boss.armor > 0:
+            bar_color = COLOR_ARMOR
+        else:
+            bar_color = COLOR_HULL
+
+        # Draw health bar with gradient effect
+        if segment_width > 0:
+            pygame.draw.rect(self.render_surface, bar_color, (x, y, int(segment_width), bar_height))
+            # Highlight on top
+            highlight_color = tuple(min(255, c + 50) for c in bar_color)
+            pygame.draw.rect(self.render_surface, highlight_color, (x, y, int(segment_width), 4))
+
+        # Border
+        pygame.draw.rect(self.render_surface, (100, 100, 120), (x, y, bar_width, bar_height), 2)
+
+        # Boss name
+        name_text = self.font.render(boss.stats['name'].upper(), True, COLOR_AMARR_ACCENT)
+        name_rect = name_text.get_rect(center=(SCREEN_WIDTH // 2, y - 12))
+        self.render_surface.blit(name_text, name_rect)
+
+        # Health percentage
+        pct_text = self.font_small.render(f"{int(health_pct * 100)}%", True, COLOR_TEXT)
+        pct_rect = pct_text.get_rect(center=(SCREEN_WIDTH // 2, y + bar_height // 2))
+        self.render_surface.blit(pct_text, pct_rect)
+
+        # Phase indicator for multi-phase bosses
+        if hasattr(boss, 'boss_phase') and boss.boss_phase > 0:
+            phase_text = self.font_small.render(f"PHASE {boss.boss_phase + 1}", True, (255, 100, 100))
+            phase_rect = phase_text.get_rect(right=x + bar_width, centery=y - 12)
+            self.render_surface.blit(phase_text, phase_rect)
+
     def draw_menu(self):
         """Draw main menu"""
         # Title
@@ -963,17 +1110,59 @@ class Game:
         self.render_surface.blit(inst_text, rect)
 
     def draw_pause(self):
-        """Draw pause overlay"""
+        """Draw pause overlay with controls"""
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 150))
+        overlay.fill((0, 0, 0, 180))
         self.render_surface.blit(overlay, (0, 0))
-        
-        text = self.font_large.render("PAUSED", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+
+        # Title
+        text = self.font_large.render("PAUSED", True, COLOR_MINMATAR_ACCENT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 100))
         self.render_surface.blit(text, rect)
-        
+
+        # Controls box
+        box_rect = pygame.Rect(80, 150, SCREEN_WIDTH - 160, 280)
+        pygame.draw.rect(self.render_surface, (30, 30, 40), box_rect)
+        pygame.draw.rect(self.render_surface, (100, 100, 120), box_rect, 2)
+
+        text = self.font.render("CONTROLS", True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 170))
+        self.render_surface.blit(text, rect)
+
+        controls = [
+            ("WASD / Arrows", "Move ship"),
+            ("Space / Left Click", "Fire autocannons"),
+            ("Shift / Right Click", "Fire rockets"),
+            ("1-5 / Q / Tab", "Switch ammo type"),
+            ("D", "Toggle danger zones"),
+            ("ESC", "Pause/Resume"),
+        ]
+
+        y = 200
+        for key, action in controls:
+            key_text = self.font_small.render(key, True, COLOR_MINMATAR_ACCENT)
+            self.render_surface.blit(key_text, (100, y))
+            action_text = self.font_small.render(action, True, COLOR_TEXT)
+            self.render_surface.blit(action_text, (280, y))
+            y += 25
+
+        # Current status
+        y += 20
+        ship_class = getattr(self.player, 'ship_class', 'Rifter')
+        status_text = f"Ship: {ship_class} | Score: {self.player.score} | Stage: {self.current_stage + 1}"
+        text = self.font_small.render(status_text, True, (150, 150, 150))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+
+        # Berserk tip
+        y += 40
+        text = self.font_small.render("TIP: Get closer to enemies for higher score multipliers!", True, (255, 200, 100))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+
+        # Resume prompt
         text = self.font.render("Press ESC to Resume", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 100))
         self.render_surface.blit(text, rect)
     
     def draw_shop(self):
@@ -1027,62 +1216,160 @@ class Game:
         self.render_surface.blit(text, rect)
     
     def draw_gameover(self):
-        """Draw game over screen"""
+        """Draw game over screen with berserk stats"""
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((100, 0, 0, 150))
+        overlay.fill((80, 0, 0, 180))
         self.render_surface.blit(overlay, (0, 0))
-        
+
+        # Title
         text = self.font_large.render("SHIP DESTROYED", True, (255, 100, 100))
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 120))
         self.render_surface.blit(text, rect)
-        
-        text = self.font.render(f"Final Score: {self.player.score}", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
-        self.render_surface.blit(text, rect)
-        
-        text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 35))
-        self.render_surface.blit(text, rect)
-        
-        text = self.font.render("Press ENTER to return to menu", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100))
-        self.render_surface.blit(text, rect)
-    
-    def draw_victory(self):
-        """Draw victory screen"""
-        title = self.font_large.render("VICTORY!", True, COLOR_MINMATAR_ACCENT)
-        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
-        self.render_surface.blit(title, rect)
-        
-        text = self.font.render("The Amarr station has fallen.", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 220))
-        self.render_surface.blit(text, rect)
-        
-        text = self.font.render("The Minmatar Rebellion grows stronger!", True, COLOR_MINMATAR_ACCENT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 260))
-        self.render_surface.blit(text, rect)
-        
-        y = 350
-        text = self.font.render(f"Final Score: {self.player.score}", True, COLOR_TEXT)
+
+        # Main stats
+        y = 180
+        text = self.font_large.render(f"Final Score: {self.player.score}", True, (255, 200, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
-        
+
         text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
         self.render_surface.blit(text, rect)
-        
-        ship_type = "Wolf Assault Frigate" if self.player.is_wolf else "Rifter Frigate"
-        text = self.font.render(f"Ship: {ship_type}", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 80))
+
+        # Stage reached
+        stage_name = STAGES[self.current_stage]['name'] if self.current_stage < len(STAGES) else "Final Stage"
+        text = self.font_small.render(f"Reached: {stage_name} - Wave {self.current_wave + 1}", True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 70))
         self.render_surface.blit(text, rect)
-        
-        diff_text = f"Difficulty: {self.difficulty_settings['name']}"
-        text = self.font.render(diff_text, True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 110))
+
+        # Berserk stats box
+        y += 110
+        box_rect = pygame.Rect(80, y, SCREEN_WIDTH - 160, 120)
+        pygame.draw.rect(self.render_surface, (40, 20, 20), box_rect)
+        pygame.draw.rect(self.render_surface, (150, 80, 80), box_rect, 2)
+
+        berserk_stats = self.berserk.get_stats()
+        kills = berserk_stats['kills_by_range']
+        total_kills = berserk_stats.get('total_kills', 0)
+        avg_mult = berserk_stats.get('avg_multiplier', 1.0)
+
+        text = self.font.render("COMBAT ANALYSIS", True, (255, 150, 100))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 15))
         self.render_surface.blit(text, rect)
-        
+
+        y += 40
+        text = self.font_small.render(f"Total Kills: {total_kills}  |  Avg Multiplier: x{avg_mult:.2f}", True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+
+        extreme = kills.get('EXTREME', 0)
+        close = kills.get('CLOSE', 0)
+        text = self.font_small.render(f"Extreme Kills: {extreme}  |  Close Range: {close}", True, (255, 150, 100))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 25))
+        self.render_surface.blit(text, rect)
+
+        # Ship info
+        y += 70
+        ship_class = getattr(self.player, 'ship_class', 'Rifter')
+        text = self.font_small.render(f"Ship: {ship_class}  |  Difficulty: {self.difficulty_settings['name']}", True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+
+        # Continue prompt
+        text = self.font.render("Press ENTER to return to menu", True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 50))
+        self.render_surface.blit(text, rect)
+    
+    def draw_victory(self):
+        """Draw victory screen with berserk stats"""
+        title = self.font_large.render("VICTORY!", True, COLOR_MINMATAR_ACCENT)
+        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 80))
+        self.render_surface.blit(title, rect)
+
+        text = self.font.render("The Amarr station has fallen.", True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 130))
+        self.render_surface.blit(text, rect)
+
+        text = self.font.render("The Minmatar Rebellion grows stronger!", True, COLOR_MINMATAR_ACCENT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 160))
+        self.render_surface.blit(text, rect)
+
+        # Main stats
+        y = 220
+        text = self.font_large.render(f"Final Score: {self.player.score}", True, (255, 215, 0))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+
+        text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
+        self.render_surface.blit(text, rect)
+
+        # Berserk stats
+        berserk_stats = self.berserk.get_stats()
+        y += 90
+
+        # Draw berserk stats box
+        box_rect = pygame.Rect(80, y - 10, SCREEN_WIDTH - 160, 160)
+        pygame.draw.rect(self.render_surface, (30, 30, 40), box_rect)
+        pygame.draw.rect(self.render_surface, (100, 80, 60), box_rect, 2)
+
+        text = self.font.render("BERSERK PERFORMANCE", True, (255, 150, 50))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 5))
+        self.render_surface.blit(text, rect)
+
+        y += 35
+        # Kill breakdown by range
+        kills = berserk_stats['kills_by_range']
+        extreme_kills = kills.get('EXTREME', 0)
+        close_kills = kills.get('CLOSE', 0)
+        safe_kills = kills.get('FAR', 0) + kills.get('VERY_FAR', 0)
+
+        text = self.font_small.render(f"Extreme Close Kills (5x): {extreme_kills}", True, (255, 50, 50))
+        self.render_surface.blit(text, (100, y))
+
+        text = self.font_small.render(f"Close Range Kills (3x): {close_kills}", True, (255, 150, 50))
+        self.render_surface.blit(text, (100, y + 22))
+
+        text = self.font_small.render(f"Safe Distance Kills: {safe_kills}", True, (100, 200, 100))
+        self.render_surface.blit(text, (100, y + 44))
+
+        # Average multiplier
+        avg_mult = berserk_stats.get('avg_multiplier', 1.0)
+        mult_color = (255, 50, 50) if avg_mult >= 3.0 else ((255, 200, 50) if avg_mult >= 1.5 else (150, 150, 150))
+        text = self.font.render(f"Avg Multiplier: x{avg_mult:.2f}", True, mult_color)
+        rect = text.get_rect(right=SCREEN_WIDTH - 100, top=y)
+        self.render_surface.blit(text, rect)
+
+        # Risk rating
+        total_kills = berserk_stats.get('total_kills', 1)
+        risk_pct = ((extreme_kills + close_kills) / total_kills * 100) if total_kills > 0 else 0
+        if risk_pct >= 50:
+            rating = "BERSERKER"
+            rating_color = (255, 50, 50)
+        elif risk_pct >= 30:
+            rating = "AGGRESSIVE"
+            rating_color = (255, 150, 50)
+        elif risk_pct >= 15:
+            rating = "BALANCED"
+            rating_color = (255, 255, 100)
+        else:
+            rating = "CAUTIOUS"
+            rating_color = (100, 200, 100)
+
+        text = self.font.render(f"Combat Style: {rating}", True, rating_color)
+        rect = text.get_rect(right=SCREEN_WIDTH - 100, top=y + 30)
+        self.render_surface.blit(text, rect)
+
+        # Ship and difficulty
+        y += 100
+        ship_class = getattr(self.player, 'ship_class', 'Rifter')
+        ship_type = f"{ship_class} {'Assault Frigate' if self.player.is_wolf else 'Frigate'}"
+        text = self.font_small.render(f"Ship: {ship_type}  |  Difficulty: {self.difficulty_settings['name']}", True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+
         text = self.font.render("Press ENTER to play again", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 170))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 50))
         self.render_surface.blit(text, rect)
     
     def run(self):
