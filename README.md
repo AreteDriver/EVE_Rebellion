@@ -1,107 +1,176 @@
-# MINMATAR REBELLION
+# Minmatar Rebellion
 
-A top-down arcade space shooter inspired by EVE Online, featuring the iconic Rifter frigate in a fight for freedom against the Amarr Empire.
+**A top-down arcade shooter where you pilot a Rifter against the Amarr Empire.**
+
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Pygame 2.0+](https://img.shields.io/badge/Pygame-2.0+-red.svg)](https://www.pygame.org/)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-orange.svg)]()
+
+---
+
+![Minmatar Rebellion Gameplay](docs/screenshot.png)
+
+> **Screenshot Instructions:** Capture gameplay showing:
+> 1. The Rifter engaging multiple Amarr ships with autocannon fire
+> 2. Berserk multiplier indicator glowing at close range
+> 3. Escape pods floating from a destroyed Bestower
+> 4. HUD showing shields/armor/hull, ammo type, and refugee count
+>
+> For a GIF: Record destroying an industrial, collecting refugees, then using them at the upgrade shop.
+
+---
+
+## The Premise
+
+You are a Minmatar pilot. Your ancestors were enslaved. Your people were broken.
+
+But not you.
+
+In a Rifter-class frigate armed with autocannons and rockets, you'll tear through Amarr patrols, liberate slave ships, and face down battleships that outclass you a hundred to one. The odds don't matter. Freedom isn't free—it's paid for in burnt wrecks and rescued souls.
+
+*"We were slaves once. Never again."*
+
+---
 
 ## Features
 
-- **Procedural Sound Effects** - Retro-style synthesized sounds for weapons, explosions, pickups
-- **Ambient Music** - Generated space ambient background music
-- **Screen Shake** - Impact feedback for explosions and damage
-- **4 Difficulty Levels** - Easy, Normal, Hard, Nightmare
-- **Advanced Enemy AI** - Multiple movement patterns (sine wave, zigzag, swoop, flank, circle)
-- **5 Ammo Types** - Swappable ammunition with tactical rock-paper-scissors mechanics
-- **Upgrade System** - Spend rescued refugees on ship improvements
+### Combat System
+- **5 Ammo Types** with rock-paper-scissors mechanics
+  - Titanium Sabot (balanced starter)
+  - EMP (melts shields)
+  - Phased Plasma (shreds armor)
+  - Fusion (high alpha, slow fire)
+  - Barrage (fast tracking, reduced range)
+- **Autocannons + Rockets** - Primary and secondary weapons
+- **Berserk System** - Get closer for higher score multipliers (0.5x to 5.0x)
 
-## Requirements
+### Progression
+- **Refugee Economy** - Destroy slave transports, collect escape pods, spend lives on upgrades
+- **Ship Upgrades** - Gyrostabilizers, armor plates, tracking enhancers
+- **Unlock the Wolf** - Upgrade to a T2 Assault Frigate with bonuses
+- **8 Stages** - From asteroid belts to capital ship assaults
 
-- Python 3.8+
-- Pygame 2.0+
-- NumPy (for sound generation)
+### Technical
+- **Procedural Audio** - All sounds synthesized in real-time (no audio files needed)
+- **Controller Support** - Full gamepad support with analog movement
+- **4 Difficulty Levels** - Easy to Nightmare
+- **Data-Driven Design** - Add enemies, stages, and bosses via JSON
+
+### Polish
+- **Screen Shake** - Impactful combat feedback
+- **Parallax Backgrounds** - Layered space environments
+- **Visual Effects** - Glows, explosions, damage indicators
+- **60 FPS** - Smooth arcade action
+
+---
 
 ## Installation
 
-```bash
-pip install pygame numpy
-```
+### Requirements
+- Python 3.8+
+- ~50MB disk space
 
-## Running the Game
+### Quick Start
 
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/EVE_Rebellion.git
+cd EVE_Rebellion
+
+# Install dependencies
+pip install pygame numpy cairosvg
+
+# Play
 python main.py
 ```
 
-Or on Linux:
+### Linux One-Liner
+
 ```bash
-chmod +x main.py
-./main.py
+pip install pygame numpy cairosvg && python main.py
 ```
+
+### Verify Installation
+
+```bash
+python -c "import pygame; import numpy; print('Ready to rebel!')"
+```
+
+---
 
 ## Controls
 
-| Action | Keys |
-|--------|------|
-| Move | WASD or Arrow Keys |
-| Fire Autocannons | Space or Left Mouse Button |
-| Fire Rockets | Shift or Right Mouse Button |
-| Select Ammo | 1-5 |
-| Cycle Ammo | Q or Tab |
-| Pause | ESC |
+### Keyboard + Mouse
 
-### Menu Controls
+| Action | Primary | Alternative |
+|--------|---------|-------------|
+| Move | WASD | Arrow Keys |
+| Fire Autocannons | Space | Left Click |
+| Fire Rockets | Shift | Right Click |
+| Select Ammo | 1-5 | - |
+| Cycle Ammo | Q | Tab |
+| Pause | ESC | - |
+
+### Controller (Xbox/PlayStation)
+
+| Action | Button |
+|--------|--------|
+| Move | Left Stick |
+| Aim Offset | Right Stick |
+| Fire (pressure-sensitive) | RT / R2 |
+| Rockets | LT / L2 |
+| Cycle Ammo Forward | RB / R1 |
+| Cycle Ammo Back | LB / L1 |
+| Collect Refugees | A / Cross |
+| Emergency Burn | B / Circle |
+| Pause | Start |
+
+### Menu
 
 | Action | Key |
 |--------|-----|
 | Toggle Sound | S |
 | Toggle Music | M |
 
-## Difficulty Levels
+---
 
-| Level | Description |
-|-------|-------------|
-| Easy | 30% less enemy health/damage, more powerups |
-| Normal | Standard experience |
-| Hard | 30% more enemy health/damage, faster attacks |
-| Nightmare | 60% more health, 50% more damage, very fast attacks |
+## Gameplay Guide
 
-## Ammo Types
+### The Berserk System
 
-| Type | Key | Color | Best Against |
-|------|-----|-------|--------------|
-| Titanium Sabot | 1 | Gray | Starter ammo |
-| EMP | 2 | Blue | Shields |
-| Phased Plasma | 3 | Orange | Armor |
-| Fusion | 4 | Red | High damage (slower fire) |
-| Barrage | 5 | Yellow | Range/accuracy (fast fire) |
+Inspired by Devil Blade, your score multiplier depends on how close you are when you kill:
 
-Ammo types must be unlocked at the Rebel Station between stages.
+| Range | Distance | Multiplier | Risk |
+|-------|----------|------------|------|
+| EXTREME | 0-80px | 5.0x | Maximum |
+| CLOSE | 80-150px | 3.0x | High |
+| MEDIUM | 150-250px | 1.5x | Moderate |
+| FAR | 250-400px | 1.0x | Low |
+| VERY FAR | 400+px | 0.5x | None |
 
-## Gameplay
+Playing safe gets you through stages. Playing aggressive gets you on the leaderboard.
 
-### Objective
-Fight through 5 stages of Amarr forces, liberating enslaved Minmatar refugees along the way. Refugees serve as currency for upgrades.
+### Ammo Selection
+
+| Ammo | Key | Color | Best Against | Fire Rate |
+|------|-----|-------|--------------|-----------|
+| Titanium Sabot | 1 | Gray | Balanced starter | Normal |
+| EMP | 2 | Blue | Shields (Executioners) | Normal |
+| Phased Plasma | 3 | Orange | Armor (Punishers, Mallers) | Normal |
+| Fusion | 4 | Red | Everything (high damage) | Slow |
+| Barrage | 5 | Yellow | Fast targets | Fast |
+
+Unlock ammo types at the Rebel Station between stages.
 
 ### Refugee System
-- Destroy Amarr industrial ships (Bestowers, Sigils) to release escape pods
-- Collect pods before they drift away
-- Spend refugees at the Rebel Station on upgrades
 
-### Stages
+1. **Find Industrials** - Bestowers and Sigils carry slaves
+2. **Destroy Them** - Escape pods eject on death
+3. **Collect Pods** - Fly into them before they drift away
+4. **Spend Refugees** - Buy upgrades at the Rebel Station
 
-The game includes 5 core campaign stages plus 3 expansion stages:
-
-#### Core Campaign
-1. **Asteroid Belt Escape** - Tutorial, basic enemies
-2. **Amarr Patrol Interdiction** - Introduces cruisers, mini-boss
-3. **Slave Colony Liberation** - High refugee opportunity
-4. **Gate Assault** - Boss: Apocalypse Battleship
-5. **Final Push** - Boss: Abaddon Dreadnought
-
-#### Expansion Stages
-6. **Capital Ship Assault** - Boss: Golden Supercarrier (amarr_capital)
-7. **Sisters Rescue** - Boss: Stratios (Sisters of EVE cruiser)
-8. **Pirate Invasion** - Boss: Machariel (Angel Cartel battleship)
-
-Expansion stages are automatically loaded from `data/stages/` directory. See the **Expansion Content** section below for details.
+Refugees are your only currency. Every upgrade costs lives saved.
 
 ### Upgrades
 
@@ -116,109 +185,266 @@ Expansion stages are automatically loaded from `data/stages/` directory. See the
 | Barrage Ammo | 55 | Unlock Barrage rounds |
 | **Wolf Upgrade** | 50 | T2 Assault Frigate! |
 
-### Power-ups (dropped by enemies)
+### Power-ups
 
-- **Nanite Paste** (green) - Repairs hull
-- **Capacitor Booster** (blue) - Refills rockets
-- **Overdrive** (yellow) - Temporary speed boost
-- **Shield Booster** (light blue) - Temporary damage reduction + shield repair
+Dropped by enemies:
 
-## Enemy Types
-
-### Frigates
-- **Executioner** - Fast, shield-heavy. Use EMP. Aggressive movement patterns.
-- **Punisher** - Slow, armor-tanked. Use Plasma. Steady movement.
-
-### Cruisers
-- **Omen** - Mid-boss. Balanced defenses. Tactical flanking.
-- **Maller** - Heavy armor brick. Circular strafing patterns.
-
-### Industrials
-- **Bestower/Sigil** - Non-combat. Drops refugees!
-
-### Bosses
-- **Apocalypse** - Battleship. Spread fire pattern. Phase-based fight.
-- **Abaddon** - Final boss. Multiple phases, increases aggression at low health.
-
-## Sound System
-
-The game generates all sounds procedurally using numpy waveform synthesis:
-
-- **Autocannons** - Punchy low-frequency burst
-- **Rockets** - Whooshing launch sound
-- **Lasers** - High-frequency Amarr beam
-- **Explosions** - Scaled by enemy size (small/medium/large)
-- **Shield/Armor/Hull hits** - Distinct damage feedback
-- **Pickups** - Hopeful arpeggio for refugees, bright sweep for powerups
-- **UI sounds** - Menu selection, purchase confirmation, error buzzer
-
-Sound gracefully disables if no audio device is available.
-
-## File Structure
-
-```
-minmatar_rebellion/
-├── main.py              # Entry point
-├── game.py              # Main game logic, states, rendering
-├── sprites.py           # All game entities (player, enemies, bullets)
-├── constants.py         # Configuration, stats, stage definitions
-├── sounds.py            # Procedural sound generation
-├── core/
-│   └── loader.py        # JSON data loader for enemies, stages, powerups
-├── data/
-│   ├── enemies/         # Enemy definitions (JSON)
-│   ├── stages/          # Stage/level definitions (JSON)
-│   └── powerups/        # Power-up definitions (JSON)
-├── expansion/
-│   └── capital_ship_enemy.py  # CapitalShipEnemy boss class
-├── docs/
-│   └── development.md   # Developer guide for adding content
-└── README.md            # This file
-```
-
-## Expansion Content
-
-The game supports **expansion content** through a data-driven architecture. Expansion stages, enemies, and bosses are automatically loaded from JSON files in the `data/` directory.
-
-### How Expansion Integration Works
-
-1. **Stage Loading**: All JSON files in `data/stages/` are loaded and converted to the game's stage format
-2. **Enemy Integration**: New enemies like `amarr_capital`, `machariel`, and `stratios` are defined in both:
-   - `data/enemies/*.json` (visual and behavior properties)
-   - `constants.py` ENEMY_STATS (core stats for game engine)
-3. **Boss Classes**: Specialized boss classes (like `CapitalShipEnemy`) can be added to the `expansion/` directory
-
-### Currently Available Expansion Content
-
-- **Capital Ship Assault** stage with the `amarr_capital` boss (Golden Supercarrier)
-  - Uses the specialized `CapitalShipEnemy` class with multi-turret firing
-- **Sisters Rescue** stage with `stratios` boss
-- **Pirate Invasion** stage with `machariel` boss
-
-### Adding Your Own Expansion Content
-
-See `docs/development.md` for detailed instructions on:
-- Creating new stage JSON files
-- Defining new enemies
-- Adding specialized boss behaviors
-- Extending the loader system
-
-## Customization
-
-Edit `constants.py` to adjust:
-- Player stats and speed
-- Weapon damage and fire rates
-- Enemy health and behavior
-- Stage composition
-- Upgrade costs
-- Difficulty multipliers
-- Screen shake intensity
-
-## IP Notice
-
-This is a personal/fan project. Ship designs and names are inspired by CCP Games' EVE Online. For any commercial use, original designs would need to be created or licensing obtained.
+| Power-up | Color | Effect |
+|----------|-------|--------|
+| Nanite Paste | Green | Repairs hull damage |
+| Capacitor Booster | Blue | Refills rocket ammo |
+| Overdrive | Yellow | Temporary speed boost |
+| Shield Booster | Light Blue | Damage reduction + shield repair |
 
 ---
 
-*"We were slaves once. Never again."*
-— Minmatar Rebellion motto
+## Campaign
+
+### Core Stages (1-5)
+
+| Stage | Name | Challenge |
+|-------|------|-----------|
+| 1 | Asteroid Belt Escape | Tutorial, basic frigates |
+| 2 | Amarr Patrol Interdiction | Cruisers, mini-boss |
+| 3 | Slave Colony Liberation | High refugee opportunity |
+| 4 | Gate Assault | Boss: Apocalypse Battleship |
+| 5 | Final Push | Boss: Abaddon Dreadnought |
+
+### Expansion Stages (6-8)
+
+| Stage | Name | Boss |
+|-------|------|------|
+| 6 | Capital Ship Assault | Golden Supercarrier |
+| 7 | Sisters Rescue | Stratios (SoE Cruiser) |
+| 8 | Pirate Invasion | Machariel (Angel Cartel) |
+
+---
+
+## Enemy Recognition
+
+### Frigates
+- **Executioner** - Fast, shield-tanked. Use EMP. Aggressive patterns.
+- **Punisher** - Slow, armor-tanked. Use Plasma. Steady approach.
+
+### Cruisers
+- **Omen** - Balanced defenses. Flanking maneuvers.
+- **Maller** - Heavy armor brick. Circular strafing.
+
+### Industrials
+- **Bestower / Sigil** - Non-combat. YOUR PRIMARY TARGETS. Drop refugees!
+
+### Bosses
+- **Apocalypse** - Battleship. Spread fire patterns. Multi-phase.
+- **Abaddon** - Dreadnought. Enrages at low health.
+- **Supercarrier** - Capital. Multi-turret system. The ultimate challenge.
+
+---
+
+## Difficulty Levels
+
+| Level | Enemy Health | Enemy Damage | Power-ups | Description |
+|-------|--------------|--------------|-----------|-------------|
+| Easy | -30% | -30% | More frequent | Learn the mechanics |
+| Normal | Standard | Standard | Standard | Intended experience |
+| Hard | +30% | +30% | Less frequent | For veterans |
+| Nightmare | +60% | +50% | Rare | Pure suffering |
+
+---
+
+## Configuration
+
+All game settings are in `constants.py`:
+
+```python
+# Display
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 800
+FPS = 60
+
+# Player Base Stats
+PLAYER_SPEED = 5
+PLAYER_BASE_FIRE_RATE = 150  # ms between shots
+PLAYER_ROCKET_COOLDOWN = 500
+PLAYER_START_SHIELDS = 100
+PLAYER_START_ARMOR = 100
+PLAYER_START_HULL = 50
+
+# Screen Shake
+SHAKE_INTENSITY = 10
+SHAKE_DECAY = 0.85
+```
+
+### Adding Content
+
+The game uses a data-driven architecture. Add new content via JSON:
+
+**New Enemy** (`data/enemies/my_enemy.json`):
+```json
+{
+  "name": "my_enemy",
+  "display_name": "Custom Enemy",
+  "health": { "shields": 50, "armor": 100, "hull": 50 },
+  "behavior": "weaver",
+  "speed": 3,
+  "fire_rate": 1000,
+  "points": 150
+}
+```
+
+**New Stage** (`data/stages/my_stage.json`):
+```json
+{
+  "name": "my_stage",
+  "display_name": "Custom Stage",
+  "waves": [
+    { "enemies": ["executioner", "executioner"], "delay": 2000 },
+    { "enemies": ["my_enemy"], "delay": 3000, "boss": true }
+  ]
+}
+```
+
+See `docs/development.md` for complete schemas.
+
+---
+
+## Project Structure
+
+```
+EVE_Rebellion/
+├── main.py                 # Entry point
+├── game.py                 # Game loop, states, rendering
+├── sprites.py              # Player, enemies, bullets, effects
+├── constants.py            # All configuration
+├── sounds.py               # Procedural audio synthesis
+│
+├── core/
+│   ├── loader.py           # JSON content loader
+│   ├── controls.py         # Input configuration
+│   ├── pause_menu.py       # Pause/options menu
+│   ├── save_manager.py     # Save/load system
+│   └── tutorial.py         # Tutorial system
+│
+├── data/
+│   ├── enemies/            # Enemy definitions (JSON)
+│   ├── stages/             # Stage definitions (JSON)
+│   ├── powerups/           # Power-up definitions (JSON)
+│   └── upgrades.json       # Upgrade shop data
+│
+├── expansion/
+│   └── capital_ship_enemy.py   # Capital ship boss class
+│
+├── berserk_system.py       # Distance-based scoring
+├── devil_blade_combat.py   # Combo mechanics
+├── controller_input.py     # Gamepad support
+├── cinematic_system.py     # Cutscenes
+└── vertical_shmup_*.py     # Effects, music, controls
+```
+
+---
+
+## Roadmap
+
+### Planned Features
+- [ ] Wingman power-up (AI companion before bosses)
+- [ ] Drone waves from Amarr carriers
+- [ ] Background capital ships (parallax)
+- [ ] Enhanced weapon visuals
+- [ ] Steam Deck optimized controls
+- [ ] Leaderboard system
+
+### Known Limitations
+- Ship assets stored in separate repository (EVE_Ships) for size
+- Cutscene system partially implemented
+- Wolf/Jaguar upgrade cinematics pending
+
+---
+
+## Contributing
+
+This is a community project. Contributions welcome!
+
+### Ways to Help
+- **Balance Feedback** - Play and report what feels off
+- **New Content** - Create enemies, stages, bosses via JSON
+- **Code** - Check `docs/development.md` for architecture
+- **Art** - Ship sprites, effects, UI elements
+- **Sound** - Improve procedural audio or add music tracks
+
+### Development Setup
+
+```bash
+git clone https://github.com/yourusername/EVE_Rebellion.git
+cd EVE_Rebellion
+pip install pygame numpy cairosvg
+python main.py
+```
+
+---
+
+## Technical Notes
+
+### Procedural Audio
+
+All game audio is synthesized at runtime using NumPy:
+
+```python
+# No audio files required - everything generated from waveforms
+- Autocannons: Low-frequency burst with decay
+- Rockets: Frequency sweep (whoosh)
+- Lasers: High-frequency sine wave
+- Explosions: Noise burst scaled by enemy size
+- UI: Arpeggios and sweeps
+```
+
+Sound gracefully disables if no audio device is available.
+
+### Performance
+
+- **Target**: 60 FPS on modest hardware
+- **Resolution**: 600x800 (scales to display)
+- **Memory**: ~100MB typical usage
+- **CPU**: Single-threaded, minimal overhead
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Disclaimer
+
+**Minmatar Rebellion is not affiliated with or endorsed by CCP Games.**
+
+EVE Online, the EVE logo, and all associated ship names and designs are registered trademarks of CCP hf. This is an independent fan project created out of love for the EVE universe. Ship designs in this game are inspired by EVE Online but are original interpretations for this arcade context.
+
+For any commercial use, original designs would need to be created or licensing obtained from CCP Games.
+
+---
+
+## Support the Project
+
+If you enjoy this project, consider supporting development:
+
+- **In-Game**: Send ISK donations to **AreteDriver** in EVE Online
+- **Buy Me a Coffee**: [buymeacoffee.com/aretedriver](https://buymeacoffee.com/aretedriver)
+
+Your support helps keep these projects maintained and improving. o7
+
+---
+
+## Acknowledgments
+
+- **CCP Games** - For creating the EVE Online universe
+- **Devil Blade Reboot** - Inspiration for the Berserk scoring system
+- **Pygame Community** - For the excellent game framework
+- **Minmatar Fleet** - You know who you are. Fly aggressive. o7
+
+---
+
+<p align="center">
+  <em>"In rust we trust."</em>
+  <br><br>
+  <strong>Fly dangerous, capsuleer.</strong>
+</p>
