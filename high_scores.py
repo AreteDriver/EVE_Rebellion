@@ -221,6 +221,62 @@ class AchievementManager:
             'desc': 'Complete a stage with only extreme/close kills',
             'icon': 'fist',
             'hidden': True
+        },
+
+        # Endless mode achievements
+        'endless_initiate': {
+            'name': 'Endless Initiate',
+            'desc': 'Reach wave 5 in Endless Mode',
+            'icon': 'wave',
+            'hidden': False
+        },
+        'endless_warrior': {
+            'name': 'Endless Warrior',
+            'desc': 'Reach wave 10 in Endless Mode',
+            'icon': 'sword',
+            'hidden': False
+        },
+        'endless_champion': {
+            'name': 'Endless Champion',
+            'desc': 'Reach wave 20 in Endless Mode',
+            'icon': 'champion',
+            'hidden': False
+        },
+        'endless_legend': {
+            'name': 'Endless Legend',
+            'desc': 'Reach wave 30 in Endless Mode',
+            'icon': 'legend',
+            'hidden': False
+        },
+        'endless_god': {
+            'name': 'Endless God',
+            'desc': 'Reach wave 50 in Endless Mode',
+            'icon': 'god',
+            'hidden': True
+        },
+        'endless_survivor': {
+            'name': 'Survivor',
+            'desc': 'Survive 5 minutes in Endless Mode',
+            'icon': 'clock',
+            'hidden': False
+        },
+        'endless_endurance': {
+            'name': 'Iron Will',
+            'desc': 'Survive 10 minutes in Endless Mode',
+            'icon': 'iron',
+            'hidden': False
+        },
+        'endless_score_50k': {
+            'name': 'Endless Scorer',
+            'desc': 'Score 50,000 points in Endless Mode',
+            'icon': 'endless_coin',
+            'hidden': False
+        },
+        'endless_score_100k': {
+            'name': 'Endless Master',
+            'desc': 'Score 100,000 points in Endless Mode',
+            'icon': 'endless_gem',
+            'hidden': False
         }
     }
 
@@ -352,6 +408,45 @@ class AchievementManager:
         if score >= 100000:
             if self.unlock('score_master'):
                 newly_unlocked.append('score_master')
+
+        # Endless mode achievements
+        endless_wave = game_stats.get('endless_wave', 0)
+        endless_time = game_stats.get('endless_time', 0)
+        is_endless = game_stats.get('game_mode') == 'endless'
+
+        if is_endless:
+            # Wave achievements
+            if endless_wave >= 5:
+                if self.unlock('endless_initiate'):
+                    newly_unlocked.append('endless_initiate')
+            if endless_wave >= 10:
+                if self.unlock('endless_warrior'):
+                    newly_unlocked.append('endless_warrior')
+            if endless_wave >= 20:
+                if self.unlock('endless_champion'):
+                    newly_unlocked.append('endless_champion')
+            if endless_wave >= 30:
+                if self.unlock('endless_legend'):
+                    newly_unlocked.append('endless_legend')
+            if endless_wave >= 50:
+                if self.unlock('endless_god'):
+                    newly_unlocked.append('endless_god')
+
+            # Time-based achievements (time in seconds)
+            if endless_time >= 300:  # 5 minutes
+                if self.unlock('endless_survivor'):
+                    newly_unlocked.append('endless_survivor')
+            if endless_time >= 600:  # 10 minutes
+                if self.unlock('endless_endurance'):
+                    newly_unlocked.append('endless_endurance')
+
+            # Endless score achievements
+            if score >= 50000:
+                if self.unlock('endless_score_50k'):
+                    newly_unlocked.append('endless_score_50k')
+            if score >= 100000:
+                if self.unlock('endless_score_100k'):
+                    newly_unlocked.append('endless_score_100k')
 
         # Update persistent stats
         self.stats['total_kills'] += kills

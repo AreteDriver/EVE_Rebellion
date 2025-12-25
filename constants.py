@@ -148,7 +148,7 @@ ENEMY_STATS = {
         'speed': 2.5,
         'fire_rate': 1500,
         'score': 100,
-        'size': (30, 40)
+        'size': (60, 78)  # Frigates
     },
     'punisher': {
         'name': 'Punisher',
@@ -158,7 +158,7 @@ ENEMY_STATS = {
         'speed': 1.5,
         'fire_rate': 2000,
         'score': 150,
-        'size': (35, 45)
+        'size': (66, 86)  # Frigates
     },
     'omen': {
         'name': 'Omen',
@@ -168,7 +168,7 @@ ENEMY_STATS = {
         'speed': 1.2,
         'fire_rate': 1200,
         'score': 500,
-        'size': (50, 65)
+        'size': (100, 130)  # Cruisers
     },
     'maller': {
         'name': 'Maller',
@@ -178,7 +178,7 @@ ENEMY_STATS = {
         'speed': 0.8,
         'fire_rate': 1800,
         'score': 600,
-        'size': (55, 70)
+        'size': (105, 135)  # Cruisers
     },
     'bestower': {
         'name': 'Bestower',
@@ -186,10 +186,10 @@ ENEMY_STATS = {
         'armor': 100,
         'hull': 60,
         'speed': 1.0,
-        'fire_rate': 0,  # Non-combat
+        'fire_rate': 0,  # Non-combat - Amarr industrial
         'score': 200,
         'refugees': 5,
-        'size': (45, 80)
+        'size': (88, 150)  # Industrial
     },
     'apocalypse': {
         'name': 'Apocalypse',
@@ -199,7 +199,7 @@ ENEMY_STATS = {
         'speed': 0.5,
         'fire_rate': 800,
         'score': 2000,
-        'size': (80, 120),
+        'size': (130, 195),  # Battleship
         'boss': True
     },
     'abaddon': {
@@ -210,7 +210,7 @@ ENEMY_STATS = {
         'speed': 0.3,
         'fire_rate': 600,
         'score': 5000,
-        'size': (100, 150),
+        'size': (160, 240),  # Battleship boss
         'boss': True
     },
     'amarr_capital': {
@@ -221,7 +221,7 @@ ENEMY_STATS = {
         'speed': 0.3,
         'fire_rate': 1500,
         'score': 5000,
-        'size': (200, 300),
+        'size': (320, 480),  # Capital ship
         'boss': True
     },
     'machariel': {
@@ -232,7 +232,7 @@ ENEMY_STATS = {
         'speed': 1.0,
         'fire_rate': 800,
         'score': 2000,
-        'size': (80, 120),
+        'size': (130, 195),  # Pirate battleship
         'boss': True
     },
     'stratios': {
@@ -243,7 +243,7 @@ ENEMY_STATS = {
         'speed': 1.2,
         'fire_rate': 1000,
         'score': 1500,
-        'size': (60, 80),
+        'size': (98, 130),  # Cruiser-size
         'boss': True
     },
     # New enemy types
@@ -255,7 +255,7 @@ ENEMY_STATS = {
         'speed': 4.0,
         'fire_rate': 2500,
         'score': 25,
-        'size': (15, 15),
+        'size': (32, 32),  # Drones
         'behavior': 'swarm'
     },
     'bomber': {
@@ -266,7 +266,7 @@ ENEMY_STATS = {
         'speed': 0.8,
         'fire_rate': 3000,
         'score': 300,
-        'size': (40, 55),
+        'size': (75, 105),  # Bombers
         'behavior': 'bomber'
     },
     'interceptor': {
@@ -277,7 +277,7 @@ ENEMY_STATS = {
         'speed': 5.0,
         'fire_rate': 1000,
         'score': 200,
-        'size': (25, 35),
+        'size': (48, 66),  # Interceptors
         'behavior': 'aggressive'
     },
     'coercer': {
@@ -288,7 +288,7 @@ ENEMY_STATS = {
         'speed': 2.0,
         'fire_rate': 1200,
         'score': 125,
-        'size': (32, 42),
+        'size': (64, 84),  # Destroyers
         'behavior': 'strafe'
     },
     'harbinger': {
@@ -299,7 +299,7 @@ ENEMY_STATS = {
         'speed': 0.6,
         'fire_rate': 1000,
         'score': 800,
-        'size': (65, 90),
+        'size': (120, 165),  # Battlecruisers
         'behavior': 'artillery'
     },
     'dragoon': {
@@ -310,9 +310,9 @@ ENEMY_STATS = {
         'speed': 1.5,
         'fire_rate': 1800,
         'score': 350,
-        'size': (45, 60),
+        'size': (84, 112),  # Drone carriers
         'behavior': 'drone_carrier',
-        'drones': 2
+        'drones': 4  # Spawns more drones
     }
 }
 
@@ -338,7 +338,12 @@ POWERUP_TYPES = {
     'nanite': {'name': 'Nanite Paste', 'color': (100, 255, 100), 'heal': 50},
     'capacitor': {'name': 'Capacitor Booster', 'color': (100, 100, 255), 'rockets': 5},
     'overdrive': {'name': 'Overdrive', 'color': (255, 255, 100), 'duration': 5000},
-    'shield_boost': {'name': 'Shield Booster', 'color': (150, 200, 255), 'duration': 3000}
+    'shield_boost': {'name': 'Shield Booster', 'color': (150, 200, 255), 'duration': 3000},
+    'double_damage': {'name': 'Damage Amplifier', 'color': (255, 100, 100), 'duration': 6000},
+    'rapid_fire': {'name': 'Rapid Fire', 'color': (255, 150, 50), 'duration': 5000},
+    'bomb_charge': {'name': 'Bomb Charge', 'color': (255, 50, 255), 'bombs': 1},
+    'magnet': {'name': 'Tractor Beam', 'color': (200, 200, 255), 'duration': 8000},
+    'invulnerability': {'name': 'Hardener', 'color': (255, 215, 0), 'duration': 3000}
 }
 
 # Stage definitions

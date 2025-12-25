@@ -106,6 +106,11 @@ class ControllerInput:
             # Enable haptics if supported
             if hasattr(self.joystick, 'rumble'):
                 print("Haptic feedback enabled")
+                # Stop any startup vibration (some controllers rumble on init)
+                try:
+                    self.joystick.rumble(0, 0, 0)
+                except:
+                    pass
         else:
             print("No controller detected - keyboard/mouse active")
     
@@ -292,16 +297,24 @@ class ControllerInput:
         """Update continuous haptic feedback based on heat"""
         if not self.connected or not hasattr(self.joystick, 'rumble'):
             return
-        
-        # Rumble intensity scales with heat
-        target_rumble = (
-            self.config.haptic_heat_base +
-            (self.config.haptic_heat_max - self.config.haptic_heat_base) * self.heat_level
-        )
-        
+
+        # Only rumble if heat level is actively set (during gameplay)
+        if self.heat_level <= 0:
+            # Stop rumble when not in gameplay
+            if self.current_rumble > 0:
+                self.current_rumble = 0
+                try:
+                    self.joystick.rumble(0, 0, 0)
+                except:
+                    pass
+            return
+
+        # Rumble intensity scales with heat (no base rumble)
+        target_rumble = self.heat_level * self.config.haptic_heat_max
+
         # Smooth rumble changes
         self.current_rumble += (target_rumble - self.current_rumble) * 0.1
-        
+
         try:
             # Dual motor rumble (low frequency, high frequency)
             self.joystick.rumble(

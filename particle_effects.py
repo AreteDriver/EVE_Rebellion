@@ -300,3 +300,333 @@ class ScreenEffects:
             pygame.draw.rect(overlay, (0, 0, 0, alpha_step), rect, 20)
 
         surface.blit(overlay, (0, 0))
+
+
+class DamageNumber(pygame.sprite.Sprite):
+    """Floating damage number that rises and fades"""
+
+    def __init__(self, x, y, damage, color=(255, 255, 255), is_crit=False):
+        super().__init__()
+        self.x = float(x)
+        self.y = float(y)
+        self.damage = damage
+        self.color = color
+        self.is_crit = is_crit
+        self.lifetime = 45  # frames
+        self.max_lifetime = 45
+        self.vy = -2.5  # Rise speed
+        self.vx = random.uniform(-0.5, 0.5)  # Slight horizontal drift
+
+        # Create font (cached at class level for performance)
+        if not hasattr(DamageNumber, '_font'):
+            DamageNumber._font = pygame.font.Font(None, 24)
+        if not hasattr(DamageNumber, '_font_crit'):
+            DamageNumber._font_crit = pygame.font.Font(None, 32)
+
+        self._update_image()
+
+    def _update_image(self):
+        progress = 1 - (self.lifetime / self.max_lifetime)
+        alpha = int(255 * (1 - progress))
+
+        # Format damage text
+        text = str(self.damage)
+        if self.is_crit:
+            text = f"{self.damage}!"
+            font = DamageNumber._font_crit
+        else:
+            font = DamageNumber._font
+
+        # Render text
+        text_surface = font.render(text, True, self.color)
+
+        # Create surface with alpha
+        self.image = pygame.Surface(text_surface.get_size(), pygame.SRCALPHA)
+        self.image.blit(text_surface, (0, 0))
+        self.image.set_alpha(alpha)
+
+        self.rect = self.image.get_rect(center=(int(self.x), int(self.y)))
+
+    def update(self):
+        self.lifetime -= 1
+        if self.lifetime <= 0:
+            self.kill()
+            return
+
+        # Float upward with slight deceleration
+        self.x += self.vx
+        self.y += self.vy
+        self.vy *= 0.97  # Slow down rise
+
+        self._update_image()
+
+
+class DamageNumberManager:
+    """Manages floating damage numbers"""
+
+    def __init__(self):
+        self.numbers = pygame.sprite.Group()
+
+    def spawn(self, x, y, damage, color=(255, 255, 255), is_crit=False):
+        """Spawn a new damage number"""
+        # Slight random offset to prevent stacking
+        x += random.randint(-10, 10)
+        y += random.randint(-5, 5)
+        num = DamageNumber(x, y, damage, color, is_crit)
+        self.numbers.add(num)
+
+    def update(self):
+        self.numbers.update()
+
+    def draw(self, surface):
+        self.numbers.draw(surface)
+
+    def clear(self):
+        self.numbers.empty()
+
+
+class WarpTransition:
+    """Hyperspace warp effect for stage transitions"""
+
+    def __init__(self, screen_width, screen_height):
+        self.width = screen_width
+        self.height = screen_height
+        self.active = False
+        self.phase = 'idle'  # idle, warp_in, hold, warp_out
+        self.timer = 0
+        self.max_timer = 0
+        self.stars = []
+        self.center_x = screen_width // 2
+        self.center_y = screen_height // 2
+
+    def start(self, duration=90):
+        """Start warp transition"""
+        self.active = True
+        self.phase = 'warp_in'
+        self.timer = 0
+        self.max_timer = duration // 3  # Each phase gets 1/3 of duration
+        self._generate_warp_stars()
+
+    def _generate_warp_stars(self):
+        """Generate star streaks for warp effect"""
+        self.stars = []
+        for _ in range(80):
+            angle = random.uniform(0, 2 * math.pi)
+            distance = random.uniform(50, max(self.width, self.height))
+            speed = random.uniform(5, 15)
+            length = random.uniform(20, 100)
+            brightness = random.randint(150, 255)
+            self.stars.append({
+                'angle': angle,
+                'distance': distance,
+                'speed': speed,
+                'length': length,
+                'brightness': brightness
+            })
+
+    def update(self):
+        """Update warp effect"""
+        if not self.active:
+            return False
+
+        self.timer += 1
+
+        if self.phase == 'warp_in':
+            # Stars accelerate toward center
+            for star in self.stars:
+                star['distance'] -= star['speed'] * (self.timer / self.max_timer)
+                star['length'] += 2
+
+            if self.timer >= self.max_timer:
+                self.phase = 'hold'
+                self.timer = 0
+
+        elif self.phase == 'hold':
+            # Bright flash at center
+            if self.timer >= self.max_timer // 2:
+                self.phase = 'warp_out'
+                self.timer = 0
+                self._generate_warp_stars()
+
+        elif self.phase == 'warp_out':
+            # Stars streak outward
+            for star in self.stars:
+                star['distance'] += star['speed'] * 2
+                star['length'] = max(10, star['length'] - 1)
+
+            if self.timer >= self.max_timer:
+                self.active = False
+                self.phase = 'idle'
+                return True  # Transition complete
+
+        return False
+
+    def draw(self, surface):
+        """Draw warp effect"""
+        if not self.active:
+            return
+
+        # Create overlay surface
+        overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+
+        if self.phase == 'warp_in':
+            # Draw streaking stars toward center
+            progress = self.timer / self.max_timer
+            for star in self.stars:
+                if star['distance'] > 0:
+                    # Calculate start and end points
+                    x1 = self.center_x + math.cos(star['angle']) * star['distance']
+                    y1 = self.center_y + math.sin(star['angle']) * star['distance']
+                    x2 = self.center_x + math.cos(star['angle']) * (star['distance'] + star['length'])
+                    y2 = self.center_y + math.sin(star['angle']) * (star['distance'] + star['length'])
+
+                    alpha = int(star['brightness'] * progress)
+                    color = (star['brightness'], star['brightness'], 255, alpha)
+                    pygame.draw.line(overlay, color, (int(x1), int(y1)), (int(x2), int(y2)), 2)
+
+            # Vignette darkening
+            dark_alpha = int(100 * progress)
+            pygame.draw.rect(overlay, (0, 0, 0, dark_alpha), (0, 0, self.width, self.height))
+
+        elif self.phase == 'hold':
+            # Bright flash
+            progress = 1 - abs(self.timer / (self.max_timer // 2) - 1)
+            flash_alpha = int(255 * progress)
+            overlay.fill((255, 255, 255, flash_alpha))
+
+        elif self.phase == 'warp_out':
+            # Stars streak outward
+            progress = self.timer / self.max_timer
+            fade = 1 - progress
+
+            for star in self.stars:
+                x1 = self.center_x + math.cos(star['angle']) * star['distance']
+                y1 = self.center_y + math.sin(star['angle']) * star['distance']
+                x2 = self.center_x + math.cos(star['angle']) * (star['distance'] - star['length'])
+                y2 = self.center_y + math.sin(star['angle']) * (star['distance'] - star['length'])
+
+                alpha = int(star['brightness'] * fade)
+                color = (star['brightness'], star['brightness'], 255, alpha)
+                pygame.draw.line(overlay, color, (int(x1), int(y1)), (int(x2), int(y2)), 2)
+
+        surface.blit(overlay, (0, 0))
+
+    @property
+    def is_active(self):
+        return self.active
+
+
+class HitMarker:
+    """Brief crosshair flash when bullets connect"""
+
+    def __init__(self):
+        self.markers = []
+
+    def add(self, x, y, is_crit=False):
+        """Add a hit marker at position"""
+        self.markers.append({
+            'x': x,
+            'y': y,
+            'timer': 8 if not is_crit else 12,
+            'size': 6 if not is_crit else 10,
+            'is_crit': is_crit
+        })
+
+    def update(self):
+        """Update all markers"""
+        self.markers = [m for m in self.markers if m['timer'] > 0]
+        for marker in self.markers:
+            marker['timer'] -= 1
+
+    def draw(self, surface):
+        """Draw all active markers"""
+        for marker in self.markers:
+            alpha = int(255 * (marker['timer'] / (12 if marker['is_crit'] else 8)))
+            size = marker['size']
+            x, y = int(marker['x']), int(marker['y'])
+
+            if marker['is_crit']:
+                color = (255, 255, 100, alpha)
+            else:
+                color = (255, 255, 255, alpha)
+
+            # Draw X shape
+            overlay = pygame.Surface((size * 4, size * 4), pygame.SRCALPHA)
+            cx, cy = size * 2, size * 2
+
+            # Diagonal lines
+            pygame.draw.line(overlay, color, (cx - size, cy - size), (cx + size, cy + size), 2)
+            pygame.draw.line(overlay, color, (cx + size, cy - size), (cx - size, cy + size), 2)
+
+            surface.blit(overlay, (x - size * 2, y - size * 2))
+
+    def clear(self):
+        self.markers = []
+
+
+class ComboEffects:
+    """Visual effects for combo system"""
+
+    def __init__(self, screen_width, screen_height):
+        self.width = screen_width
+        self.height = screen_height
+        self.pulse_intensity = 0
+        self.combo_scale = 1.0
+        self.target_scale = 1.0
+        self.last_combo = 0
+        self.shake_offset = (0, 0)
+
+    def trigger(self, combo_count):
+        """Trigger effects based on combo count"""
+        if combo_count > self.last_combo:
+            # Combo increased - trigger effects
+            if combo_count >= 10:
+                self.pulse_intensity = min(0.3, combo_count * 0.02)
+                self.target_scale = min(2.0, 1.0 + combo_count * 0.05)
+
+                # Screen shake for big combos
+                if combo_count >= 20:
+                    shake = min(8, combo_count // 5)
+                    self.shake_offset = (
+                        random.randint(-shake, shake),
+                        random.randint(-shake, shake)
+                    )
+
+        self.last_combo = combo_count
+
+    def update(self):
+        """Update combo effects"""
+        # Decay pulse
+        self.pulse_intensity *= 0.95
+        if self.pulse_intensity < 0.01:
+            self.pulse_intensity = 0
+
+        # Smooth scale transition
+        self.combo_scale += (self.target_scale - self.combo_scale) * 0.1
+        self.target_scale += (1.0 - self.target_scale) * 0.05
+
+        # Decay shake
+        self.shake_offset = (
+            int(self.shake_offset[0] * 0.8),
+            int(self.shake_offset[1] * 0.8)
+        )
+
+    def draw_pulse(self, surface):
+        """Draw screen pulse effect"""
+        if self.pulse_intensity > 0.01:
+            overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            # Red/orange pulse from edges
+            alpha = int(self.pulse_intensity * 100)
+            for i in range(3):
+                border = 30 + i * 20
+                rect = pygame.Rect(border, border, self.width - border * 2, self.height - border * 2)
+                pygame.draw.rect(overlay, (255, 100, 50, alpha // (i + 1)), rect, 10 - i * 3)
+            surface.blit(overlay, (0, 0))
+
+    def get_combo_scale(self):
+        """Get current scale for combo text"""
+        return self.combo_scale
+
+    def get_shake_offset(self):
+        """Get current shake offset"""
+        return self.shake_offset

@@ -59,12 +59,25 @@ class BerserkSystem:
         self.session_score = 0
         self.current_multiplier = 1.0
         self.current_range = 'FAR'
-        
+
+        # Combo system
+        self.combo_count = 0
+        self.combo_timer = 0
+        self.combo_timeout = 120  # 2 seconds at 60fps to chain kills
+        self.max_combo = 0
+        self.combo_bonus_thresholds = {
+            5: 1.2,    # 5 kills = 20% bonus
+            10: 1.5,   # 10 kills = 50% bonus
+            20: 2.0,   # 20 kills = 100% bonus
+            50: 3.0    # 50 kills = 200% bonus
+        }
+
         # Visual feedback
         self.score_popups = []  # [{pos, value, lifetime, multiplier, range_name}]
+        self.combo_popup = None  # Special popup for combo milestones
         self.danger_pulse = 0
         self.extreme_close_time = 0  # Frames spent in extreme danger
-        
+
         # Statistics
         self.kills_by_range = {
             'EXTREME': 0,
@@ -99,18 +112,36 @@ class BerserkSystem:
         else:
             return (self.MULTIPLIERS['VERY_FAR'], 'VERY_FAR')
     
+    def get_combo_bonus(self) -> float:
+        """Get current combo bonus multiplier"""
+        bonus = 1.0
+        for threshold, mult in sorted(self.combo_bonus_thresholds.items()):
+            if self.combo_count >= threshold:
+                bonus = mult
+        return bonus
+
     def register_kill(self, base_score: int, player_pos: Tuple[float, float],
                      enemy_pos: Tuple[float, float], enemy_type: str = "default") -> int:
         """
         Register an enemy kill and calculate berserked score
-        
+
         Returns: Final score value with berserk multiplier applied
         """
         multiplier, range_name = self.calculate_multiplier(player_pos, enemy_pos)
-        
-        # Apply multiplier
-        final_score = int(base_score * multiplier)
-        
+
+        # Update combo
+        self.combo_count += 1
+        self.combo_timer = self.combo_timeout
+        if self.combo_count > self.max_combo:
+            self.max_combo = self.combo_count
+
+        # Get combo bonus
+        combo_bonus = self.get_combo_bonus()
+
+        # Apply multipliers (berserk * combo)
+        total_multiplier = multiplier * combo_bonus
+        final_score = int(base_score * total_multiplier)
+
         # Update stats
         self.total_score += final_score
         self.session_score += final_score
@@ -118,14 +149,22 @@ class BerserkSystem:
         self.total_kills += 1
         self.current_multiplier = multiplier
         self.current_range = range_name
-        
+
         # Create score popup
         self.create_score_popup(enemy_pos, final_score, multiplier, range_name)
-        
+
+        # Check for combo milestone
+        if self.combo_count in self.combo_bonus_thresholds:
+            self.combo_popup = {
+                'text': f"{self.combo_count}x COMBO!",
+                'lifetime': 90,
+                'bonus': self.combo_bonus_thresholds[self.combo_count]
+            }
+
         # Visual feedback for extreme close kills
         if range_name == 'EXTREME':
             self.danger_pulse = 30  # Flash screen
-            
+
         return final_score
     
     def create_score_popup(self, pos: Tuple[float, float], score: int, 
@@ -144,19 +183,31 @@ class BerserkSystem:
     
     def update(self, delta_time: float = 1.0):
         """Update berserk system state"""
+        # Update combo timer
+        if self.combo_timer > 0:
+            self.combo_timer -= 1
+            if self.combo_timer <= 0:
+                self.combo_count = 0  # Reset combo
+
+        # Update combo popup
+        if self.combo_popup:
+            self.combo_popup['lifetime'] -= 1
+            if self.combo_popup['lifetime'] <= 0:
+                self.combo_popup = None
+
         # Update score popups
         for popup in self.score_popups[:]:
             popup['lifetime'] -= 1
             popup['pos'][0] += popup['velocity'][0]
             popup['pos'][1] += popup['velocity'][1]
-            
+
             # Fade out in last 30 frames
             if popup['lifetime'] < 30:
                 popup['alpha'] = int((popup['lifetime'] / 30) * 255)
-            
+
             if popup['lifetime'] <= 0:
                 self.score_popups.remove(popup)
-        
+
         # Update danger pulse
         if self.danger_pulse > 0:
             self.danger_pulse -= 1
@@ -198,7 +249,26 @@ class BerserkSystem:
                     danger_surf.set_alpha(alpha)
                     danger_rect = danger_surf.get_rect(center=(int(x), int(y + 35)))
                     surface.blit(danger_surf, danger_rect)
-    
+
+        # Draw combo milestone popup (center screen)
+        if self.combo_popup:
+            popup = self.combo_popup
+            alpha = min(255, popup['lifetime'] * 3)
+
+            # Large combo text
+            combo_surf = font_large.render(popup['text'], True, (255, 255, 100))
+            combo_surf.set_alpha(alpha)
+            screen_w = surface.get_width()
+            combo_rect = combo_surf.get_rect(center=(screen_w // 2, 200))
+            surface.blit(combo_surf, combo_rect)
+
+            # Bonus text
+            bonus_text = f"+{int((popup['bonus'] - 1) * 100)}% BONUS!"
+            bonus_surf = font_small.render(bonus_text, True, (255, 200, 100))
+            bonus_surf.set_alpha(alpha)
+            bonus_rect = bonus_surf.get_rect(center=(screen_w // 2, 235))
+            surface.blit(bonus_surf, bonus_rect)
+
     def draw_hud(self, surface: pygame.Surface, x: int, y: int,
                 font_small: pygame.font.Font, font_large: pygame.font.Font):
         """
@@ -231,7 +301,43 @@ class BerserkSystem:
             label_surf = font_small.render("BERSERK", True, (200, 200, 200))
             label_rect = label_surf.get_rect(topright=(x, y + 30))
             surface.blit(label_surf, label_rect)
-    
+
+        # Combo indicator (show if combo > 2)
+        if self.combo_count >= 3:
+            combo_y = y + 55
+            combo_bonus = self.get_combo_bonus()
+
+            # Combo count with color based on level
+            if self.combo_count >= 50:
+                combo_color = (255, 50, 255)  # Purple for mega combo
+            elif self.combo_count >= 20:
+                combo_color = (255, 100, 100)  # Red for big combo
+            elif self.combo_count >= 10:
+                combo_color = (255, 200, 50)  # Orange for medium combo
+            else:
+                combo_color = (100, 255, 100)  # Green for starting combo
+
+            combo_text = f"{self.combo_count} COMBO"
+            combo_surf = font_small.render(combo_text, True, combo_color)
+            combo_rect = combo_surf.get_rect(topright=(x, combo_y))
+            surface.blit(combo_surf, combo_rect)
+
+            # Show bonus if active
+            if combo_bonus > 1.0:
+                bonus_text = f"+{int((combo_bonus - 1) * 100)}%"
+                bonus_surf = font_small.render(bonus_text, True, combo_color)
+                bonus_rect = bonus_surf.get_rect(topright=(x, combo_y + 18))
+                surface.blit(bonus_surf, bonus_rect)
+
+            # Combo timer bar
+            timer_pct = self.combo_timer / self.combo_timeout
+            bar_width = 60
+            bar_height = 4
+            bar_x = x - bar_width
+            bar_y = combo_y + 38
+            pygame.draw.rect(surface, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height))
+            pygame.draw.rect(surface, combo_color, (bar_x, bar_y, int(bar_width * timer_pct), bar_height))
+
     def draw_danger_zones(self, surface: pygame.Surface, player_pos: Tuple[int, int],
                          alpha: int = 60):
         """
@@ -273,7 +379,8 @@ class BerserkSystem:
             'kills_by_range': self.kills_by_range.copy(),
             'avg_multiplier': avg_multiplier,
             'extreme_kills': self.kills_by_range['EXTREME'],
-            'safe_kills': self.kills_by_range['FAR'] + self.kills_by_range['VERY_FAR']
+            'safe_kills': self.kills_by_range['FAR'] + self.kills_by_range['VERY_FAR'],
+            'max_combo': self.max_combo
         }
     
     def reset_session(self):

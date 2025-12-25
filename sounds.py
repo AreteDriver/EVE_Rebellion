@@ -67,6 +67,9 @@ class SoundGenerator:
         # Boss sounds
         self.sounds['boss_entrance'] = self._make_boss_entrance()
         self.sounds['boss_death'] = self._make_boss_death()
+        self.sounds['boss_attack'] = self._make_boss_attack()
+        self.sounds['boss_summon'] = self._make_boss_summon()
+        self.sounds['bomb'] = self._make_bomb()
 
         # Alert sounds
         self.sounds['low_health'] = self._make_low_health()
@@ -75,6 +78,17 @@ class SoundGenerator:
         # Victory/defeat
         self.sounds['victory'] = self._make_victory_fanfare()
         self.sounds['defeat'] = self._make_defeat()
+
+        # Unique powerup pickup sounds
+        self.sounds['powerup_nanite'] = self._make_powerup_nanite()
+        self.sounds['powerup_capacitor'] = self._make_powerup_capacitor()
+        self.sounds['powerup_overdrive'] = self._make_powerup_overdrive()
+        self.sounds['powerup_shield'] = self._make_powerup_shield()
+        self.sounds['powerup_damage'] = self._make_powerup_damage()
+        self.sounds['powerup_rapid'] = self._make_powerup_rapid()
+        self.sounds['powerup_bomb'] = self._make_powerup_bomb()
+        self.sounds['powerup_magnet'] = self._make_powerup_magnet()
+        self.sounds['powerup_invuln'] = self._make_powerup_invuln()
     
     def _numpy_to_sound(self, samples):
         """Convert numpy array to pygame Sound"""
@@ -499,6 +513,77 @@ class SoundGenerator:
 
         return self._numpy_to_sound(wave)
 
+    def _make_boss_attack(self):
+        """Heavy boss special attack sound"""
+        duration = 0.4
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Deep bass whoosh
+        freq = 150 + 200 * np.exp(-t * 8)
+        wave = np.sin(2 * np.pi * freq * t) * 0.4
+
+        # Add energy buildup
+        buildup = np.sin(2 * np.pi * 600 * t) * t / duration * 0.3
+        wave += buildup * np.exp(-t * 5)
+
+        # Burst at end
+        burst_t = t - 0.2
+        burst_mask = burst_t > 0
+        wave[burst_mask] += np.sin(2 * np.pi * 100 * burst_t[burst_mask]) * 0.4
+
+        envelope = np.exp(-t * 4) * (1 - np.exp(-t * 30))
+        wave *= envelope * 0.5
+
+        return self._numpy_to_sound(wave)
+
+    def _make_boss_summon(self):
+        """Boss summoning minions sound"""
+        duration = 0.5
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Warping effect
+        freq = 300 + 400 * np.sin(t * 20) * np.exp(-t * 4)
+        wave = np.sin(2 * np.pi * freq * t) * 0.3
+
+        # Portal opening sound
+        wave += np.sin(2 * np.pi * 200 * t) * (1 - np.exp(-t * 10)) * 0.3
+
+        # Shimmer
+        shimmer = np.sin(2 * np.pi * 1200 * t) * np.exp(-t * 8) * 0.15
+        wave += shimmer
+
+        envelope = (1 - np.exp(-t * 15)) * np.exp(-t * 3)
+        wave *= envelope * 0.5
+
+        return self._numpy_to_sound(wave)
+
+    def _make_bomb(self):
+        """Massive screen-clearing explosion"""
+        duration = 0.8
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Massive low frequency boom
+        freq = 60 + 100 * np.exp(-t * 5)
+        wave = np.sin(2 * np.pi * freq * t) * 0.6
+
+        # Heavy noise burst
+        noise = np.random.uniform(-1, 1, len(t))
+        noise_filtered = np.convolve(noise, np.ones(150)/150, mode='same')
+        wave += noise_filtered * np.exp(-t * 3) * 0.5
+
+        # High frequency sizzle
+        sizzle = np.sin(2 * np.pi * 2000 * t) * np.exp(-t * 10) * 0.2
+        wave += sizzle
+
+        # Shockwave whoosh
+        whoosh_freq = 500 * np.exp(-t * 4)
+        wave += np.sin(2 * np.pi * whoosh_freq * t) * np.exp(-t * 5) * 0.3
+
+        envelope = (1 - np.exp(-t * 50)) * np.exp(-t * 2.5)
+        wave *= envelope * 0.7
+
+        return self._numpy_to_sound(wave)
+
     def _make_low_health(self):
         """Warning beep for low health"""
         duration = 0.4
@@ -576,6 +661,181 @@ class SoundGenerator:
         wave = np.clip(wave, -1, 1) * 0.4
         return self._numpy_to_sound(wave)
 
+    def _make_powerup_nanite(self):
+        """Healing/regeneration sound - warm, organic bubbling"""
+        duration = 0.35
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Warm ascending tones
+        wave = np.sin(2 * np.pi * 300 * t) * np.exp(-t * 8) * 0.3
+        wave += np.sin(2 * np.pi * 400 * t) * np.exp(-(t - 0.08) * 8) * 0.25
+        wave += np.sin(2 * np.pi * 500 * t) * np.exp(-(t - 0.16) * 8) * 0.2
+
+        # Soft bubbling texture
+        bubble = np.sin(2 * np.pi * 800 * t) * np.sin(2 * np.pi * 15 * t) * 0.1
+        wave += bubble * np.exp(-t * 6)
+
+        wave *= 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_powerup_capacitor(self):
+        """Rocket reload - mechanical click and charge"""
+        duration = 0.25
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Mechanical click
+        click = np.random.uniform(-1, 1, len(t)) * np.exp(-t * 80) * 0.4
+
+        # Charging whine
+        charge_freq = 200 + t * 600
+        charge = np.sin(2 * np.pi * charge_freq * t) * 0.3
+        charge *= (1 - np.exp(-t * 30)) * np.exp(-t * 4)
+
+        wave = click + charge
+        wave *= 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_powerup_overdrive(self):
+        """Speed boost - accelerating whoosh"""
+        duration = 0.3
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Accelerating sweep
+        freq = 150 + t * 1200
+        wave = np.sin(2 * np.pi * freq * t) * 0.3
+
+        # Wind noise
+        noise = np.random.uniform(-0.3, 0.3, len(t))
+        noise_filtered = np.convolve(noise, np.ones(80)/80, mode='same')
+        wave += noise_filtered * 0.4
+
+        envelope = (1 - np.exp(-t * 40)) * (1 - t / duration)
+        wave *= envelope * 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_powerup_shield(self):
+        """Shield boost - electric shimmer"""
+        duration = 0.3
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Electric shimmer
+        wave = np.sin(2 * np.pi * 600 * t) * 0.25
+        wave += np.sin(2 * np.pi * 900 * t) * 0.15
+        wave += np.sin(2 * np.pi * 1200 * t) * 0.1
+
+        # Sparkle modulation
+        sparkle = 0.7 + 0.3 * np.sin(2 * np.pi * 40 * t)
+        wave *= sparkle
+
+        envelope = np.exp(-t * 6) * (1 - np.exp(-t * 60))
+        wave *= envelope * 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_powerup_damage(self):
+        """Damage amplifier - powerful aggressive charge"""
+        duration = 0.35
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Deep powerful tone
+        wave = np.sin(2 * np.pi * 120 * t) * 0.4
+        wave += np.sin(2 * np.pi * 180 * t) * 0.3
+
+        # Aggressive overtones
+        wave += np.sin(2 * np.pi * 360 * t) * 0.2
+        wave += np.sin(2 * np.pi * 540 * t) * 0.1
+
+        # Punch
+        punch = np.exp(-t * 25) * 0.5
+        wave *= (0.5 + punch)
+
+        envelope = (1 - np.exp(-t * 50)) * np.exp(-t * 5)
+        wave *= envelope * 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_powerup_rapid(self):
+        """Rapid fire - fast clicking/whirring"""
+        duration = 0.25
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Rapid clicks (machine gun like)
+        click_freq = 30  # clicks per second
+        clicks = np.sin(2 * np.pi * click_freq * t)
+        clicks = (clicks > 0.8).astype(float) * 0.5
+
+        # Whirring undertone
+        whir = np.sin(2 * np.pi * 400 * t) * 0.2
+        whir += np.sin(2 * np.pi * 800 * t) * 0.1
+
+        wave = clicks + whir
+        envelope = (1 - np.exp(-t * 40)) * np.exp(-t * 6)
+        wave *= envelope * 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_powerup_bomb(self):
+        """Bomb charge - heavy mechanical loading"""
+        duration = 0.3
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Heavy thunk
+        thunk = np.sin(2 * np.pi * 80 * t) * np.exp(-t * 20) * 0.5
+
+        # Mechanical slide
+        slide_freq = 300 - t * 200
+        slide = np.sin(2 * np.pi * slide_freq * t) * 0.3
+        slide *= np.exp(-t * 8)
+
+        # Lock click
+        click_start = int(0.2 * self.sample_rate * duration)
+        click = np.zeros_like(t)
+        click[click_start:] = np.random.uniform(-0.4, 0.4, len(t) - click_start)
+        click *= np.exp(-np.maximum(0, t - 0.06) * 50)
+
+        wave = thunk + slide + click
+        wave *= 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_powerup_magnet(self):
+        """Tractor beam - humming pull"""
+        duration = 0.35
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Humming base
+        hum = np.sin(2 * np.pi * 150 * t) * 0.3
+        hum += np.sin(2 * np.pi * 300 * t) * 0.2
+
+        # Wobble effect (tractor beam pulsing)
+        wobble = 0.7 + 0.3 * np.sin(2 * np.pi * 8 * t)
+        hum *= wobble
+
+        # High frequency attraction whine
+        pull_freq = 800 + 200 * np.sin(2 * np.pi * 4 * t)
+        pull = np.sin(2 * np.pi * pull_freq * t) * 0.15
+
+        wave = hum + pull
+        envelope = (1 - np.exp(-t * 30)) * np.exp(-t * 4)
+        wave *= envelope * 0.5
+        return self._numpy_to_sound(wave)
+
+    def _make_powerup_invuln(self):
+        """Invulnerability/hardener - solid protective golden tone"""
+        duration = 0.4
+        t = np.linspace(0, duration, int(self.sample_rate * duration))
+
+        # Majestic chord (golden/powerful feel)
+        wave = np.sin(2 * np.pi * 440 * t) * 0.25  # A
+        wave += np.sin(2 * np.pi * 550 * t) * 0.2   # C#
+        wave += np.sin(2 * np.pi * 660 * t) * 0.2   # E
+        wave += np.sin(2 * np.pi * 880 * t) * 0.15  # A octave
+
+        # Shimmering effect
+        shimmer = 0.8 + 0.2 * np.sin(2 * np.pi * 12 * t)
+        wave *= shimmer
+
+        # Strong attack, sustained release
+        envelope = (1 - np.exp(-t * 60)) * np.exp(-t * 3)
+        wave *= envelope * 0.5
+        return self._numpy_to_sound(wave)
+
     def play(self, sound_name, volume=1.0):
         """Play a sound effect"""
         if not self.enabled:
@@ -591,51 +851,272 @@ class SoundGenerator:
             return None
         return self.sounds.get(sound_name)
 
+    def set_volume(self, volume):
+        """Set the master volume for all sound effects (0.0 to 1.0)"""
+        self.master_volume = max(0.0, min(1.0, volume))
+        # Apply to all cached sounds
+        for sound in self.sounds.values():
+            if sound:
+                try:
+                    sound.set_volume(self.master_volume)
+                except:
+                    pass
+
 
 class MusicGenerator:
-    """Simple procedural background music"""
-    
-    def __init__(self, sample_rate=22050):
+    """Vaporwave procedural background music with sick bass lines"""
+
+    def __init__(self, sample_rate=44100):
         self.sample_rate = sample_rate
         self.playing = False
         self.enabled = pygame.mixer.get_init() is not None
-    
-    def generate_ambient_loop(self, duration=30.0):
-        """Generate ambient space music loop"""
+        self.current_stage = 0
+
+    def _lowpass_filter(self, wave, cutoff_ratio=0.1):
+        """Simple lowpass filter for that lo-fi vaporwave sound"""
+        # Moving average filter
+        window_size = max(1, int(1.0 / cutoff_ratio))
+        kernel = np.ones(window_size) / window_size
+        return np.convolve(wave, kernel, mode='same')
+
+    def _add_reverb(self, wave, decay=0.4, delay_samples=None):
+        """Add reverb/echo effect"""
+        if delay_samples is None:
+            delay_samples = int(self.sample_rate * 0.08)
+        result = wave.copy()
+        for i in range(1, 6):
+            delayed = np.zeros_like(wave)
+            shift = delay_samples * i
+            if shift < len(wave):
+                delayed[shift:] = wave[:-shift] * (decay ** i)
+                result += delayed
+        return result / 2
+
+    def _generate_bass_line(self, t, bpm, pattern, root_note=41.2):
+        """Generate groovy bass line with sub-bass
+
+        root_note: frequency in Hz (default E1 = 41.2 Hz)
+        pattern: list of (note_offset_semitones, duration_beats)
+        """
+        beat_duration = 60.0 / bpm
+        bass = np.zeros_like(t)
+
+        # Note frequencies relative to root
+        def note_freq(semitones):
+            return root_note * (2 ** (semitones / 12.0))
+
+        current_time = 0
+        pattern_idx = 0
+
+        while current_time < t[-1]:
+            note_semitones, duration_beats = pattern[pattern_idx % len(pattern)]
+            note_duration = duration_beats * beat_duration
+            freq = note_freq(note_semitones)
+
+            # Find samples for this note
+            mask = (t >= current_time) & (t < current_time + note_duration)
+            local_t = t[mask] - current_time
+
+            if len(local_t) > 0:
+                # Sub-bass (pure sine, very low)
+                sub = np.sin(2 * np.pi * freq * local_t) * 0.5
+
+                # Mid-bass with slight saturation for growl
+                mid = np.sin(2 * np.pi * freq * 2 * local_t) * 0.3
+                mid = np.tanh(mid * 2) * 0.5  # Soft saturation
+
+                # Upper harmonics for punch
+                upper = np.sin(2 * np.pi * freq * 3 * local_t) * 0.15
+                upper += np.sin(2 * np.pi * freq * 4 * local_t) * 0.08
+
+                # Envelope - punchy attack, smooth sustain
+                env_attack = np.minimum(local_t / 0.02, 1.0)
+                env_release = np.maximum(0, 1 - (local_t - note_duration + 0.1) / 0.1)
+                envelope = env_attack * env_release
+
+                bass[mask] = (sub + mid + upper) * envelope
+
+            current_time += note_duration
+            pattern_idx += 1
+
+        return bass
+
+    def _generate_synth_pad(self, t, chord_freqs, detune=0.02):
+        """Generate lush detuned synth pad (classic vaporwave)"""
+        pad = np.zeros_like(t)
+
+        for freq in chord_freqs:
+            # Multiple detuned oscillators per note
+            for detune_amt in [-detune, 0, detune]:
+                f = freq * (1 + detune_amt)
+                # Saw wave approximation (sum of harmonics)
+                for h in range(1, 6):
+                    pad += np.sin(2 * np.pi * f * h * t) / h * 0.08
+
+        # Slow filter sweep for movement
+        sweep = 0.3 + 0.2 * np.sin(2 * np.pi * 0.03 * t)
+        pad = self._lowpass_filter(pad, sweep.mean())
+
+        return pad * 0.4
+
+    def _generate_arp(self, t, bpm, notes, gate=0.5):
+        """Generate arpeggiated synth line"""
+        beat_duration = 60.0 / bpm
+        note_duration = beat_duration * gate
+        arp = np.zeros_like(t)
+
+        current_time = 0
+        note_idx = 0
+
+        while current_time < t[-1]:
+            freq = notes[note_idx % len(notes)]
+            mask = (t >= current_time) & (t < current_time + note_duration)
+            local_t = t[mask] - current_time
+
+            if len(local_t) > 0:
+                # Square-ish wave
+                wave = np.sin(2 * np.pi * freq * local_t)
+                wave += np.sin(2 * np.pi * freq * 2 * local_t) * 0.5
+                wave = np.tanh(wave)
+
+                # Sharp envelope
+                env = np.exp(-local_t * 8)
+                arp[mask] = wave * env * 0.15
+
+            current_time += beat_duration / 2  # 8th notes
+            note_idx += 1
+
+        return arp
+
+    def generate_stage_music(self, stage=0, duration=45.0):
+        """Generate vaporwave music for specific stage"""
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
-        # Deep drone bass
-        bass = np.sin(2 * np.pi * 55 * t) * 0.15
-        bass += np.sin(2 * np.pi * 82.5 * t) * 0.1
-        
-        # Slow pad with filter sweep
-        pad_freq = 220 + 50 * np.sin(2 * np.pi * 0.05 * t)
-        pad = np.sin(2 * np.pi * pad_freq * t) * 0.08
-        pad += np.sin(2 * np.pi * pad_freq * 1.5 * t) * 0.05
-        
-        # Subtle high shimmer
-        shimmer = np.sin(2 * np.pi * 880 * t) * 0.02
-        shimmer *= 0.5 + 0.5 * np.sin(2 * np.pi * 0.2 * t)
-        
-        wave = bass + pad + shimmer
-        
+
+        # Stage-specific settings
+        if stage == 0:  # Asteroid Belt Escape - chill intro
+            bpm = 75
+            root = 41.2  # E1
+            bass_pattern = [
+                (0, 2), (0, 1), (5, 1),  # E, E, A
+                (7, 2), (5, 1), (3, 1),  # B, A, G
+                (0, 2), (0, 1), (-2, 1),  # E, E, D
+                (0, 2), (3, 1), (5, 1),  # E, G, A
+            ]
+            chord = [164.81, 196.00, 246.94, 329.63]  # E minor 7
+            arp_notes = [329.63, 392.00, 493.88, 659.26]
+
+        elif stage == 1:  # Amarr Patrol - tension building
+            bpm = 82
+            root = 36.71  # D1
+            bass_pattern = [
+                (0, 1), (0, 0.5), (12, 0.5), (10, 1), (7, 1),
+                (5, 1), (5, 0.5), (7, 0.5), (5, 1), (3, 1),
+                (0, 2), (0, 1), (5, 1),
+                (7, 1), (10, 1), (12, 1), (10, 1),
+            ]
+            chord = [146.83, 174.61, 220.00, 293.66]  # D minor 7
+            arp_notes = [293.66, 349.23, 440.00, 523.25]
+
+        elif stage == 2:  # Slave Colony Liberation - emotional
+            bpm = 70
+            root = 43.65  # F1
+            bass_pattern = [
+                (0, 2), (0, 1), (0, 0.5), (3, 0.5),
+                (5, 2), (3, 1), (0, 1),
+                (-2, 2), (0, 1), (3, 1),
+                (5, 1), (3, 1), (0, 2),
+            ]
+            chord = [174.61, 207.65, 261.63, 349.23]  # F major 7
+            arp_notes = [523.25, 659.26, 783.99, 1046.50]
+
+        elif stage == 3:  # Gate Assault - intense
+            bpm = 90
+            root = 32.70  # C1
+            bass_pattern = [
+                (0, 0.5), (0, 0.5), (12, 0.5), (0, 0.5),
+                (10, 0.5), (0, 0.5), (7, 0.5), (0, 0.5),
+                (5, 1), (7, 1), (10, 1), (12, 1),
+                (0, 0.5), (0, 0.5), (0, 0.5), (15, 0.5), (12, 1), (10, 1),
+            ]
+            chord = [130.81, 155.56, 196.00, 261.63]  # C minor 7
+            arp_notes = [261.63, 311.13, 392.00, 466.16, 523.25]
+
+        else:  # Final Push / Boss - epic
+            bpm = 95
+            root = 27.50  # A0 - super deep
+            bass_pattern = [
+                (0, 1), (12, 0.5), (0, 0.5), (7, 1), (5, 1),
+                (0, 0.5), (0, 0.5), (12, 0.5), (10, 0.5), (7, 1), (5, 1),
+                (3, 1), (5, 1), (7, 2),
+                (0, 0.5), (12, 0.5), (0, 0.5), (12, 0.5), (10, 1), (7, 1),
+            ]
+            chord = [110.00, 130.81, 164.81, 220.00]  # A minor 7
+            arp_notes = [440.00, 523.25, 659.26, 783.99, 880.00]
+
+        # Generate layers
+        bass = self._generate_bass_line(t, bpm, bass_pattern, root)
+        pad = self._generate_synth_pad(t, chord)
+        arp = self._generate_arp(t, bpm, arp_notes)
+
+        # Add subtle kick drum on beats
+        kick = np.zeros_like(t)
+        beat_duration = 60.0 / bpm
+        for beat_time in np.arange(0, duration, beat_duration):
+            mask = (t >= beat_time) & (t < beat_time + 0.15)
+            local_t = t[mask] - beat_time
+            if len(local_t) > 0:
+                # Kick: pitch drop + noise
+                kick_freq = 150 * np.exp(-local_t * 30) + 40
+                kick_wave = np.sin(2 * np.pi * kick_freq * local_t)
+                kick_env = np.exp(-local_t * 15)
+                kick[mask] += kick_wave * kick_env * 0.4
+
+        # Hi-hat pattern (offbeat for groove)
+        hihat = np.zeros_like(t)
+        for beat_time in np.arange(beat_duration / 2, duration, beat_duration):
+            mask = (t >= beat_time) & (t < beat_time + 0.05)
+            local_t = t[mask] - beat_time
+            if len(local_t) > 3:  # Need enough samples for filter
+                noise = np.random.uniform(-1, 1, len(local_t))
+                noise = self._lowpass_filter(noise, 0.3)[:len(local_t)]
+                hat_env = np.exp(-local_t * 40)
+                hihat[mask] += noise * hat_env * 0.08
+
+        # Mix everything
+        mix = bass * 0.45 + pad * 0.25 + arp * 0.15 + kick * 0.35 + hihat * 0.1
+
+        # Add reverb for space
+        mix = self._add_reverb(mix, decay=0.35)
+
+        # Slight tape wobble effect (vaporwave aesthetic)
+        wobble = 1 + 0.002 * np.sin(2 * np.pi * 0.5 * t)
+        # Apply wobble by resampling would be complex, so just modulate amplitude slightly
+        mix = mix * wobble
+
+        # Final compression and limiting
+        mix = np.tanh(mix * 1.5) * 0.7
+
         # Normalize
-        wave = wave / np.max(np.abs(wave)) * 0.3
-        
-        return wave
-    
-    def start_music(self):
-        """Start background music"""
+        max_val = np.max(np.abs(mix))
+        if max_val > 0:
+            mix = mix / max_val * 0.85
+
+        return mix
+
+    def start_music(self, stage=0):
+        """Start background music for specific stage"""
         if not self.enabled or self.playing:
             return
-        
+
+        self.current_stage = stage
+
         try:
-            # Generate and save to temp file
-            wave = self.generate_ambient_loop(30.0)
+            # Generate stage-specific music
+            wave = self.generate_stage_music(stage, 45.0)
             wave = np.clip(wave, -1, 1)
             samples = (wave * 32767).astype(np.int16)
             stereo = np.column_stack((samples, samples))
-            
+
             # Save as WAV in memory
             import wave as wave_module
             buffer = io.BytesIO()
@@ -644,16 +1125,22 @@ class MusicGenerator:
                 wf.setsampwidth(2)
                 wf.setframerate(self.sample_rate)
                 wf.writeframes(stereo.tobytes())
-            
+
             buffer.seek(0)
             pygame.mixer.music.load(buffer, 'wav')
-            pygame.mixer.music.set_volume(0.3)
+            pygame.mixer.music.set_volume(0.4)
             pygame.mixer.music.play(-1)  # Loop forever
             self.playing = True
         except Exception as e:
             print(f"Could not start music: {e}")
             self.enabled = False
-    
+
+    def change_stage(self, stage):
+        """Change to music for a different stage"""
+        if stage != self.current_stage:
+            self.stop_music()
+            self.start_music(stage)
+
     def stop_music(self):
         """Stop background music"""
         if not self.enabled:
@@ -663,7 +1150,7 @@ class MusicGenerator:
         except:
             pass
         self.playing = False
-    
+
     def set_volume(self, volume):
         """Set music volume (0.0 to 1.0)"""
         if not self.enabled:
