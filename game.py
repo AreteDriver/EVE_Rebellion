@@ -4,6 +4,7 @@ import random
 import math
 import json
 import os
+import sys
 from constants import *
 from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, Wingman,
                      RefugeePod, Powerup, Explosion, Star, ParallaxBackground)
@@ -1610,7 +1611,7 @@ class Game:
         asteroid_damage = self.hazards.get_asteroid_collisions(self.player.rect)
         if asteroid_damage > 0:
             total_damage += asteroid_damage
-            self.shake.trigger(10, 8)
+            self.shake.add(10)
             self.play_sound('hull_hit', 0.7)
             self.particle_emitter.emit_explosion(player_x, player_y, (150, 100, 50), 20, 8, 5)
 
@@ -1626,13 +1627,13 @@ class Game:
         mine_damage = self.hazards.get_mine_damage(player_x, player_y)
         if mine_damage > 0:
             total_damage += mine_damage
-            self.shake.trigger(15, 10)
+            self.shake.add(15)
             self.play_sound('explosion', 0.8)
 
         # Apply accumulated damage
         if total_damage > 0:
             self.player.take_damage(total_damage)
-            self.damage_numbers.add_number(player_x, player_y, total_damage, (255, 100, 100))
+            self.damage_numbers.spawn(player_x, player_y, total_damage, (255, 100, 100))
 
         # Warp bubble pull effect
         pull_x, pull_y = self.hazards.get_bubble_pull(player_x, player_y)
