@@ -6,38 +6,406 @@ import os
 from constants import *
 from visual_enhancements import add_ship_glow, add_colored_tint, add_outline, add_strong_outline
 
+# Import ship assets module for EVE renders
+try:
+    from ship_assets import (
+        ShipAssetManager, PLAYER_SHIPS, ENEMY_SHIPS, INDUSTRIAL, BOSSES, ALL_SHIPS
+    )
+    _ship_asset_manager = None
+    SHIP_ASSETS_AVAILABLE = True
+except ImportError:
+    SHIP_ASSETS_AVAILABLE = False
+    _ship_asset_manager = None
+
 # Ship sprite cache
 _ship_sprite_cache = {}
 _SPRITE_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'ship_sprites')
+_EVE_SPRITE_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'ships', 'processed')
 
-def load_ship_sprite(ship_name, target_size=None):
-    """Load a rendered ship sprite from the ship_sprites directory.
+# EVE Type ID mapping for ships
+EVE_TYPE_IDS = {
+    # Player ships (Minmatar)
+    'rifter': 587,
+    'wolf': 11379,
+    'jaguar': 11377,
+    # Enemy ships (Amarr frigates)
+    'executioner': 589,
+    'punisher': 597,
+    'tormentor': 589,  # Use executioner model
+    'crucifier': 589,
+    'coercer': 597,    # Use punisher model
+    # Cruisers
+    'omen': 2006,
+    'maller': 624,
+    'arbitrator': 624,
+    'augoror': 624,
+    # Battlecruisers
+    'harbinger': 2006,  # Use omen for now
+    'prophecy': 624,    # Use maller for now
+    # Battleships
+    'apocalypse': 642,
+    'abaddon': 24690,
+    'armageddon': 24690,
+    # Capitals
+    'archon': 642,      # Use apocalypse
+    'aeon': 24690,      # Use abaddon
+    'avatar': 24690,
+    # Industrial
+    'bestower': 1944,
+    'sigil': 2863,
+    # Fallbacks
+    'interceptor': 589,
+    'bomber': 597,
+    'zealot': 2006,
+    'sacrilege': 624,
+}
+
+# Ship class scale ratios (base size is 48px for frigates)
+SHIP_SCALE_RATIOS = {
+    'frigate': 1.0,
+    'destroyer': 1.2,
+    'cruiser': 1.5,
+    'battlecruiser': 1.8,
+    'battleship': 2.5,
+    'industrial': 1.2,
+    'capital': 3.0,
+    'titan': 4.0,
+}
+
+# Map ship names to their class
+SHIP_CLASSES = {
+    'rifter': 'frigate', 'wolf': 'frigate', 'jaguar': 'frigate',
+    'executioner': 'frigate', 'punisher': 'frigate', 'tormentor': 'frigate',
+    'crucifier': 'frigate', 'coercer': 'destroyer',
+    'omen': 'cruiser', 'maller': 'cruiser', 'arbitrator': 'cruiser', 'augoror': 'cruiser',
+    'harbinger': 'battlecruiser', 'prophecy': 'battlecruiser',
+    'apocalypse': 'battleship', 'abaddon': 'battleship', 'armageddon': 'battleship',
+    'archon': 'capital', 'aeon': 'capital', 'revelation': 'capital',
+    'avatar': 'titan',
+    'bestower': 'industrial', 'sigil': 'industrial',
+    'interceptor': 'frigate', 'bomber': 'frigate',
+    'zealot': 'cruiser', 'sacrilege': 'cruiser',
+    'drone': 'frigate', 'heavy_drone': 'frigate',
+}
+
+def get_ship_asset_manager():
+    """Get or create the ship asset manager singleton."""
+    global _ship_asset_manager
+    if _ship_asset_manager is None and SHIP_ASSETS_AVAILABLE:
+        _ship_asset_manager = ShipAssetManager()
+    return _ship_asset_manager
+
+def load_ship_sprite(ship_name, target_size=None, use_eve_assets=True):
+    """Load a rendered ship sprite, preferring EVE API assets.
 
     Args:
         ship_name: Name of the ship (e.g., 'rifter', 'executioner')
         target_size: Optional (width, height) tuple to scale the sprite to
+        use_eve_assets: If True, try EVE API assets first
 
     Returns:
         pygame.Surface with the ship sprite, or None if not found
     """
-    cache_key = (ship_name, target_size)
+    cache_key = (ship_name, target_size, use_eve_assets)
     if cache_key in _ship_sprite_cache:
         return _ship_sprite_cache[cache_key].copy()
 
-    sprite_path = os.path.join(_SPRITE_DIR, f"{ship_name}.png")
-    if not os.path.exists(sprite_path):
+    sprite = None
+    ship_name_lower = ship_name.lower()
+
+    # Try EVE API processed assets first
+    if use_eve_assets and ship_name_lower in EVE_TYPE_IDS:
+        type_id = EVE_TYPE_IDS[ship_name_lower]
+        # Check for processed EVE asset
+        eve_sprite_path = os.path.join(
+            _EVE_SPRITE_DIR,
+            f"{ship_name_lower}_{type_id}.png"
+        )
+        if os.path.exists(eve_sprite_path):
+            try:
+                sprite = pygame.image.load(eve_sprite_path).convert_alpha()
+            except pygame.error:
+                pass
+
+    # Fall back to old ship_sprites directory
+    if sprite is None:
+        sprite_path = os.path.join(_SPRITE_DIR, f"{ship_name}.png")
+        if os.path.exists(sprite_path):
+            try:
+                sprite = pygame.image.load(sprite_path).convert_alpha()
+            except pygame.error:
+                pass
+
+    if sprite is None:
         return None
 
-    try:
-        sprite = pygame.image.load(sprite_path).convert_alpha()
+    # Apply scaling based on ship class if no explicit size given
+    if target_size is None and ship_name_lower in SHIP_CLASSES:
+        ship_class = SHIP_CLASSES[ship_name_lower]
+        scale_ratio = SHIP_SCALE_RATIOS.get(ship_class, 1.0)
+        base_size = 48  # Base frigate size
+        new_size = int(base_size * scale_ratio)
+        # Maintain aspect ratio
+        orig_w, orig_h = sprite.get_size()
+        aspect = orig_w / orig_h
+        if aspect > 1:
+            target_size = (new_size, int(new_size / aspect))
+        else:
+            target_size = (int(new_size * aspect), new_size)
 
-        if target_size:
-            sprite = pygame.transform.smoothscale(sprite, target_size)
+    if target_size:
+        sprite = pygame.transform.smoothscale(sprite, target_size)
 
-        _ship_sprite_cache[cache_key] = sprite
-        return sprite.copy()
-    except pygame.error:
+    _ship_sprite_cache[cache_key] = sprite
+    return sprite.copy()
+
+
+def get_ship_scale(ship_name):
+    """Get the scale ratio for a ship based on its class."""
+    ship_class = SHIP_CLASSES.get(ship_name.lower(), 'frigate')
+    return SHIP_SCALE_RATIOS.get(ship_class, 1.0)
+
+
+class ShipRenderer:
+    """Handles ship rendering with effects, damage states, and animations."""
+
+    # Faction-specific colors
+    MINMATAR_ENGINE = (255, 120, 40)   # Orange/red rusty thrust
+    AMARR_ENGINE = (255, 220, 100)     # Golden/yellow thrust
+    SHIELD_COLOR = (100, 180, 255)     # Blue shield shimmer
+    ARMOR_COLOR = (180, 140, 80)       # Bronze armor
+
+    def __init__(self, ship_name, is_player=False):
+        self.ship_name = ship_name.lower()
+        self.is_player = is_player
+        self.type_id = EVE_TYPE_IDS.get(self.ship_name)
+        self.ship_class = SHIP_CLASSES.get(self.ship_name, 'frigate')
+
+        # Load base sprite
+        self.base_sprite = load_ship_sprite(ship_name)
+        if self.base_sprite:
+            self.width, self.height = self.base_sprite.get_size()
+        else:
+            self.width, self.height = 48, 48
+
+        # Animation state
+        self.engine_frame = 0
+        self.engine_timer = 0
+        self.thrust_intensity = 0.5
+
+        # Damage state
+        self.damage_level = 0  # 0=none, 1=light, 2=moderate, 3=critical
+        self.fire_particles = []
+        self.smoke_particles = []
+        self.spark_timer = 0
+
+        # Shield effect
+        self.shield_shimmer = 0
+        self.shield_hit_timer = 0
+
+        # Determine faction for engine color
+        if self.ship_name in ['rifter', 'wolf', 'jaguar']:
+            self.engine_color = self.MINMATAR_ENGINE
+            self.faction = 'minmatar'
+        else:
+            self.engine_color = self.AMARR_ENGINE
+            self.faction = 'amarr'
+
+    def update(self, health_percent=1.0, is_moving=False, shield_active=False):
+        """Update animation states."""
+        # Update engine animation
+        self.engine_timer += 1
+        if self.engine_timer >= 3:
+            self.engine_timer = 0
+            self.engine_frame = (self.engine_frame + 1) % 6
+
+        # Update thrust intensity based on movement
+        target_thrust = 0.8 if is_moving else 0.4
+        self.thrust_intensity += (target_thrust - self.thrust_intensity) * 0.1
+
+        # Update damage level based on health
+        if health_percent > 0.75:
+            self.damage_level = 0
+        elif health_percent > 0.50:
+            self.damage_level = 1
+        elif health_percent > 0.25:
+            self.damage_level = 2
+        else:
+            self.damage_level = 3
+
+        # Update damage particles
+        self._update_damage_particles()
+
+        # Update shield shimmer
+        self.shield_shimmer = (self.shield_shimmer + 0.1) % (math.pi * 2)
+        if self.shield_hit_timer > 0:
+            self.shield_hit_timer -= 1
+
+    def _update_damage_particles(self):
+        """Update fire and smoke particles for damage visualization."""
+        # Spawn new particles based on damage level
+        if self.damage_level >= 2 and random.random() < 0.3:
+            # Smoke particles
+            self.smoke_particles.append({
+                'x': random.randint(-self.width // 4, self.width // 4),
+                'y': random.randint(-self.height // 4, self.height // 4),
+                'alpha': 200,
+                'size': random.randint(3, 8),
+                'drift_x': random.uniform(-0.5, 0.5),
+                'drift_y': random.uniform(-1.5, -0.5),
+            })
+
+        if self.damage_level >= 3 and random.random() < 0.4:
+            # Fire particles
+            self.fire_particles.append({
+                'x': random.randint(-self.width // 4, self.width // 4),
+                'y': random.randint(-self.height // 4, self.height // 4),
+                'alpha': 255,
+                'size': random.randint(2, 6),
+                'life': random.randint(10, 20),
+            })
+
+        # Update existing particles
+        for p in self.smoke_particles[:]:
+            p['x'] += p['drift_x']
+            p['y'] += p['drift_y']
+            p['alpha'] -= 5
+            if p['alpha'] <= 0:
+                self.smoke_particles.remove(p)
+
+        for p in self.fire_particles[:]:
+            p['life'] -= 1
+            p['alpha'] = int(255 * (p['life'] / 20))
+            if p['life'] <= 0:
+                self.fire_particles.remove(p)
+
+        # Limit particle counts
+        self.smoke_particles = self.smoke_particles[-20:]
+        self.fire_particles = self.fire_particles[-15:]
+
+    def render(self, surface, x, y, angle=0):
+        """Render the ship with all effects at the given position."""
+        if self.base_sprite is None:
+            return
+
+        # Start with base sprite
+        ship_img = self.base_sprite.copy()
+
+        # Apply damage tint
+        if self.damage_level > 0:
+            ship_img = self._apply_damage_tint(ship_img)
+
+        # Rotate if needed
+        if angle != 0:
+            ship_img = pygame.transform.rotate(ship_img, angle)
+
+        # Get blit position (centered)
+        rect = ship_img.get_rect(center=(x, y))
+
+        # Draw smoke particles (behind ship)
+        for p in self.smoke_particles:
+            smoke_alpha = min(p['alpha'], 150)
+            smoke_surf = pygame.Surface((p['size'] * 2, p['size'] * 2), pygame.SRCALPHA)
+            pygame.draw.circle(smoke_surf, (80, 80, 80, smoke_alpha),
+                             (p['size'], p['size']), p['size'])
+            surface.blit(smoke_surf, (x + p['x'] - p['size'], y + p['y'] - p['size']))
+
+        # Draw ship
+        surface.blit(ship_img, rect)
+
+        # Draw fire particles (in front of ship)
+        for p in self.fire_particles:
+            fire_color = (255, 150 + random.randint(0, 50), 50, p['alpha'])
+            fire_surf = pygame.Surface((p['size'] * 2, p['size'] * 2), pygame.SRCALPHA)
+            pygame.draw.circle(fire_surf, fire_color, (p['size'], p['size']), p['size'])
+            surface.blit(fire_surf, (x + p['x'] - p['size'], y + p['y'] - p['size']),
+                        special_flags=pygame.BLEND_RGBA_ADD)
+
+        # Draw engine glow
+        self._draw_engine_glow(surface, x, y, angle)
+
+        # Draw shield effect if active
+        if self.shield_hit_timer > 0:
+            self._draw_shield_hit(surface, x, y)
+
+    def _apply_damage_tint(self, surface):
+        """Apply damage coloring to the ship surface."""
+        result = surface.copy()
+
+        if self.damage_level == 1:
+            # Light damage - slight darkening
+            dark = pygame.Surface(result.get_size(), pygame.SRCALPHA)
+            dark.fill((0, 0, 0, 30))
+            result.blit(dark, (0, 0))
+        elif self.damage_level == 2:
+            # Moderate damage - orange tint
+            tint = pygame.Surface(result.get_size(), pygame.SRCALPHA)
+            tint.fill((100, 50, 0, 50))
+            result.blit(tint, (0, 0))
+        elif self.damage_level == 3:
+            # Critical damage - red flicker
+            if random.random() < 0.3:
+                tint = pygame.Surface(result.get_size(), pygame.SRCALPHA)
+                tint.fill((150, 0, 0, 80))
+                result.blit(tint, (0, 0))
+
+        return result
+
+    def _draw_engine_glow(self, surface, x, y, angle):
+        """Draw engine thrust glow effect."""
+        # Calculate engine position (bottom of ship)
+        rad = math.radians(angle)
+        engine_offset_y = self.height // 2 + 5
+        engine_x = x - math.sin(rad) * engine_offset_y
+        engine_y = y + math.cos(rad) * engine_offset_y
+
+        # Glow intensity with flicker
+        intensity = self.thrust_intensity * (0.8 + 0.2 * math.sin(self.engine_frame * 0.5))
+
+        # Draw glow layers
+        for i in range(3):
+            radius = int((10 - i * 2) * intensity)
+            if radius > 0:
+                alpha = int((150 - i * 40) * intensity)
+                glow_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+                color = (*self.engine_color[:3], alpha)
+                pygame.draw.circle(glow_surf, color, (radius, radius), radius)
+                surface.blit(glow_surf,
+                           (engine_x - radius, engine_y - radius),
+                           special_flags=pygame.BLEND_RGBA_ADD)
+
+    def _draw_shield_hit(self, surface, x, y):
+        """Draw shield impact effect."""
+        radius = max(self.width, self.height) // 2 + 10
+        alpha = int(150 * (self.shield_hit_timer / 15))
+
+        shield_surf = pygame.Surface((radius * 2 + 20, radius * 2 + 20), pygame.SRCALPHA)
+        shimmer = int(20 * math.sin(self.shield_shimmer * 3))
+
+        # Outer ring
+        pygame.draw.circle(shield_surf, (*self.SHIELD_COLOR[:3], alpha),
+                          (radius + 10, radius + 10), radius, 3)
+        # Inner shimmer
+        pygame.draw.circle(shield_surf, (*self.SHIELD_COLOR[:3], alpha // 2 + shimmer),
+                          (radius + 10, radius + 10), radius - 5, 2)
+
+        surface.blit(shield_surf, (x - radius - 10, y - radius - 10),
+                    special_flags=pygame.BLEND_RGBA_ADD)
+
+    def trigger_shield_hit(self):
+        """Trigger shield hit visual effect."""
+        self.shield_hit_timer = 15
+
+    def get_thrust_frames(self):
+        """Get thrust animation frames from ship_assets if available."""
+        if not SHIP_ASSETS_AVAILABLE or self.type_id is None:
+            return None
+
+        manager = get_ship_asset_manager()
+        if manager and self.type_id in manager.thrust_effects:
+            return manager.thrust_effects[self.type_id]
         return None
+
 
 # Map enemy types to sprite names
 ENEMY_SPRITE_MAP = {
@@ -72,13 +440,18 @@ ENEMY_SPRITE_MAP = {
 
 class Player(pygame.sprite.Sprite):
     """Player ship - Rifter/Wolf"""
-    
+
     def __init__(self):
         super().__init__()
         self.is_wolf = False
         self.is_jaguar = False
         self.width = 46
         self.height = 58
+
+        # Ship renderer for advanced effects (initialized after ship selection)
+        self.ship_renderer = None
+        self._current_ship_name = 'rifter'
+
         self.base_image = self._create_ship_image()  # Store base for animation
         self.image = self.base_image.copy()
         self.rect = self.image.get_rect()
@@ -188,15 +561,21 @@ class Player(pygame.sprite.Sprite):
         """Create EVE-accurate Minmatar ship sprite with proper loadouts"""
         ship_class = getattr(self, 'ship_class', 'Rifter')
 
-        # All Minmatar assault frigates use the Rifter hull as base
-        # Visual differentiation through color tints, weapon loadouts, and tank effects:
-        # - Rifter: T1 frigate, 3 turrets + 1 launcher, rust brown
-        # - Wolf: Assault frigate, 4 autocannon turrets, armor tank (darker, more plating)
-        # - Jaguar: Assault frigate, 3 turrets + 2 rocket launchers, shield tank (blue glow)
-        base_hull = 'rifter'
+        # Determine which ship to load based on ship class
+        if self.is_wolf:
+            ship_name = 'wolf'
+        elif self.is_jaguar:
+            ship_name = 'jaguar'
+        else:
+            ship_name = 'rifter'
 
-        # Try to load the Rifter hull sprite
-        sprite = load_ship_sprite(base_hull, (self.width, self.height))
+        self._current_ship_name = ship_name
+
+        # Initialize ship renderer for effects
+        self.ship_renderer = ShipRenderer(ship_name, is_player=True)
+
+        # Try to load from EVE assets first
+        sprite = load_ship_sprite(ship_name, (self.width, self.height))
         if sprite:
             # Add ship-specific weapons, color tints, and effects
             return self._add_ship_loadout(sprite, ship_class)
@@ -2040,12 +2419,15 @@ class Enemy(pygame.sprite.Sprite):
         self.enemy_type = enemy_type
         self.stats = ENEMY_STATS[enemy_type]
         self.difficulty = difficulty or {}
-        
+
         self.width, self.height = self.stats['size']
-        
+
+        # Ship renderer for advanced effects
+        self.ship_renderer = None
+
         # Apply difficulty scaling
         health_mult = self.difficulty.get('enemy_health_mult', 1.0)
-        
+
         # Combat stats
         self.shields = int(self.stats['shields'] * health_mult)
         self.armor = int(self.stats['armor'] * health_mult)
@@ -2053,7 +2435,7 @@ class Enemy(pygame.sprite.Sprite):
         self.max_shields = self.shields
         self.max_armor = self.armor
         self.max_hull = self.hull
-        
+
         # Behavior - apply speed multiplier for nightmare difficulty
         speed_mult = self.difficulty.get('enemy_speed_mult', 1.0)
         self.speed = self.stats['speed'] * speed_mult
@@ -2063,7 +2445,7 @@ class Enemy(pygame.sprite.Sprite):
         self.score = self.stats['score']
         self.refugees = self.stats.get('refugees', 0)
         self.is_boss = self.stats.get('boss', False)
-        
+
         # Create image after all attributes are set
         self.base_image = self._create_image()  # Store pristine image
         self.image = self.base_image.copy()
@@ -2240,12 +2622,18 @@ class Enemy(pygame.sprite.Sprite):
     
     def _create_image(self):
         """Create polished top-down Amarr ship sprite"""
-        # Try to load rendered sprite from the sprite map
-        sprite_name = ENEMY_SPRITE_MAP.get(self.enemy_type)
+        # Determine sprite name for this enemy type
+        sprite_name = ENEMY_SPRITE_MAP.get(self.enemy_type, self.enemy_type)
+
+        # Initialize ship renderer for effects
+        if sprite_name and sprite_name in EVE_TYPE_IDS:
+            self.ship_renderer = ShipRenderer(sprite_name, is_player=False)
+
+        # Try to load rendered sprite (EVE assets first, then old sprites)
         if sprite_name:
             sprite = load_ship_sprite(sprite_name, (self.width, self.height))
             if sprite:
-                # Add engine glow and flip so nose points down (enemy faces player)
+                # Flip so nose points down (enemy faces player)
                 sprite = pygame.transform.flip(sprite, False, True)
                 return self._add_enemy_engine_effects(sprite)
 
