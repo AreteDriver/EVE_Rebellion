@@ -481,6 +481,11 @@ class Player(pygame.sprite.Sprite):
         self.magnet_until = 0
         self.invulnerable_until = 0
 
+        # Weapon upgrade stacking system
+        self.weapon_level = 0       # 0=base, 1-3=upgrades, max 3
+        self.extra_streams = 0      # Additional bullet streams (0-2)
+        self.damage_bonus = 1.0     # Damage multiplier from upgrades
+
         # Ship ability system
         self.ability_cooldown = 0
         self.ability_active_until = 0
@@ -1592,6 +1597,39 @@ class Player(pygame.sprite.Sprite):
         # Only expire invulnerability if it's a powerup (long duration)
         if self.invulnerable_until > now + 1000:  # More than 1 second remaining = powerup
             self.invulnerable_until = 0
+        # Reset weapon upgrades on overheat
+        self.weapon_level = 0
+        self.extra_streams = 0
+        self.damage_bonus = 1.0
+
+    def upgrade_weapon(self):
+        """Upgrade weapon level - stacks up to level 3"""
+        if self.weapon_level < 3:
+            self.weapon_level += 1
+            # Level 1: +25% fire rate
+            # Level 2: +50% fire rate + 1 extra stream
+            # Level 3: +75% fire rate + 2 extra streams + damage bonus
+            self.fire_rate_mult = 1.0 + (self.weapon_level * 0.25)
+            if self.weapon_level >= 2:
+                self.extra_streams = self.weapon_level - 1  # 1 at lvl2, 2 at lvl3
+            if self.weapon_level >= 3:
+                self.damage_bonus = 1.5
+            return True
+        return False  # Already at max
+
+    def add_rapid_fire(self):
+        """Add rapid fire bonus - stacks with weapon upgrades"""
+        now = pygame.time.get_ticks()
+        # Rapid fire adds +50% fire rate for 5 seconds
+        self.rapid_fire_until = now + 5000
+        return True
+
+    def cool_heat(self, amount):
+        """Cool down heat (from nanite paste)"""
+        self.heat = max(0, self.heat - amount)
+        if self.heat < self.max_heat * 0.5:
+            self.is_overheated = False
+            self.heat_warning = False
     
     def can_rocket(self):
         """Check if can fire rocket"""
@@ -3834,35 +3872,82 @@ class Powerup(pygame.sprite.Sprite):
 
         # Draw icon based on type
         if self.powerup_type == 'nanite':
-            # Green cross (health)
-            self._draw_cross(cx, cy, (100, 255, 100))
+            # Green nanite swirl (heat cooling)
+            self._draw_nanite_swirl(cx, cy, (100, 255, 100))
+        elif self.powerup_type == 'shield_recharger':
+            # Blue shield icon
+            self._draw_shield(cx, cy, (100, 180, 255))
+        elif self.powerup_type == 'armor_repairer':
+            # Orange armor plates
+            self._draw_armor(cx, cy, (255, 180, 80))
+        elif self.powerup_type == 'hull_repairer':
+            # Gray wrench/repair
+            self._draw_cross(cx, cy, (180, 180, 180))
         elif self.powerup_type == 'capacitor':
             # Blue lightning bolt (rockets)
             self._draw_lightning(cx, cy, (100, 150, 255))
-        elif self.powerup_type == 'overdrive':
-            # Yellow speed arrows
-            self._draw_speed_arrows(cx, cy, (255, 255, 100))
-        elif self.powerup_type == 'shield_boost':
-            # Cyan shield
-            self._draw_shield(cx, cy, (150, 220, 255))
-        elif self.powerup_type == 'double_damage':
-            # Red damage star
+        elif self.powerup_type == 'bomb_charge':
+            # Magenta bomb
+            self._draw_bomb(cx, cy, (255, 100, 255))
+        elif self.powerup_type == 'weapon_upgrade':
+            # Red damage star (stacking weapon)
             self._draw_damage_star(cx, cy, (255, 100, 100))
         elif self.powerup_type == 'rapid_fire':
             # Orange bullets
             self._draw_rapid_fire(cx, cy, (255, 180, 50))
-        elif self.powerup_type == 'bomb_charge':
-            # Magenta bomb
-            self._draw_bomb(cx, cy, (255, 100, 255))
+        elif self.powerup_type == 'overdrive':
+            # Yellow speed arrows
+            self._draw_speed_arrows(cx, cy, (255, 255, 100))
         elif self.powerup_type == 'magnet':
             # Light blue magnet
             self._draw_magnet(cx, cy, (180, 200, 255))
         elif self.powerup_type == 'invulnerability':
             # Gold star
             self._draw_invuln_star(cx, cy, (255, 215, 50))
+        # Legacy support
+        elif self.powerup_type == 'shield_boost':
+            self._draw_shield(cx, cy, (150, 220, 255))
+        elif self.powerup_type == 'double_damage':
+            self._draw_damage_star(cx, cy, (255, 100, 100))
         else:
             # Default: colored diamond
             self._draw_diamond(cx, cy, self.color)
+
+    def _draw_nanite_swirl(self, cx, cy, color):
+        """Nanite swirl for heat cooling"""
+        s = self.size // 2
+        # Outer glow
+        pygame.draw.circle(self.base_surface, (*color, 40), (cx, cy), s + 4)
+        # Swirl pattern
+        for i in range(3):
+            angle = i * (2 * math.pi / 3)
+            x1 = cx + int(math.cos(angle) * s * 0.3)
+            y1 = cy + int(math.sin(angle) * s * 0.3)
+            x2 = cx + int(math.cos(angle + 1.5) * s * 0.8)
+            y2 = cy + int(math.sin(angle + 1.5) * s * 0.8)
+            pygame.draw.line(self.base_surface, color, (x1, y1), (x2, y2), 3)
+        # Center dot
+        pygame.draw.circle(self.base_surface, color, (cx, cy), 4)
+        pygame.draw.circle(self.base_surface, (255, 255, 255), (cx, cy), 2)
+
+    def _draw_armor(self, cx, cy, color):
+        """Armor plates icon"""
+        s = self.size // 2
+        # Outer glow
+        pygame.draw.circle(self.base_surface, (*color, 40), (cx, cy), s + 4)
+        # Armor plate shape (hexagon-ish)
+        points = [
+            (cx, cy - s),
+            (cx + s * 0.8, cy - s * 0.4),
+            (cx + s * 0.8, cy + s * 0.4),
+            (cx, cy + s),
+            (cx - s * 0.8, cy + s * 0.4),
+            (cx - s * 0.8, cy - s * 0.4),
+        ]
+        pygame.draw.polygon(self.base_surface, color, points)
+        # Inner highlight
+        inner_points = [(cx + (px - cx) * 0.6, cy + (py - cy) * 0.6) for px, py in points]
+        pygame.draw.polygon(self.base_surface, (255, 220, 150), inner_points)
 
     def _draw_cross(self, cx, cy, color):
         """Health cross"""

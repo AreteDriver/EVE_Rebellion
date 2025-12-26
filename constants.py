@@ -393,16 +393,34 @@ JAGUAR_SHIELD_BONUS = 30
 
 # Powerup types
 POWERUP_TYPES = {
-    'nanite': {'name': 'Nanite Paste', 'color': (100, 255, 100), 'heal': 50},
-    'capacitor': {'name': 'Capacitor Booster', 'color': (100, 100, 255), 'rockets': 5},
-    'overdrive': {'name': 'Overdrive', 'color': (255, 255, 100), 'duration': 5000},
-    'shield_boost': {'name': 'Shield Booster', 'color': (150, 200, 255), 'duration': 3000},
-    'double_damage': {'name': 'Damage Amplifier', 'color': (255, 100, 100), 'duration': 6000},
-    'rapid_fire': {'name': 'Rapid Fire', 'color': (255, 150, 50), 'duration': 5000},
-    'bomb_charge': {'name': 'Bomb Charge', 'color': (255, 50, 255), 'bombs': 1},
-    'magnet': {'name': 'Tractor Beam', 'color': (200, 200, 255), 'duration': 8000},
-    'invulnerability': {'name': 'Hardener', 'color': (255, 215, 0), 'duration': 3000}
+    # Heat management - Nanite Paste cools weapons (EVE lore accurate)
+    'nanite': {'name': 'Nanite Paste', 'color': (100, 255, 100), 'heat_reduce': 100, 'category': 'utility'},
+
+    # Health powerups - spawn based on what's damaged
+    'shield_recharger': {'name': 'Shield Recharger', 'color': (100, 180, 255), 'shield_heal': 40, 'category': 'health'},
+    'armor_repairer': {'name': 'Armor Repairer', 'color': (255, 180, 80), 'armor_heal': 35, 'category': 'health'},
+    'hull_repairer': {'name': 'Hull Repairer', 'color': (180, 180, 180), 'hull_heal': 30, 'category': 'health'},
+
+    # Ammo/charges
+    'capacitor': {'name': 'Capacitor Booster', 'color': (100, 100, 255), 'rockets': 5, 'category': 'ammo'},
+    'bomb_charge': {'name': 'Bomb Charge', 'color': (255, 50, 255), 'bombs': 1, 'category': 'ammo'},
+
+    # Weapon upgrades - STACK for increased power
+    'weapon_upgrade': {'name': 'Weapon Upgrade', 'color': (255, 100, 100), 'category': 'weapon'},
+    'rapid_fire': {'name': 'Rapid Fire', 'color': (255, 150, 50), 'category': 'weapon'},
+
+    # Timed buffs
+    'overdrive': {'name': 'Overdrive', 'color': (255, 255, 100), 'duration': 5000, 'category': 'buff'},
+    'magnet': {'name': 'Tractor Beam', 'color': (200, 200, 255), 'duration': 8000, 'category': 'buff'},
+    'invulnerability': {'name': 'Hardener', 'color': (255, 215, 0), 'duration': 3000, 'category': 'buff'},
 }
+
+# Powerups that can spawn randomly (excludes contextual health powerups)
+RANDOM_POWERUPS = ['nanite', 'capacitor', 'bomb_charge', 'weapon_upgrade', 'rapid_fire',
+                   'overdrive', 'magnet', 'invulnerability']
+
+# Health powerups spawn based on player damage state
+HEALTH_POWERUPS = ['shield_recharger', 'armor_repairer', 'hull_repairer']
 
 # Stage definitions
 STAGES = [

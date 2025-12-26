@@ -1047,13 +1047,44 @@ class Game:
         self.wave_spawned += 1
     
     def spawn_powerup(self, x, y):
-        """Maybe spawn a powerup at location"""
+        """Maybe spawn a powerup at location - contextual based on player state"""
         chance = self.difficulty_settings.get('powerup_chance', 0.15)
         if random.random() < chance:
-            powerup_type = random.choice(list(POWERUP_TYPES.keys()))
+            powerup_type = self._choose_powerup_type()
             powerup = Powerup(x, y, powerup_type)
             self.powerups.add(powerup)
             self.all_sprites.add(powerup)
+
+    def _choose_powerup_type(self):
+        """Choose powerup type based on player state - health drops are contextual"""
+        # 30% chance for contextual health powerup if player is damaged
+        if random.random() < 0.3:
+            health_type = self._get_contextual_health_powerup()
+            if health_type:
+                return health_type
+
+        # Otherwise pick from random powerups
+        from constants import RANDOM_POWERUPS
+        return random.choice(RANDOM_POWERUPS)
+
+    def _get_contextual_health_powerup(self):
+        """Return appropriate health powerup based on what's damaged, or None"""
+        # Only drop health for the layer that's currently taking damage
+        shield_pct = self.player.shields / max(self.player.max_shields, 1)
+        armor_pct = self.player.armor / max(self.player.max_armor, 1)
+        hull_pct = self.player.hull / max(self.player.max_hull, 1)
+
+        # Hull is damaged (player is in hull) - drop hull repairer
+        if hull_pct < 1.0 and self.player.armor <= 0:
+            return 'hull_repairer'
+        # Armor is damaged (player is in armor) - drop armor repairer
+        elif armor_pct < 1.0 and self.player.shields <= 0:
+            return 'armor_repairer'
+        # Shields are damaged - drop shield recharger
+        elif shield_pct < 0.8:
+            return 'shield_recharger'
+
+        return None  # Player is healthy, no health powerup needed
 
     def spawn_formation(self, formation_type, enemy_types=None):
         """Spawn a group of enemies in formation"""
@@ -3158,54 +3189,83 @@ class Game:
         """
         data = powerup.data
         now = pygame.time.get_ticks()
-        # Weapon powerups last until overheat or death - effectively permanent
-        permanent_duration = 100000000  # ~27 hours
-        # Other powerups use timed durations from constants
         timed_duration = data.get('duration', 5000)
+        ptype = powerup.powerup_type
 
-        if powerup.powerup_type == 'nanite':
-            self.player.heal(data['heal'])
-            self.show_message("Hull Repaired!", 60)
+        # === HEAT MANAGEMENT ===
+        if ptype == 'nanite':
+            heat_reduce = data.get('heat_reduce', 100)
+            self.player.cool_heat(heat_reduce)
+            self.show_message("Heat Cooled!", 60)
             self.play_sound('powerup_nanite', 0.7)
-        elif powerup.powerup_type == 'capacitor':
+
+        # === HEALTH POWERUPS (contextual) ===
+        elif ptype == 'shield_recharger':
+            heal = data.get('shield_heal', 40)
+            self.player.shields = min(self.player.shields + heal, self.player.max_shields)
+            self.show_message(f"Shields +{heal}!", 60)
+            self.play_sound('powerup_shield', 0.7)
+        elif ptype == 'armor_repairer':
+            heal = data.get('armor_heal', 35)
+            self.player.armor = min(self.player.armor + heal, self.player.max_armor)
+            self.show_message(f"Armor +{heal}!", 60)
+            self.play_sound('powerup_armor', 0.7)
+        elif ptype == 'hull_repairer':
+            heal = data.get('hull_heal', 30)
+            self.player.hull = min(self.player.hull + heal, self.player.max_hull)
+            self.show_message(f"Hull +{heal}!", 60)
+            self.play_sound('powerup_nanite', 0.7)
+
+        # === AMMO/CHARGES ===
+        elif ptype == 'capacitor':
             self.player.add_rockets(data['rockets'])
             self.show_message("Rockets Loaded!", 60)
             self.play_sound('powerup_capacitor', 0.7)
-        elif powerup.powerup_type == 'overdrive':
-            # Timed powerup - speed boost
-            self.player.overdrive_until = now + timed_duration
-            self.show_message(f"OVERDRIVE! ({timed_duration//1000}s)", 60)
-            self.play_sound('powerup_overdrive', 0.7)
-        elif powerup.powerup_type == 'shield_boost':
-            # Timed powerup - damage reduction
-            self.player.shield_boost_until = now + timed_duration
-            self.player.shields = min(self.player.shields + 30, self.player.max_shields)
-            self.show_message(f"Shields Boosted! ({timed_duration//1000}s)", 60)
-            self.play_sound('powerup_shield', 0.7)
-        elif powerup.powerup_type == 'double_damage':
-            # WEAPON POWERUP - lasts until overheat or death
-            self.player.double_damage_until = now + permanent_duration
-            self.show_message("DAMAGE x2! (Until Overheat)", 60)
-            self.play_sound('powerup_damage', 0.7)
-        elif powerup.powerup_type == 'rapid_fire':
-            # WEAPON POWERUP - lasts until overheat or death
-            self.player.rapid_fire_until = now + permanent_duration
-            self.show_message("RAPID FIRE! (Until Overheat)", 60)
-            self.play_sound('powerup_rapid', 0.7)
-        elif powerup.powerup_type == 'bomb_charge':
+        elif ptype == 'bomb_charge':
             self.player.bombs = min(self.player.bombs + data['bombs'], self.player.max_bombs)
             self.show_message("Bomb Charged!", 60)
             self.play_sound('powerup_bomb', 0.7)
-        elif powerup.powerup_type == 'magnet':
-            # Timed powerup - tractor beam
+
+        # === WEAPON UPGRADES (stack until overheat) ===
+        elif ptype == 'weapon_upgrade':
+            if self.player.upgrade_weapon():
+                lvl = self.player.weapon_level
+                msg = f"WEAPON LVL {lvl}!"
+                if lvl >= 2:
+                    msg += f" (+{self.player.extra_streams} streams)"
+                self.show_message(msg, 60)
+            else:
+                self.show_message("WEAPONS MAXED!", 60)
+            self.play_sound('powerup_damage', 0.7)
+        elif ptype == 'rapid_fire':
+            self.player.add_rapid_fire()
+            self.show_message("RAPID FIRE! (5s)", 60)
+            self.play_sound('powerup_rapid', 0.7)
+
+        # === TIMED BUFFS ===
+        elif ptype == 'overdrive':
+            self.player.overdrive_until = now + timed_duration
+            self.show_message(f"OVERDRIVE! ({timed_duration//1000}s)", 60)
+            self.play_sound('powerup_overdrive', 0.7)
+        elif ptype == 'magnet':
             self.player.magnet_until = now + timed_duration
             self.show_message(f"Tractor Beam! ({timed_duration//1000}s)", 60)
             self.play_sound('powerup_magnet', 0.7)
-        elif powerup.powerup_type == 'invulnerability':
-            # Timed powerup - invulnerability (short duration for balance)
+        elif ptype == 'invulnerability':
             self.player.invulnerable_until = now + timed_duration
             self.show_message(f"INVULNERABLE! ({timed_duration//1000}s)", 60)
             self.play_sound('powerup_invuln', 0.7)
+
+        # === LEGACY SUPPORT (in case old saves have these) ===
+        elif ptype == 'shield_boost':
+            self.player.shield_boost_until = now + timed_duration
+            self.player.shields = min(self.player.shields + 30, self.player.max_shields)
+            self.show_message(f"Shields Boosted!", 60)
+            self.play_sound('powerup_shield', 0.7)
+        elif ptype == 'double_damage':
+            self.player.upgrade_weapon()
+            self.show_message("Damage Boost!", 60)
+            self.play_sound('powerup_damage', 0.7)
     
     def update_waves(self):
         """Handle wave progression"""
