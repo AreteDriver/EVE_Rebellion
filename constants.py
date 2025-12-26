@@ -12,10 +12,12 @@ SHAKE_MEDIUM = 6
 SHAKE_LARGE = 12
 SHAKE_DECAY = 0.85
 
-# Difficulty settings
+# Difficulty settings - EVE Online themed labels
+# Carebear = Easy, Newbro = Normal, Bitter Vet = Hard, Triglavian = Nightmare
 DIFFICULTY_SETTINGS = {
     'easy': {
-        'name': 'Easy',
+        'name': 'Carebear',
+        'desc': 'Forgiving. Learn systems. Minimal punishment.',
         'enemy_health_mult': 0.5,      # Easy to kill
         'enemy_damage_mult': 0.4,      # Low damage
         'enemy_fire_rate_mult': 1.8,   # Slow shooting
@@ -26,7 +28,8 @@ DIFFICULTY_SETTINGS = {
         'spawn_rate_mult': 1.4         # Slower spawns
     },
     'normal': {
-        'name': 'Normal',
+        'name': 'Newbro',
+        'desc': 'Real mechanics. Teaches heat, positioning, failure.',
         'enemy_health_mult': 0.8,      # Slightly easier than before
         'enemy_damage_mult': 0.8,      # Manageable damage
         'enemy_fire_rate_mult': 1.2,   # Slightly slower fire
@@ -37,7 +40,8 @@ DIFFICULTY_SETTINGS = {
         'spawn_rate_mult': 1.1
     },
     'hard': {
-        'name': 'Hard',
+        'name': 'Bitter Vet',
+        'desc': 'No mercy. Assumes mastery and discipline.',
         'enemy_health_mult': 1.4,      # Tougher but not brutal
         'enemy_damage_mult': 1.3,      # Noticeable damage
         'enemy_fire_rate_mult': 0.75,  # Faster but manageable
@@ -48,8 +52,8 @@ DIFFICULTY_SETTINGS = {
         'spawn_rate_mult': 0.85
     },
     'nightmare': {
-        'name': 'Nightmare',
-        # Very challenging but not impossible
+        'name': 'Triglavian',
+        'desc': 'Hostile reality. Systems turn against you.',
         'enemy_health_mult': 2.2,      # Tanky but killable
         'enemy_damage_mult': 1.8,      # Hurts a lot
         'enemy_fire_rate_mult': 0.5,   # Fast shooting
@@ -198,13 +202,6 @@ ENEMY_STATS = {
         'fire_rate': 1200,
         'score': 800,
         'size': (320, 420),  # MASSIVE cruiser - dwarfs player ships
-        'has_hardpoints': True,
-        'hardpoints': [  # (offset_x, offset_y, type, health)
-            (-80, 50, 'dual_laser', 60),
-            (80, 50, 'dual_laser', 60),
-            (-50, 120, 'laser', 40),
-            (50, 120, 'laser', 40),
-        ]
     },
     'maller': {
         'name': 'Maller',
@@ -215,14 +212,6 @@ ENEMY_STATS = {
         'fire_rate': 1800,
         'score': 1000,
         'size': (350, 460),  # MASSIVE armor cruiser - tank
-        'has_hardpoints': True,
-        'hardpoints': [
-            (-90, 40, 'dual_laser', 80),
-            (90, 40, 'dual_laser', 80),
-            (0, 80, 'heavy_laser', 100),  # Center heavy turret
-            (-60, 140, 'laser', 50),
-            (60, 140, 'laser', 50),
-        ]
     },
     'bestower': {
         'name': 'Bestower',
@@ -345,20 +334,6 @@ ENEMY_STATS = {
         'score': 2500,
         'size': (450, 600),  # MASSIVE battlecruiser - mini-boss sized
         'behavior': 'artillery',
-        'has_hardpoints': True,
-        'hardpoints': [
-            # Front heavy turrets
-            (-100, 30, 'heavy_laser', 100),
-            (100, 30, 'heavy_laser', 100),
-            # Mid dual turrets
-            (-120, 120, 'dual_laser', 80),
-            (120, 120, 'dual_laser', 80),
-            # Rear defense turrets
-            (-80, 200, 'dual_laser', 60),
-            (80, 200, 'dual_laser', 60),
-            # Center mega turret
-            (0, 150, 'heavy_laser', 120),
-        ]
     },
     'dragoon': {
         'name': 'Dragoon',
@@ -401,10 +376,6 @@ POWERUP_TYPES = {
     'armor_repairer': {'name': 'Armor Repairer', 'color': (255, 180, 80), 'armor_heal': 35, 'category': 'health'},
     'hull_repairer': {'name': 'Hull Repairer', 'color': (180, 180, 180), 'hull_heal': 30, 'category': 'health'},
 
-    # Ammo/charges
-    'capacitor': {'name': 'Capacitor Booster', 'color': (100, 100, 255), 'rockets': 5, 'category': 'ammo'},
-    'bomb_charge': {'name': 'Bomb Charge', 'color': (255, 50, 255), 'bombs': 1, 'category': 'ammo'},
-
     # Weapon upgrades - STACK for increased power
     'weapon_upgrade': {'name': 'Weapon Upgrade', 'color': (255, 100, 100), 'category': 'weapon'},
     'rapid_fire': {'name': 'Rapid Fire', 'color': (255, 150, 50), 'category': 'weapon'},
@@ -412,11 +383,12 @@ POWERUP_TYPES = {
     # Timed buffs
     'overdrive': {'name': 'Overdrive', 'color': (255, 255, 100), 'duration': 5000, 'category': 'buff'},
     'magnet': {'name': 'Tractor Beam', 'color': (200, 200, 255), 'duration': 8000, 'category': 'buff'},
-    'invulnerability': {'name': 'Hardener', 'color': (255, 215, 0), 'duration': 3000, 'category': 'buff'},
+    'invulnerability': {'name': 'Assault Damage Control', 'color': (255, 215, 0), 'duration': 5000, 'category': 'buff'},
 }
 
 # Powerups that can spawn randomly (excludes contextual health powerups)
-RANDOM_POWERUPS = ['nanite', 'capacitor', 'bomb_charge', 'weapon_upgrade', 'rapid_fire',
+# Removed: capacitor (unlimited ammo), bomb_charge (no bombs)
+RANDOM_POWERUPS = ['nanite', 'weapon_upgrade', 'rapid_fire',
                    'overdrive', 'magnet', 'invulnerability']
 
 # Health powerups spawn based on player damage state

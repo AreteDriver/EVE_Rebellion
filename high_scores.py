@@ -170,13 +170,13 @@ class AchievementManager:
         },
         'rebel_hero': {
             'name': 'Rebel Hero',
-            'desc': 'Complete the game on Normal or harder',
+            'desc': 'Complete the game on Newbro or harder',
             'icon': 'trophy',
             'hidden': False
         },
-        'nightmare_slayer': {
-            'name': 'Nightmare Slayer',
-            'desc': 'Complete the game on Nightmare',
+        'triglavian_slayer': {
+            'name': 'Triglavian Slayer',
+            'desc': 'Complete the game on Triglavian difficulty',
             'icon': 'crown',
             'hidden': True
         },
@@ -392,8 +392,8 @@ class AchievementManager:
                 if self.unlock('rebel_hero'):
                     newly_unlocked.append('rebel_hero')
             if difficulty == 'nightmare':
-                if self.unlock('nightmare_slayer'):
-                    newly_unlocked.append('nightmare_slayer')
+                if self.unlock('triglavian_slayer'):
+                    newly_unlocked.append('triglavian_slayer')
             if ship == 'Wolf':
                 if self.unlock('wolf_pack'):
                     newly_unlocked.append('wolf_pack')

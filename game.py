@@ -9,11 +9,13 @@ from constants import *
 from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, Wingman,
                      RefugeePod, Powerup, Explosion, Star, ParallaxBackground)
 from sounds import get_sound_manager, get_music_manager, play_sound
-from controller_input import ControllerInput, XboxButton
+from controller_input import ControllerInput, XboxButton, InputState
 from space_background import SpaceBackground, AmarrArchon
 from parallax_background import ParallaxBackground as StageParallaxBackground
 from visual_effects import (ShipDamageEffects, EnhancedExplosion,
-                            get_ship_damage_effects, clear_ship_damage_effects)
+                            get_ship_damage_effects, clear_ship_damage_effects,
+                            get_shield_impact_manager, get_screen_shake, get_muzzle_flash_manager,
+                            clear_all_effects)
 from expansion.capital_ship_enemy import CapitalShipEnemy
 from berserk_system import BerserkSystem
 from cinematic_system import CinematicManager, TribeType
@@ -506,7 +508,7 @@ class Game:
             'screen_shake': True,
             'show_damage_numbers': True,
             'show_danger_zones': False,
-            'controller_vibration': True
+            'controller_vibration': True,
         }
         self.settings_options = [
             ('master_volume', 'Master Volume', 'slider'),
@@ -593,8 +595,20 @@ class Game:
         # Enhanced explosions list (for big ships with secondary explosions)
         self.enhanced_explosions = []
 
+        # Shield impact effects
+        self.shield_impacts = get_shield_impact_manager()
+        self.shield_impacts.clear()
+
+        # Screen shake
+        self.screen_shake = get_screen_shake()
+        self.screen_shake.clear()
+
+        # Muzzle flash effects
+        self.muzzle_flashes = get_muzzle_flash_manager()
+        self.muzzle_flashes.clear()
+
         # Clear any lingering ship damage effects
-        clear_ship_damage_effects()
+        clear_all_effects()
 
         # Apply selected ship bonuses
         self.apply_ship_selection()
@@ -760,13 +774,26 @@ class Game:
         if random.random() < industrial_chance:
             self.wave_enemies += 1
     
-    def _get_spawn_position(self):
-        """Get a spawn position from 260-degree frontal arc (top, sides, diagonals)"""
-        # Spawn direction weights: top (60%), left side (15%), right side (15%), diagonals (10%)
-        spawn_type = random.choices(
-            ['top', 'carrier', 'left', 'right', 'top_left', 'top_right'],
-            weights=[30, 30, 12, 12, 8, 8]
-        )[0]
+    def _get_spawn_position(self, allow_flanking: bool = True):
+        """Get a spawn position from full 360-degree arc for tactical spawning
+
+        Args:
+            allow_flanking: If True, allows bottom/side spawns for flanking attacks
+        """
+        # Spawn direction weights - now includes flanking positions
+        if allow_flanking and self.current_wave > 1:
+            # After first wave, enable tactical flanking spawns
+            spawn_type = random.choices(
+                ['top', 'carrier', 'left', 'right', 'top_left', 'top_right',
+                 'bottom_left', 'bottom_right', 'bottom'],
+                weights=[25, 20, 10, 10, 8, 8, 6, 6, 7]
+            )[0]
+        else:
+            # Early waves - mostly frontal assault
+            spawn_type = random.choices(
+                ['top', 'carrier', 'left', 'right', 'top_left', 'top_right'],
+                weights=[30, 30, 12, 12, 8, 8]
+            )[0]
 
         if spawn_type == 'carrier' and hasattr(self, 'archon_carrier'):
             # Spawn from Archon carrier hangar
@@ -775,37 +802,55 @@ class Game:
             x = max(50, min(SCREEN_WIDTH - 50, x))
             y = carrier_y
             self.archon_carrier.trigger_launch()
-            return x, y, 0  # Angle 0 = straight down
+            return x, y, 0, 'top'
 
         elif spawn_type == 'top':
             # Standard top spawn
             x = random.randint(100, SCREEN_WIDTH - 100)
             y = -50
-            return x, y, 0
+            return x, y, 0, 'top'
 
         elif spawn_type == 'left':
             # Left side spawn - enemies fly in from left
             x = -50
             y = random.randint(100, SCREEN_HEIGHT // 2)
-            return x, y, math.radians(45)  # Angle toward center-down
+            return x, y, math.radians(45), 'left'
 
         elif spawn_type == 'right':
             # Right side spawn - enemies fly in from right
             x = SCREEN_WIDTH + 50
             y = random.randint(100, SCREEN_HEIGHT // 2)
-            return x, y, math.radians(-45)  # Angle toward center-down
+            return x, y, math.radians(-45), 'right'
 
         elif spawn_type == 'top_left':
             # Top-left diagonal
             x = random.randint(-50, SCREEN_WIDTH // 4)
             y = -50
-            return x, y, math.radians(20)
+            return x, y, math.radians(20), 'top'
 
-        else:  # top_right
+        elif spawn_type == 'top_right':
             # Top-right diagonal
             x = random.randint(SCREEN_WIDTH * 3 // 4, SCREEN_WIDTH + 50)
             y = -50
-            return x, y, math.radians(-20)
+            return x, y, math.radians(-20), 'top'
+
+        elif spawn_type == 'bottom_left':
+            # Bottom-left flanking attack
+            x = -50
+            y = random.randint(SCREEN_HEIGHT // 2, SCREEN_HEIGHT - 100)
+            return x, y, math.radians(30), 'bottom_left'
+
+        elif spawn_type == 'bottom_right':
+            # Bottom-right flanking attack
+            x = SCREEN_WIDTH + 50
+            y = random.randint(SCREEN_HEIGHT // 2, SCREEN_HEIGHT - 100)
+            return x, y, math.radians(-30), 'bottom_right'
+
+        else:  # bottom
+            # Bottom spawn - behind the player!
+            x = random.randint(200, SCREEN_WIDTH - 200)
+            y = SCREEN_HEIGHT + 50
+            return x, y, math.radians(180), 'bottom'
 
     def spawn_enemy(self):
         """Spawn a single enemy from 260-degree frontal arc with progressive composition"""
@@ -827,17 +872,22 @@ class Game:
             enemy_type = self._get_progressive_enemy_type(stage)
 
         # Get spawn position from multi-directional system
-        x, y, entry_angle = self._get_spawn_position()
+        x, y, entry_angle, spawn_direction = self._get_spawn_position()
 
         # Drones spawn in swarms of 3-5 with formation
         if enemy_type == 'drone':
             self._spawn_drone_swarm(x, y)
         else:
             enemy = Enemy(enemy_type, x, y, self.difficulty_settings)
-            # Set entry angle for side-spawning enemies
+            # Set entry angle and spawn direction for tactical spawning
+            enemy.spawn_direction = spawn_direction
             if entry_angle != 0:
                 enemy.entry_angle = entry_angle
                 enemy.entering_from_side = True
+            # Configure movement for flanking spawns
+            if spawn_direction in ['bottom', 'bottom_left', 'bottom_right']:
+                enemy.is_flanking = True
+                enemy.target_y = random.randint(SCREEN_HEIGHT // 2, SCREEN_HEIGHT - 150)
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
             self.wave_spawned += 1
@@ -1055,13 +1105,19 @@ class Game:
             enemy_type = random.choice(pool)
 
         # Get spawn position from multi-directional system
-        x, y, entry_angle = self._get_spawn_position()
+        x, y, entry_angle, spawn_direction = self._get_spawn_position()
 
         enemy = Enemy(enemy_type, x, y, self.difficulty_settings)
-        # Set entry angle for side-spawning enemies
+        # Set entry angle and spawn direction for tactical spawning
         if entry_angle != 0:
             enemy.entry_angle = entry_angle
             enemy.entering_from_side = True
+        enemy.spawn_direction = spawn_direction
+        # Mark as flanking if spawning from bottom/sides
+        if spawn_direction in ['bottom', 'bottom_left', 'bottom_right']:
+            enemy.is_flanking = True
+            enemy.pattern = enemy.PATTERN_FLANKING
+            enemy._init_flanking_behavior()
         self.enemies.add(enemy)
         self.all_sprites.add(enemy)
         self.wave_spawned += 1
@@ -1137,24 +1193,39 @@ class Game:
             self._spawn_roaming_fleet(enemy_types)
 
     def _spawn_v_formation(self, enemy_types):
-        """Spawn 5 enemies in V-shape pointing down"""
+        """Spawn 5 enemies in V-shape pointing down with leader/follower relationships"""
         center_x = random.randint(150, SCREEN_WIDTH - 150)
         base_y = -50
         spacing = 45
 
         # V-shape positions: leader at front, wings spread back
-        positions = [
-            (center_x, base_y),                          # Leader
-            (center_x - spacing, base_y - spacing),      # Left wing 1
-            (center_x + spacing, base_y - spacing),      # Right wing 1
-            (center_x - spacing * 2, base_y - spacing * 2),  # Left wing 2
-            (center_x + spacing * 2, base_y - spacing * 2),  # Right wing 2
+        # Offsets relative to leader for formation following
+        positions_and_offsets = [
+            ((center_x, base_y), (0, 0)),                               # Leader
+            ((center_x - spacing, base_y - spacing), (-spacing, -spacing)),  # Left wing 1
+            ((center_x + spacing, base_y - spacing), (spacing, -spacing)),   # Right wing 1
+            ((center_x - spacing * 2, base_y - spacing * 2), (-spacing * 2, -spacing * 2)),  # Left wing 2
+            ((center_x + spacing * 2, base_y - spacing * 2), (spacing * 2, -spacing * 2)),   # Right wing 2
         ]
 
         leader_type = random.choice(enemy_types)
-        for i, (x, y) in enumerate(positions):
+        leader = None
+
+        for i, ((x, y), offset) in enumerate(positions_and_offsets):
             etype = leader_type if i == 0 else random.choice(enemy_types)
             enemy = Enemy(etype, x, y, self.difficulty_settings)
+
+            if i == 0:
+                # Leader uses normal pattern (cruiser AI if it's a cruiser, else drift)
+                leader = enemy
+                enemy.formation_role = 'leader'
+            else:
+                # Followers use formation pattern - track the leader
+                enemy.pattern = enemy.PATTERN_FORMATION
+                enemy.formation_leader = leader
+                enemy.formation_offset = offset
+                enemy.formation_role = 'follower'
+
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
 
@@ -1162,25 +1233,33 @@ class Game:
         self.show_message("V-FORMATION INCOMING!", 60)
 
     def _spawn_escort_formation(self, enemy_types):
-        """Spawn escorts protecting a Bestower"""
+        """Spawn escorts protecting a Bestower with formation following"""
         center_x = random.randint(100, SCREEN_WIDTH - 100)
         base_y = -80
 
-        # Center: Bestower (VIP)
+        # Center: Bestower (VIP) is the leader
         bestower = Enemy('bestower', center_x, base_y, self.difficulty_settings)
+        bestower.formation_role = 'leader'
         self.enemies.add(bestower)
         self.all_sprites.add(bestower)
 
-        # Escorts around the Bestower
-        escort_positions = [
-            (center_x - 60, base_y - 30),   # Front left
-            (center_x + 60, base_y - 30),   # Front right
-            (center_x - 50, base_y + 50),   # Rear left
-            (center_x + 50, base_y + 50),   # Rear right
+        # Escorts around the Bestower with offsets for formation following
+        escort_offsets = [
+            (-60, -30),   # Front left
+            (60, -30),    # Front right
+            (-50, 50),    # Rear left
+            (50, 50),     # Rear right
         ]
 
-        for x, y in escort_positions:
+        for offset_x, offset_y in escort_offsets:
+            x = center_x + offset_x
+            y = base_y + offset_y
             enemy = Enemy(random.choice(enemy_types), x, y, self.difficulty_settings)
+            # Set up formation following
+            enemy.pattern = enemy.PATTERN_FORMATION
+            enemy.formation_leader = bestower
+            enemy.formation_offset = (offset_x, offset_y)
+            enemy.formation_role = 'escort'
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
 
@@ -1229,20 +1308,32 @@ class Game:
         self.show_message("LINE FORMATION!", 60)
 
     def _spawn_diamond_formation(self, enemy_types):
-        """Spawn enemies in diamond shape"""
+        """Spawn enemies in diamond shape with formation leader"""
         center_x = random.randint(150, SCREEN_WIDTH - 150)
         base_y = -50
         spacing = 50
 
-        positions = [
-            (center_x, base_y),                    # Top
-            (center_x - spacing, base_y - spacing),  # Left
-            (center_x + spacing, base_y - spacing),  # Right
-            (center_x, base_y - spacing * 2),      # Bottom (back)
+        # (position, offset from leader)
+        positions_and_offsets = [
+            ((center_x, base_y), (0, 0)),                      # Leader at front
+            ((center_x - spacing, base_y - spacing), (-spacing, -spacing)),  # Left wing
+            ((center_x + spacing, base_y - spacing), (spacing, -spacing)),   # Right wing
+            ((center_x, base_y - spacing * 2), (0, -spacing * 2)),           # Rear guard
         ]
 
-        for x, y in positions:
+        leader = None
+        for i, ((x, y), offset) in enumerate(positions_and_offsets):
             enemy = Enemy(random.choice(enemy_types), x, y, self.difficulty_settings)
+
+            if i == 0:
+                leader = enemy
+                enemy.formation_role = 'leader'
+            else:
+                enemy.pattern = enemy.PATTERN_FORMATION
+                enemy.formation_leader = leader
+                enemy.formation_offset = offset
+                enemy.formation_role = 'wingman'
+
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
 
@@ -1492,61 +1583,94 @@ class Game:
         self.play_sound('ammo_switch')
 
     def _thrust_jet(self, direction=1):
-        """Execute thrust jet maneuver - quick horizontal burst in direction
+        """Execute thrust jet maneuver - quick burst in movement direction
+
+        Pure mobility skill - no invincibility. Jaguar has unlimited uses.
 
         Args:
-            direction: -1 for left thrust, 1 for right thrust
+            direction: -1 for left, 0 for forward, 1 for right
         """
-        # Jaguar has unlimited jets - no cooldown for horizontal
-        if self.player.thrust_cooldown > 0 and not self.player.is_jaguar:
+        # Check thrust cooldown (Jaguar has 0 cooldown = unlimited)
+        if self.player.thrust_cooldown > 0:
             self.play_sound('error')
             return False
 
         self.player.thrust_active = True
         self.player.thrust_timer = self.player.thrust_duration
-        # Jaguar: NO cooldown for left/right, others: normal cooldown
-        self.player.thrust_cooldown = 0 if self.player.is_jaguar else self.player.thrust_cooldown_time
+        self.player.thrust_cooldown = self.player.thrust_cooldown_time
         self.player.thrust_direction = direction
         self.player.thrust_velocity = 25  # Initial burst speed (pixels/frame)
 
-        # Brief invincibility during thrust
-        self.player.invulnerable_until = pygame.time.get_ticks() + 200  # 0.2 sec
+        # No invincibility - thrust is pure mobility
 
         self.play_sound('powerup')
-        self.controller.trigger_decision_haptic()
+        if self.controller and self.controller.connected:
+            self.controller.trigger_decision_haptic()
 
         # Engine flare effect
-        self.screen_flash_alpha = 25
-        self.screen_flash_color = (255, 150, 50) if direction > 0 else (50, 150, 255)
+        self.screen_flash_alpha = 20
+        if direction == 0:
+            self.screen_flash_color = (255, 200, 100)  # Forward boost
+        elif direction > 0:
+            self.screen_flash_color = (255, 150, 50)  # Right
+        else:
+            self.screen_flash_color = (50, 150, 255)  # Left
         return True
 
-    def _thrust_forward(self):
-        """Execute forward thrust boost - both bumpers pressed"""
-        # Jaguar has unlimited jets - minimal cooldown for forward
-        if self.player.thrust_cooldown > 0 and not self.player.is_jaguar:
+    def _thrust_with_movement(self):
+        """Execute thrust in current movement direction (from left stick)
+
+        Pure mobility skill - no invincibility. Uses left stick direction.
+        LB or RB triggers thrust in whatever direction player is moving.
+        """
+        # Check thrust cooldown (Jaguar has 0 cooldown = unlimited)
+        if self.player.thrust_cooldown > 0:
             self.play_sound('error')
             return False
 
-        self.player.thrust_active = True
-        self.player.thrust_timer = self.player.thrust_duration + 6  # Slightly longer
-        # Jaguar: minimal cooldown (10 frames ~0.17 sec), others: normal cooldown
-        self.player.thrust_cooldown = 10 if self.player.is_jaguar else self.player.thrust_cooldown_time
-        self.player.thrust_direction = 0  # Forward (no horizontal)
-        self.player.thrust_velocity = 30  # Faster forward boost
+        # Get movement direction from controller
+        move_x, move_y = 0.0, 0.0
+        if self.controller and self.controller.connected:
+            move_x, move_y = self.controller.get_movement_vector()
 
-        # Brief invincibility during forward thrust
-        self.player.invulnerable_until = pygame.time.get_ticks() + 250
+        # Determine thrust direction from movement
+        # If no movement, default to forward
+        if abs(move_x) < 0.2 and abs(move_y) < 0.2:
+            direction = 0  # Forward
+        elif abs(move_x) > abs(move_y):
+            direction = 1 if move_x > 0 else -1  # Horizontal
+        else:
+            direction = 0  # Forward (up) or back, treat as forward
+
+        self.player.thrust_active = True
+        self.player.thrust_timer = self.player.thrust_duration
+        self.player.thrust_cooldown = self.player.thrust_cooldown_time
+        self.player.thrust_direction = direction
+        self.player.thrust_velocity = 25 if direction != 0 else 30  # Forward is faster
+
+        # No invincibility - thrust is pure mobility
 
         self.play_sound('powerup')
-        self.controller.trigger_decision_haptic()
+        if self.controller and self.controller.connected:
+            self.controller.trigger_decision_haptic()
 
-        # Bright forward engine flare
-        self.screen_flash_alpha = 35
-        self.screen_flash_color = (255, 200, 100)
+        # Engine flare effect based on direction
+        self.screen_flash_alpha = 20
+        if direction == 0:
+            self.screen_flash_color = (255, 200, 100)  # Forward
+        elif direction > 0:
+            self.screen_flash_color = (255, 150, 50)  # Right
+        else:
+            self.screen_flash_color = (50, 150, 255)  # Left
         return True
 
     def _emergency_brake(self):
-        """Execute emergency brake - quick pull to screen bottom"""
+        """Execute emergency brake - escape maneuver with invincibility
+
+        Drops to bottom of screen with invincibility that lasts until landing.
+        This is an escape mechanic, not mobility - use it to survive.
+        Weapons are disabled during brake animation.
+        """
         if self.player.emergency_brake_cooldown > 0:
             self.play_sound('error')
             return False
@@ -1556,16 +1680,18 @@ class Game:
         self.player.emergency_brake_cooldown = self.player.emergency_brake_cooldown_time
         self.player.brake_start_y = self.player.rect.centery
 
-        # Grant brief invincibility during brake
-        self.player.invulnerable_until = pygame.time.get_ticks() + 300
+        # Invincibility lasts until landing - set far future, cleared when brake ends
+        self.player.brake_invulnerable = True
+        self.player.invulnerable_until = pygame.time.get_ticks() + 60000  # 60s failsafe
 
         self.play_sound('powerup')
-        self.show_message("BRAKE!", 40)
-        self.controller.trigger_decision_haptic()
+        self.show_message("EMERGENCY ESCAPE!", 50)
+        if self.controller and self.controller.connected:
+            self.controller.trigger_decision_haptic()
 
-        # Trail effect
-        self.screen_flash_alpha = 20
-        self.screen_flash_color = (255, 200, 100)
+        # Golden flash effect (like ADC activation)
+        self.screen_flash_alpha = 40
+        self.screen_flash_color = (255, 215, 0)
         return True
 
     def _update_maneuvers(self):
@@ -1645,6 +1771,10 @@ class Game:
 
             if self.player.emergency_brake_timer <= 0:
                 self.player.emergency_brake_active = False
+                # Clear brake invincibility on landing
+                if getattr(self.player, 'brake_invulnerable', False):
+                    self.player.brake_invulnerable = False
+                    self.player.invulnerable_until = 0
 
         if self.player.emergency_brake_cooldown > 0:
             self.player.emergency_brake_cooldown -= 1
@@ -1888,51 +2018,20 @@ class Game:
                         self.state = 'paused'
                         self.pause_menu_index = 0
                         self.play_sound('menu_select')
-                    if self.controller.is_button_just_pressed(XboxButton.Y):
-                        # Ship special ability
-                        success, ability_name = self.player.use_ability()
-                        if success:
-                            self.play_sound('powerup')
-                            self.show_message(ability_name, 60)
-                            self.screen_flash_alpha = 40
-                            self.screen_flash_color = (100, 200, 255)
-                    if self.controller.is_button_just_pressed(XboxButton.A):
-                        # Emergency brake - quick pull to bottom of screen
-                        self._emergency_brake()
-                    if self.controller.is_button_just_pressed(XboxButton.X):
-                        # Toggle fire pattern: focused <-> spread
-                        self._toggle_fire_pattern()
-                    if self.controller.is_button_just_pressed(XboxButton.B):
-                        # Toggle fire pattern (alternate button)
-                        self._toggle_fire_pattern()
-                    # Combat maneuvers on bumpers - thrust jets
-                    # Both bumpers = forward boost, single bumper = directional thrust
-                    lb_held = self.controller.is_button_held(XboxButton.LB)
-                    rb_held = self.controller.is_button_held(XboxButton.RB)
-                    lb_just = self.controller.is_button_just_pressed(XboxButton.LB)
-                    rb_just = self.controller.is_button_just_pressed(XboxButton.RB)
+                    # A/B/X/Y are RESERVED - no gameplay bindings
+                    # All gameplay controls handled via InputState:
+                    # - LT = Brake (InputState.brake_pressed)
+                    # - LB/RB = Thrust (InputState.thrust_held)
+                    # - RT = Fire (InputState.fire_held)
+                    # - R3 = Toggle fire mode (InputState.toggle_fire_mode_pressed)
+                    # - Right Stick = Aim (InputState.aim_x/y)
 
-                    if lb_held and rb_held and (lb_just or rb_just):
-                        # Both bumpers pressed - FORWARD BOOST
-                        self._thrust_forward()
-                    elif lb_just and not rb_held:
-                        # LB only - Thrust LEFT
-                        self._thrust_jet(direction=-1)
-                    elif rb_just and not lb_held:
-                        # RB only - Thrust RIGHT
-                        self._thrust_jet(direction=1)
-                    # L3/R3 for HUD toggles
+                    # L3 for HUD toggle (utility, not gameplay)
                     if self.controller.is_button_just_pressed(XboxButton.L_STICK):
                         # Toggle HUD mode (full -> minimal -> off -> full)
                         self.hud_mode = (self.hud_mode + 1) % 3
                         hud_names = ['FULL', 'MINIMAL', 'OFF']
                         self.show_message(f"HUD: {hud_names[self.hud_mode]}", 60)
-                        self.play_sound('menu_select')
-                    if self.controller.is_button_just_pressed(XboxButton.R_STICK):
-                        # Toggle danger zones display
-                        self.show_danger_zones = not self.show_danger_zones
-                        status = "ON" if self.show_danger_zones else "OFF"
-                        self.show_message(f"DANGER ZONES: {status}", 60)
                         self.play_sound('menu_select')
                     # D-Pad for ammo cycling and HUD toggles
                     self._handle_dpad_input()
@@ -2702,9 +2801,42 @@ class Game:
             self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
             if self.tutorial.active and (abs(move_x) > 0.1 or abs(move_y) > 0.1):
                 self.tutorial.track_move()
-        # Player shooting
-        controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
-        if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
+        # Player input via unified InputState
+        input_state = None
+
+        if self.controller and self.controller.connected:
+            input_state = self.controller.get_input_state()
+
+            # R3 = Toggle fire mode (Spread/Focus)
+            if input_state.toggle_fire_mode_pressed:
+                current_pattern = getattr(self.player, 'fire_pattern', 'focused')
+                self.player.fire_pattern = 'spread' if current_pattern == 'focused' else 'focused'
+                self.play_sound('ammo_switch')
+                self.show_message(f"{'SPREAD' if self.player.fire_pattern == 'spread' else 'FOCUSED'}", 30)
+
+            # LT = Brake (emergency escape with invincibility)
+            if input_state.brake_pressed:
+                self._emergency_brake()
+
+            # LB/RB = Thrust (uses movement direction)
+            if input_state.thrust_held and not self.player.thrust_active:
+                self._thrust_with_movement()
+
+        # Disable weapons during brake animation
+        brake_active = getattr(self.player, 'emergency_brake_active', False)
+
+        # Determine fire state from InputState or keyboard/mouse
+        if input_state:
+            controller_fire = input_state.fire_held
+            aim_x, aim_y = input_state.aim_x, input_state.aim_y
+        else:
+            controller_fire = False
+            aim_x, aim_y = 0.0, -1.0  # Default forward
+
+        # Keyboard/mouse fire (always Standard behavior)
+        kb_mouse_fire = keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0]
+
+        if (kb_mouse_fire or controller_fire) and not brake_active:
             ship_class = getattr(self.player, 'ship_class', 'Rifter')
 
             # Jaguar: Seeking rocket streams as main weapon
@@ -2713,7 +2845,8 @@ class Game:
                 if hasattr(self.player, 'rocket_stream_cooldown') and self.player.rocket_stream_cooldown > 0:
                     self.player.rocket_stream_cooldown -= 1
 
-                projectiles = self.player.shoot()  # Returns rockets for Jaguar
+                # Always pass aim direction (right stick with persistence)
+                projectiles = self.player.shoot(aim_direction=(aim_x, aim_y))
                 if projectiles:
                     self.play_sound('rocket', 0.15)  # Quieter for streams
                     if self.tutorial.active:
@@ -2729,8 +2862,8 @@ class Game:
                         self.player_bullets.add(rocket)
                         self.all_sprites.add(rocket)
             else:
-                # Other ships: Normal autocannon fire
-                bullets = self.player.shoot()
+                # Other ships: Normal autocannon fire with 360° aim
+                bullets = self.player.shoot(aim_direction=(aim_x, aim_y))
                 if bullets:
                     self.play_sound('autocannon', 0.3)
                     if self.tutorial.active:
@@ -2745,9 +2878,13 @@ class Game:
                     self.player_bullets.add(bullet)
                     self.all_sprites.add(bullet)
 
-        # Rockets / Special Abilities (LT)
-        controller_rocket = self.controller.is_alternate_fire() if (self.controller and self.controller.connected) else False
-        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2] or controller_rocket:
+        # Store current input state for HUD reticle drawing
+        self._current_input_state = input_state
+        self._manual_aim_active = input_state is not None
+
+        # Special Abilities (keyboard/mouse only - LT is brake on controller)
+        kb_special = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2]
+        if kb_special:
             ship_class = getattr(self.player, 'ship_class', 'Rifter')
 
             # Jaguar: LT activates SHIELD BUBBLE (7s immunity, 20s cooldown)
@@ -2818,11 +2955,6 @@ class Game:
         for enemy in self.enemies:
             enemy.update(self.player.rect)
 
-            # Update hardpoints for cruisers/BCs
-            if hasattr(enemy, 'has_hardpoints') and enemy.has_hardpoints:
-                for hardpoint in enemy.get_hardpoints():
-                    hardpoint.update()
-
             # Update enemy damage visual effects
             enemy_id = id(enemy)
             enemy_effects = get_ship_damage_effects(enemy_id)
@@ -2870,6 +3002,18 @@ class Game:
         # Update enhanced explosions
         if hasattr(self, 'enhanced_explosions'):
             self.enhanced_explosions = [e for e in self.enhanced_explosions if e.update()]
+
+        # Update shield impact effects
+        if hasattr(self, 'shield_impacts'):
+            self.shield_impacts.update()
+
+        # Update muzzle flash effects
+        if hasattr(self, 'muzzle_flashes'):
+            self.muzzle_flashes.update()
+
+        # Update screen shake
+        if hasattr(self, 'screen_shake'):
+            self.screen_shake.update()
 
         # Update visual effects
         self.warp_transition.update()
@@ -2972,60 +3116,7 @@ class Game:
                             enemy.rect.centery + random.randint(-20, 20),
                             (255, 50, 50), 3)
         
-        # Check collisions - player bullets vs HARDPOINTS first (BOSS enemies only)
-        for bullet in list(self.player_bullets):
-            bullet_hit = False
-
-            # Check hardpoints only on BOSS enemies with hardpoints
-            for enemy in self.enemies:
-                if not hasattr(enemy, 'has_hardpoints') or not enemy.has_hardpoints:
-                    continue
-                if not enemy.is_boss:
-                    continue  # Hardpoints only active for bosses
-
-                for hardpoint in enemy.get_active_hardpoints():
-                    if bullet.rect.colliderect(hardpoint.rect):
-                        # Hit hardpoint!
-                        self.particle_emitter.emit_sparks(
-                            bullet.rect.centerx, bullet.rect.centery,
-                            (255, 150, 50), 6)  # Orange sparks for turret hits
-                        self.hit_markers.add(bullet.rect.centerx, bullet.rect.centery)
-
-                        # Damage number on hardpoint
-                        if self.settings.get('show_damage_numbers', True):
-                            dmg = getattr(bullet, 'damage', 10)
-                            self.damage_numbers.spawn(
-                                hardpoint.rect.centerx, hardpoint.rect.top - 5,
-                                dmg, (255, 180, 80))  # Orange for turret damage
-
-                        # Apply damage to hardpoint
-                        if hardpoint.take_damage(bullet.damage):
-                            # Hardpoint destroyed!
-                            self.show_message("TURRET DESTROYED!", 45)
-                            self.play_sound('explosion_small', 0.7)
-                            self.shake.add(SHAKE_SMALL)
-
-                            # Mini explosion
-                            explosion = Explosion(hardpoint.rect.centerx, hardpoint.rect.centery,
-                                                 20, (255, 150, 50))
-                            self.effects.add(explosion)
-
-                            # Check if all hardpoints destroyed
-                            if enemy.check_hardpoints_destroyed():
-                                self.show_message("WEAPONS OFFLINE - TARGET STRUCTURE!", 90)
-                                self.play_sound('warning')
-
-                        bullet.kill()
-                        bullet_hit = True
-                        break
-
-                if bullet_hit:
-                    break
-
-            if bullet_hit:
-                continue
-
-        # Check collisions - player bullets vs enemies (main hull)
+        # Check collisions - player bullets vs enemies
         for bullet in self.player_bullets:
             hits = pygame.sprite.spritecollide(bullet, self.enemies, False)
             for enemy in hits:
@@ -3040,10 +3131,6 @@ class Game:
                 # Spawn damage number if enabled
                 if self.settings.get('show_damage_numbers', True):
                     dmg = getattr(bullet, 'damage', 10)
-                    # Show reduced damage if hardpoints active
-                    if hasattr(enemy, 'has_hardpoints') and enemy.has_hardpoints:
-                        if not enemy.check_hardpoints_destroyed():
-                            dmg = int(dmg * 0.1)  # Show reduced damage
                     dmg_color = bullet.color if hasattr(bullet, 'color') else (255, 255, 255)
                     self.damage_numbers.spawn(
                         enemy.rect.centerx, enemy.rect.top - 5,
@@ -3116,10 +3203,16 @@ class Game:
                             has_secondaries=enemy.is_boss
                         )
                         self.enhanced_explosions.append(enhanced_exp)
+                        # Screen shake for large explosions
+                        if hasattr(self, 'screen_shake'):
+                            shake_intensity = 15 if enemy.is_boss else 8
+                            shake_duration = 25 if enemy.is_boss else 15
+                            self.screen_shake.add_shake(shake_intensity, shake_duration, 'exponential')
                     else:
-                        # Normal explosion for small ships
+                        # Explosion with enhanced effects for bosses/cruisers
                         explosion = Explosion(enemy.rect.centerx, enemy.rect.centery,
-                                            exp_size, COLOR_AMARR_ACCENT)
+                                            exp_size, COLOR_AMARR_ACCENT,
+                                            is_boss=is_large_ship)
                         self.effects.add(explosion)
                         self.all_sprites.add(explosion)
 
@@ -3187,13 +3280,26 @@ class Game:
 
             damage = int(bullet.damage * self.difficulty_settings['enemy_damage_mult'])
 
-            # Determine which layer took the hit for sound
+            # Determine which layer took the hit for sound and effects
             if self.player.shields > 0:
                 self.play_sound('shield_hit', 0.5)
+                # Shield impact ripple effect
+                if hasattr(self, 'shield_impacts'):
+                    self.shield_impacts.add_impact(
+                        bullet.rect.centerx, bullet.rect.centery,
+                        self.player.rect.centerx, self.player.rect.centery,
+                        self.player.rect.width, self.player.rect.height,
+                        damage, 50)
             elif self.player.armor > 0:
                 self.play_sound('armor_hit', 0.5)
+                # Armor hit - small screen shake
+                if hasattr(self, 'screen_shake'):
+                    self.screen_shake.add_shake(3, 8, 'exponential')
             else:
                 self.play_sound('hull_hit', 0.6)
+                # Hull hit - bigger screen shake
+                if hasattr(self, 'screen_shake'):
+                    self.screen_shake.add_shake(6, 12, 'exponential')
 
             self.shake.add(SHAKE_SMALL)
 
@@ -3206,6 +3312,9 @@ class Game:
                 self.effects.add(explosion)
                 self.all_sprites.add(explosion)
                 self.shake.add(SHAKE_LARGE)
+                # Big screen shake for player death
+                if hasattr(self, 'screen_shake'):
+                    self.screen_shake.add_shake(20, 30, 'exponential')
                 self.play_sound('explosion_large')
                 self.play_sound('defeat', 0.7)
                 self.state = 'gameover'
@@ -3690,6 +3799,11 @@ class Game:
         # Apply screen shake (if enabled)
         if self.shake_enabled:
             shake_x, shake_y = self.shake.offset_x, self.shake.offset_y
+            # Add new screen shake system offset
+            if hasattr(self, 'screen_shake'):
+                new_shake_x, new_shake_y = self.screen_shake.get_offset()
+                shake_x += new_shake_x
+                shake_y += new_shake_y
         else:
             shake_x, shake_y = 0, 0
 
@@ -3723,10 +3837,10 @@ class Game:
         pygame.draw.line(self.render_surface, (100, 60, 40), (cx - 180, 105), (cx + 180, 105), 2)
 
         difficulties = [
-            ('1', 'easy', 'EASY', 'Reduced enemy damage, more powerups', (100, 200, 100), 1.0),
-            ('2', 'normal', 'NORMAL', 'Standard experience', (200, 180, 100), 2.0),
-            ('3', 'hard', 'HARD', 'Tougher enemies, faster attacks', (255, 150, 80), 3.0),
-            ('4', 'nightmare', 'NIGHTMARE', 'For veteran pilots only', (255, 80, 80), 4.0)
+            ('1', 'easy', 'CAREBEAR', 'Forgiving. Learn systems. Minimal punishment.', (100, 200, 100), 1.0),
+            ('2', 'normal', 'NEWBRO', 'Real mechanics. Teaches heat, positioning, failure.', (200, 180, 100), 2.0),
+            ('3', 'hard', 'BITTER VET', 'No mercy. Assumes mastery and discipline.', (255, 150, 80), 3.0),
+            ('4', 'nightmare', 'TRIGLAVIAN', 'Hostile reality. Systems turn against you.', (255, 80, 80), 4.0)
         ]
 
         # Draw difficulty cards in a 2x2 grid
@@ -3934,17 +4048,15 @@ class Game:
             if hasattr(sprite, 'draw_trail'):
                 sprite.draw_trail(self.render_surface)
 
+        # Draw enemy bullet trails
+        for bullet in self.enemy_bullets:
+            if hasattr(bullet, 'draw_trail'):
+                bullet.draw_trail(self.render_surface)
+
         # Draw sprites
         for sprite in self.all_sprites:
             if sprite != self.player:
                 self.render_surface.blit(sprite.image, sprite.rect)
-
-        # Draw hardpoints only on BOSS enemies (cruisers/BCs marked as boss)
-        for enemy in self.enemies:
-            if hasattr(enemy, 'has_hardpoints') and enemy.has_hardpoints and enemy.is_boss:
-                for hardpoint in enemy.get_active_hardpoints():
-                    if not hardpoint.destroyed:
-                        self.render_surface.blit(hardpoint.image, hardpoint.rect)
 
         # Draw enemy damage effects (smoke, sparks, fire)
         for enemy in self.enemies:
@@ -4048,6 +4160,14 @@ class Game:
         # Draw player damage effects (smoke, sparks, fire when damaged)
         if hasattr(self, 'player_damage_effects'):
             self.player_damage_effects.draw(self.render_surface)
+
+        # Draw shield impact ripple effects
+        if hasattr(self, 'shield_impacts'):
+            self.shield_impacts.draw(self.render_surface)
+
+        # Draw muzzle flash effects
+        if hasattr(self, 'muzzle_flashes'):
+            self.muzzle_flashes.draw(self.render_surface)
 
         # Draw particle effects
         self.particles.draw(self.render_surface)
@@ -4445,61 +4565,63 @@ class Game:
                               self.font_small, self.font_large)
 
     def _draw_eve_status_panel(self, cx, cy):
-        """Draw polished EVE Online-style capacitor wheel with concentric health rings"""
+        """Draw exact EVE Online capacitor wheel replica
+
+        EVE Layout:
+        - CENTER: Capacitor "star" - yellow dashes that turn grey when depleted
+        - Surrounding: Health rings - Shield (outer), Armor (middle), Hull (inner)
+        - Health rings turn red as damage accumulates
+        """
         now = pygame.time.get_ticks()
 
-        # Ring dimensions (EVE style - concentric rings) - compact 50% size
-        # Outer to inner: Shield -> Armor -> Hull -> Heat/Capacitor
-        shield_radius = 39
-        armor_radius = 32
-        hull_radius = 25
-        heat_radius = 17
-        ring_thickness = 6
+        # EVE-accurate dimensions
+        outer_radius = 58        # Total wheel size
+        cap_radius = 28          # Central capacitor star
+        shield_radius = 54       # Shield ring (outermost)
+        armor_radius = 46        # Armor ring
+        hull_radius = 38         # Hull ring
+        ring_thickness = 6       # Health ring thickness
 
-        # Panel surface for compositing (larger for glow)
-        panel_size = shield_radius * 2 + 60
+        # Panel surface
+        panel_size = outer_radius * 2 + 30
         panel_surf = pygame.Surface((panel_size, panel_size), pygame.SRCALPHA)
         panel_cx, panel_cy = panel_size // 2, panel_size // 2
 
-        # Calculate percentages with smooth interpolation
+        # Calculate percentages
         shield_pct = self.player.shields / max(self.player.max_shields, 1)
         armor_pct = self.player.armor / max(self.player.max_armor, 1)
         hull_pct = self.player.hull / max(self.player.max_hull, 1)
         heat_pct = self.player.heat / self.player.max_heat
+        cap_pct = 1.0 - heat_pct  # Capacitor = inverse of heat
 
-        # === OUTER GLOW (subtle EVE-style ambient glow) ===
-        self._draw_wheel_glow(panel_surf, panel_cx, panel_cy, shield_radius + 8,
-                             shield_pct, armor_pct, hull_pct)
+        # === BACKGROUND (dark circle) ===
+        pygame.draw.circle(panel_surf, (12, 14, 18), (panel_cx, panel_cy), outer_radius)
+        pygame.draw.circle(panel_surf, (30, 35, 45), (panel_cx, panel_cy), outer_radius, 2)
 
-        # === OUTER RING: SHIELDS (Blue - EVE shield color) ===
-        self._draw_health_ring(panel_surf, panel_cx, panel_cy, shield_radius, ring_thickness,
-                              shield_pct, (64, 156, 255), (20, 35, 55), "S", now)
+        # === HEALTH RINGS (outer to inner: Shield -> Armor -> Hull) ===
+        # EVE shows damage as RED filling the empty portion
+        self._draw_eve_health_arc(panel_surf, panel_cx, panel_cy, shield_radius,
+                                  ring_thickness, shield_pct, (64, 156, 255), now)
+        self._draw_eve_health_arc(panel_surf, panel_cx, panel_cy, armor_radius,
+                                  ring_thickness, armor_pct, (255, 176, 48), now)
+        self._draw_eve_health_arc(panel_surf, panel_cx, panel_cy, hull_radius,
+                                  ring_thickness, hull_pct, (160, 165, 175), now,
+                                  critical=(hull_pct < 0.25))
 
-        # === MIDDLE RING: ARMOR (Gold/Orange - EVE armor color) ===
-        self._draw_health_ring(panel_surf, panel_cx, panel_cy, armor_radius, ring_thickness,
-                              armor_pct, (255, 176, 48), (50, 35, 15), "A", now)
+        # === CENTRAL CAPACITOR STAR (EVE's iconic yellow dashes) ===
+        self._draw_eve_capacitor_star(panel_surf, panel_cx, panel_cy, cap_radius,
+                                      cap_pct, now)
 
-        # === INNER RING: HULL (Steel gray, red when critical) ===
-        if hull_pct < 0.25:
-            hull_color = (220, 60, 60)
-        else:
-            hull_color = (160, 165, 175)
-        self._draw_health_ring(panel_surf, panel_cx, panel_cy, hull_radius, ring_thickness,
-                              hull_pct, hull_color, (35, 35, 40), "H", now)
+        # === CENTER HEAT DISPLAY ===
+        self._draw_eve_center_heat(panel_surf, panel_cx, panel_cy, 14, heat_pct, now)
 
-        # === CENTER: HEAT/CAPACITOR GAUGE ===
-        self._draw_heat_center(panel_surf, panel_cx, panel_cy, heat_radius, heat_pct, now)
-
-        # === THRUST COOLDOWN INDICATOR (outer arc) ===
+        # === THRUST COOLDOWN (thin arc at bottom) ===
         thrust_cd = getattr(self.player, 'thrust_cooldown', 0)
         thrust_max = getattr(self.player, 'thrust_cooldown_time', 90)
         if thrust_cd > 0:
             thrust_pct = 1.0 - (thrust_cd / thrust_max)
-            self._draw_thrust_indicator(panel_surf, panel_cx, panel_cy, shield_radius + 12, thrust_pct, now)
-
-        # === PERCENTAGE LABELS ===
-        self._draw_wheel_labels(panel_surf, panel_cx, panel_cy, shield_radius,
-                               shield_pct, armor_pct, hull_pct)
+            self._draw_eve_thrust_arc(panel_surf, panel_cx, panel_cy,
+                                      outer_radius + 4, thrust_pct)
 
         # Blit to main surface
         self.render_surface.blit(panel_surf, (cx - panel_cx, cy - panel_cy))
@@ -4759,6 +4881,506 @@ class Game:
             text = self.font_small.render("THRUST", True, label_color)
             text_rect = text.get_rect(center=(cx, cy + radius + 14))
             surface.blit(text, text_rect)
+
+    # =========================================================================
+    # NEW EVE-AUTHENTIC CAPACITOR WHEEL METHODS
+    # =========================================================================
+
+    def _draw_capacitor_ring(self, surface, cx, cy, radius, thickness, cap_pct, now):
+        """Draw EVE-authentic capacitor ring with glowing gold cells
+
+        In EVE, capacitor shows as bright gold/yellow cells that dim to grey
+        as capacitor depletes. Cells are arranged around the ring.
+        """
+        num_cells = 24  # EVE typically has ~24 cells
+        cell_gap = 4    # degrees between cells
+        cell_arc = (360 / num_cells) - cell_gap
+
+        # Calculate how many cells are "charged"
+        charged_cells = int(cap_pct * num_cells)
+        partial_charge = (cap_pct * num_cells) - charged_cells
+
+        for i in range(num_cells):
+            # Cells start from top (-90 degrees) and go clockwise
+            angle_start = -90 + i * (360 / num_cells)
+
+            # Determine cell state
+            if i < charged_cells:
+                # Fully charged cell - bright gold with glow
+                cell_brightness = 1.0
+                is_charged = True
+            elif i == charged_cells and partial_charge > 0.1:
+                # Partially charged cell
+                cell_brightness = partial_charge
+                is_charged = True
+            else:
+                # Depleted cell - dark grey
+                cell_brightness = 0.0
+                is_charged = False
+
+            self._draw_cap_cell(surface, cx, cy, radius, thickness,
+                               angle_start, cell_arc, cell_brightness, is_charged)
+
+        # Low capacitor warning pulse
+        if cap_pct < 0.25:
+            pulse = 0.3 + 0.7 * abs(math.sin(now * 0.008))
+            # Draw warning glow on remaining cells
+            for i in range(charged_cells + 1):
+                angle_start = -90 + i * (360 / num_cells)
+                self._draw_cap_warning(surface, cx, cy, radius, thickness,
+                                       angle_start, cell_arc, pulse)
+
+    def _draw_cap_cell(self, surface, cx, cy, radius, thickness,
+                       angle_start, arc_span, brightness, is_charged):
+        """Draw a single capacitor cell with EVE-style appearance"""
+        outer_r = radius
+        inner_r = radius - thickness
+        steps = max(4, int(arc_span / 4))
+
+        # Build cell polygon
+        points = []
+        for i in range(steps + 1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            points.append((cx + outer_r * math.cos(angle),
+                          cy + outer_r * math.sin(angle)))
+        for i in range(steps, -1, -1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            points.append((cx + inner_r * math.cos(angle),
+                          cy + inner_r * math.sin(angle)))
+
+        if len(points) < 3:
+            return
+
+        if is_charged and brightness > 0:
+            # Charged cell: Gold gradient from bright center to darker edge
+            # Base gold color with brightness adjustment
+            gold_r = int(200 + 55 * brightness)
+            gold_g = int(160 + 60 * brightness)
+            gold_b = int(40 + 30 * brightness)
+            cell_color = (min(255, gold_r), min(255, gold_g), gold_b)
+
+            # Draw cell body
+            pygame.draw.polygon(surface, cell_color, points)
+
+            # Inner glow (brighter toward center)
+            glow_color = (min(255, gold_r + 40), min(255, gold_g + 30), min(255, gold_b + 20))
+            mid_r = (outer_r + inner_r) / 2
+            glow_points = []
+            for i in range(steps + 1):
+                angle = math.radians(angle_start + (arc_span * i / steps))
+                glow_points.append((cx + mid_r * math.cos(angle),
+                                   cy + mid_r * math.sin(angle)))
+            if len(glow_points) >= 2:
+                pygame.draw.lines(surface, glow_color, False, glow_points, 2)
+
+            # Outer edge highlight
+            edge_color = (255, 240, 180)
+            for i in range(steps):
+                angle1 = math.radians(angle_start + (arc_span * i / steps))
+                angle2 = math.radians(angle_start + (arc_span * (i + 1) / steps))
+                pygame.draw.line(surface, edge_color,
+                               (cx + outer_r * math.cos(angle1), cy + outer_r * math.sin(angle1)),
+                               (cx + outer_r * math.cos(angle2), cy + outer_r * math.sin(angle2)), 1)
+        else:
+            # Depleted cell: Dark grey
+            cell_color = (35, 38, 45)
+            pygame.draw.polygon(surface, cell_color, points)
+            # Subtle edge
+            edge_color = (50, 55, 65)
+            pygame.draw.polygon(surface, edge_color, points, 1)
+
+    def _draw_cap_warning(self, surface, cx, cy, radius, thickness,
+                          angle_start, arc_span, pulse):
+        """Draw warning pulse overlay on low capacitor"""
+        outer_r = radius + 2
+        inner_r = radius - thickness - 2
+        steps = max(4, int(arc_span / 4))
+
+        points = []
+        for i in range(steps + 1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            points.append((cx + outer_r * math.cos(angle),
+                          cy + outer_r * math.sin(angle)))
+        for i in range(steps, -1, -1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            points.append((cx + inner_r * math.cos(angle),
+                          cy + inner_r * math.sin(angle)))
+
+        if len(points) >= 3:
+            warning_color = (int(200 * pulse), int(60 * pulse), int(30 * pulse))
+            pygame.draw.polygon(surface, warning_color, points, 2)
+
+    def _draw_eve_health_ring(self, surface, cx, cy, radius, thickness, fill_pct,
+                               healthy_color, damage_color, bg_color, now, critical=False):
+        """Draw EVE-style health ring
+
+        In EVE, health rings show full in their color, and damage appears as
+        red coloring from the "empty" portion. The ring doesn't deplete from
+        one end - instead, damage overlays the missing health portion.
+        """
+        num_segments = 36
+        segment_gap = 2.0
+        segment_arc = (360 / num_segments) - segment_gap
+
+        for i in range(num_segments):
+            angle_start = -90 + i * (360 / num_segments)
+
+            # Calculate if this segment is "healthy" or "damaged"
+            segment_pos = (i + 0.5) / num_segments
+            is_healthy = segment_pos <= fill_pct
+
+            if is_healthy:
+                # Healthy segment - ring color with subtle glow
+                self._draw_health_segment(surface, cx, cy, radius, thickness,
+                                         angle_start, segment_arc, healthy_color, True)
+            else:
+                # Damaged segment - red/damage color (dimmer)
+                dim_damage = (damage_color[0] // 2, damage_color[1] // 2, damage_color[2] // 2)
+                self._draw_health_segment(surface, cx, cy, radius, thickness,
+                                         angle_start, segment_arc, dim_damage, False)
+
+        # Critical hull pulsing
+        if critical:
+            pulse = 0.4 + 0.6 * abs(math.sin(now * 0.01))
+            # Pulse the damaged segments
+            for i in range(num_segments):
+                angle_start = -90 + i * (360 / num_segments)
+                segment_pos = (i + 0.5) / num_segments
+                if segment_pos > fill_pct:
+                    pulse_color = (int(220 * pulse), int(40 * pulse), int(40 * pulse))
+                    self._draw_health_segment(surface, cx, cy, radius, thickness,
+                                             angle_start, segment_arc, pulse_color, False)
+
+    def _draw_health_segment(self, surface, cx, cy, radius, thickness,
+                             angle_start, arc_span, color, is_healthy):
+        """Draw a single health ring segment"""
+        outer_r = radius
+        inner_r = radius - thickness
+        steps = max(3, int(arc_span / 5))
+
+        points = []
+        for i in range(steps + 1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            points.append((cx + outer_r * math.cos(angle),
+                          cy + outer_r * math.sin(angle)))
+        for i in range(steps, -1, -1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            points.append((cx + inner_r * math.cos(angle),
+                          cy + inner_r * math.sin(angle)))
+
+        if len(points) < 3:
+            return
+
+        pygame.draw.polygon(surface, color, points)
+
+        # Add inner edge highlight for healthy segments
+        if is_healthy:
+            highlight = (min(255, color[0] + 50), min(255, color[1] + 50), min(255, color[2] + 50))
+            for i in range(steps):
+                angle1 = math.radians(angle_start + (arc_span * i / steps))
+                angle2 = math.radians(angle_start + (arc_span * (i + 1) / steps))
+                pygame.draw.line(surface, highlight,
+                               (cx + inner_r * math.cos(angle1), cy + inner_r * math.sin(angle1)),
+                               (cx + inner_r * math.cos(angle2), cy + inner_r * math.sin(angle2)), 1)
+
+    def _draw_eve_center_gauge(self, surface, cx, cy, radius, heat_pct, cap_pct, now):
+        """Draw EVE-style center gauge with heat as primary indicator
+
+        The center shows:
+        - Heat level as the main display (like EVE capacitor center)
+        - Color changes based on heat level
+        - Fills from bottom like a thermometer
+        """
+        is_overheated = getattr(self.player, 'is_overheated', False)
+        heat_warning = getattr(self.player, 'heat_warning', False)
+
+        # === BACKGROUND CIRCLE ===
+        # Dark metallic background
+        pygame.draw.circle(surface, (15, 18, 25), (cx, cy), radius)
+
+        # === BORDER RING ===
+        if is_overheated:
+            pulse = 0.5 + 0.5 * math.sin(now * 0.02)
+            border_color = (int(220 * pulse), int(50 * pulse), 20)
+        elif heat_warning:
+            pulse = 0.7 + 0.3 * math.sin(now * 0.015)
+            border_color = (int(200 * pulse), int(130 * pulse), 40)
+        else:
+            border_color = (50, 60, 75)
+        pygame.draw.circle(surface, border_color, (cx, cy), radius, 2)
+
+        # === HEAT FILL (thermometer style, fills from bottom) ===
+        if heat_pct > 0.02:
+            inner_r = radius - 3
+            fill_height = int(inner_r * 2 * heat_pct)
+
+            # Heat color gradient based on level
+            if heat_pct < 0.35:
+                heat_color = (50, 160, 100)    # Green - cool
+            elif heat_pct < 0.55:
+                heat_color = (180, 180, 50)    # Yellow - warm
+            elif heat_pct < 0.75:
+                heat_color = (220, 130, 40)    # Orange - hot
+            else:
+                heat_color = (220, 50, 40)     # Red - critical
+
+            # Create heat fill surface
+            heat_surf = pygame.Surface((inner_r * 2, inner_r * 2), pygame.SRCALPHA)
+
+            # Draw gradient fill from bottom
+            for y in range(fill_height):
+                row_y = inner_r * 2 - fill_height + y
+                progress = y / max(fill_height, 1)
+                # Gradient from darker at bottom to brighter at top
+                mult = 0.6 + 0.4 * progress
+                row_color = (int(heat_color[0] * mult),
+                            int(heat_color[1] * mult),
+                            int(heat_color[2] * mult), 220)
+                pygame.draw.line(heat_surf, row_color, (0, row_y), (inner_r * 2, row_y))
+
+            # Mask to circle
+            mask = pygame.Surface((inner_r * 2, inner_r * 2), pygame.SRCALPHA)
+            pygame.draw.circle(mask, (255, 255, 255, 255), (inner_r, inner_r), inner_r)
+            heat_surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+            surface.blit(heat_surf, (cx - inner_r, cy - inner_r))
+
+            # Heat level line at top of fill
+            fill_y = cy + inner_r - fill_height
+            # Calculate line width at this y position
+            dy = abs(fill_y - cy)
+            if dy < inner_r:
+                half_width = int(math.sqrt(inner_r**2 - dy**2))
+                if half_width > 2:
+                    line_color = (min(255, heat_color[0] + 60),
+                                 min(255, heat_color[1] + 60),
+                                 min(255, heat_color[2] + 60))
+                    pygame.draw.line(surface, line_color,
+                                   (cx - half_width, fill_y), (cx + half_width, fill_y), 2)
+
+        # === CENTER TEXT (Heat %) ===
+        if is_overheated:
+            pulse = 0.7 + 0.3 * math.sin(now * 0.02)
+            text_color = (255, int(60 * pulse), int(60 * pulse))
+            label = "HOT"
+        elif heat_pct > 0.75:
+            pulse = 0.8 + 0.2 * math.sin(now * 0.015)
+            text_color = (int(255 * pulse), int(120 * pulse), 40)
+            label = f"{int(heat_pct * 100)}"
+        elif heat_pct > 0.5:
+            text_color = (200, 180, 60)
+            label = f"{int(heat_pct * 100)}"
+        else:
+            text_color = (140, 160, 180)
+            label = f"{int(heat_pct * 100)}"
+
+        text_surf = self.font_small.render(label, True, text_color)
+        text_rect = text_surf.get_rect(center=(cx, cy))
+        surface.blit(text_surf, text_rect)
+
+    def _draw_eve_glow(self, surface, cx, cy, radius, shield_pct, armor_pct, hull_pct, cap_pct):
+        """Draw subtle ambient glow based on ship status"""
+        # Determine glow color based on most critical status
+        if hull_pct < 0.25:
+            glow_color = (180, 40, 40)   # Critical - red
+            intensity = 0.35
+        elif cap_pct < 0.2:
+            glow_color = (180, 140, 40)  # Low cap - orange
+            intensity = 0.25
+        elif armor_pct < 0.5 and shield_pct <= 0:
+            glow_color = (180, 100, 40)  # Armor damage - orange
+            intensity = 0.2
+        elif shield_pct > 0.7:
+            glow_color = (40, 100, 180)  # Healthy - blue
+            intensity = 0.12
+        else:
+            glow_color = (50, 60, 80)    # Neutral
+            intensity = 0.08
+
+        # Draw soft radial glow
+        glow_steps = max(6, int(radius * 0.2))
+        for i in range(glow_steps):
+            r = radius - i * 2
+            if r <= 0:
+                break
+            alpha = int(intensity * 255 * (1 - i / glow_steps))
+            glow_surf = pygame.Surface((r * 2 + 4, r * 2 + 4), pygame.SRCALPHA)
+            pygame.draw.circle(glow_surf, (*glow_color, alpha), (r + 2, r + 2), r + 2)
+            surface.blit(glow_surf, (cx - r - 2, cy - r - 2))
+
+    def _draw_eve_thrust_arc(self, surface, cx, cy, radius, fill_pct):
+        """Draw thrust cooldown indicator as thin outer arc"""
+        arc_span = 60  # degrees
+        start_angle = 90 - arc_span / 2  # Bottom of wheel
+        thickness = 3
+
+        # Background arc
+        self._draw_arc_segment(surface, cx, cy, radius, thickness,
+                              start_angle, arc_span, (25, 30, 40))
+
+        # Fill arc
+        if fill_pct > 0.02:
+            fill_span = arc_span * fill_pct
+            fill_color = (60, 180, 255) if fill_pct < 1.0 else (100, 220, 255)
+            self._draw_arc_segment(surface, cx, cy, radius, thickness,
+                                  start_angle, fill_span, fill_color)
+
+    def _draw_arc_segment(self, surface, cx, cy, radius, thickness,
+                          angle_start, arc_span, color):
+        """Helper to draw a simple arc segment"""
+        outer_r = radius
+        inner_r = radius - thickness
+        steps = max(4, int(arc_span / 5))
+
+        points = []
+        for i in range(steps + 1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            points.append((cx + outer_r * math.cos(angle),
+                          cy + outer_r * math.sin(angle)))
+        for i in range(steps, -1, -1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            points.append((cx + inner_r * math.cos(angle),
+                          cy + inner_r * math.sin(angle)))
+
+        if len(points) >= 3:
+            pygame.draw.polygon(surface, color, points)
+
+    # =========================================================================
+    # EVE-ACCURATE CAPACITOR WHEEL METHODS
+    # =========================================================================
+
+    def _draw_eve_health_arc(self, surface, cx, cy, radius, thickness, fill_pct,
+                             color, now, critical=False):
+        """Draw EVE-style health ring - full ring that turns RED as health drops
+
+        In EVE, health rings show as their color when healthy, and the
+        DAMAGE portion fills with red from the empty end.
+        """
+        num_segments = 40
+        segment_gap = 1.5
+        segment_arc = (360 / num_segments) - segment_gap
+
+        for i in range(num_segments):
+            # Start from top (-90 degrees), go clockwise
+            angle_start = -90 + i * (360 / num_segments)
+            segment_pos = i / num_segments
+
+            if segment_pos < fill_pct:
+                # Healthy - show ring color
+                seg_color = color
+                # Add slight highlight
+                highlight = 1.0 + 0.1 * math.sin(now * 0.003 + i * 0.2)
+                seg_color = (min(255, int(color[0] * highlight)),
+                           min(255, int(color[1] * highlight)),
+                           min(255, int(color[2] * highlight)))
+            else:
+                # Damaged - show red
+                if critical:
+                    # Pulsing red for critical
+                    pulse = 0.5 + 0.5 * math.sin(now * 0.01)
+                    seg_color = (int(180 * pulse), int(30 * pulse), int(30 * pulse))
+                else:
+                    seg_color = (120, 25, 25)
+
+            self._draw_arc_segment(surface, cx, cy, radius, thickness,
+                                  angle_start, segment_arc, seg_color)
+
+        # Draw ring border
+        pygame.draw.circle(surface, (50, 55, 65), (cx, cy), radius, 1)
+        pygame.draw.circle(surface, (40, 45, 55), (cx, cy), radius - thickness, 1)
+
+    def _draw_eve_capacitor_star(self, surface, cx, cy, radius, cap_pct, now):
+        """Draw EVE's central capacitor - yellow dashes that turn grey when depleted
+
+        The capacitor is a 'star' of bright yellow dashes arranged in a circle.
+        As capacitor drains, dashes dim from yellow to grey.
+        """
+        num_dashes = 16  # EVE typically has ~16-24 dashes
+        dash_length = radius * 0.65
+        dash_width = 4
+        inner_radius = radius * 0.35
+
+        # Background circle
+        pygame.draw.circle(surface, (15, 18, 22), (cx, cy), int(radius * 0.9))
+
+        charged_dashes = int(cap_pct * num_dashes)
+        partial = (cap_pct * num_dashes) - charged_dashes
+
+        for i in range(num_dashes):
+            angle = -90 + i * (360 / num_dashes)
+            angle_rad = math.radians(angle)
+
+            # Calculate dash endpoints
+            inner_x = cx + inner_radius * math.cos(angle_rad)
+            inner_y = cy + inner_radius * math.sin(angle_rad)
+            outer_x = cx + (inner_radius + dash_length) * math.cos(angle_rad)
+            outer_y = cy + (inner_radius + dash_length) * math.sin(angle_rad)
+
+            if i < charged_dashes:
+                # Fully charged - bright yellow/gold
+                brightness = 0.9 + 0.1 * math.sin(now * 0.005 + i * 0.4)
+                dash_color = (int(255 * brightness), int(220 * brightness), int(80 * brightness))
+                glow_color = (255, 200, 50)
+            elif i == charged_dashes and partial > 0.1:
+                # Partially charged
+                brightness = 0.5 + 0.4 * partial
+                dash_color = (int(255 * brightness), int(200 * brightness), int(60 * brightness))
+                glow_color = (200, 160, 40)
+            else:
+                # Depleted - grey
+                dash_color = (45, 50, 55)
+                glow_color = None
+
+            # Draw glow for charged dashes
+            if glow_color:
+                pygame.draw.line(surface, glow_color,
+                               (inner_x, inner_y), (outer_x, outer_y), dash_width + 2)
+
+            # Draw main dash
+            pygame.draw.line(surface, dash_color,
+                           (inner_x, inner_y), (outer_x, outer_y), dash_width)
+
+            # Bright tip for charged dashes
+            if i < charged_dashes:
+                pygame.draw.circle(surface, (255, 255, 200),
+                                 (int(outer_x), int(outer_y)), 2)
+
+        # Low capacitor warning
+        if cap_pct < 0.25:
+            pulse = 0.5 + 0.5 * math.sin(now * 0.008)
+            warning_color = (int(200 * pulse), int(100 * pulse), 20)
+            pygame.draw.circle(surface, warning_color, (cx, cy), int(radius * 0.9), 2)
+
+    def _draw_eve_center_heat(self, surface, cx, cy, radius, heat_pct, now):
+        """Draw minimal heat indicator in the very center"""
+        is_overheated = getattr(self.player, 'is_overheated', False)
+        heat_warning = getattr(self.player, 'heat_warning', False)
+
+        # Small circle background
+        pygame.draw.circle(surface, (18, 22, 28), (cx, cy), radius)
+
+        # Heat color based on level
+        if heat_pct < 0.4:
+            text_color = (100, 160, 120)  # Green
+        elif heat_pct < 0.7:
+            text_color = (200, 180, 80)   # Yellow
+        elif is_overheated:
+            pulse = 0.7 + 0.3 * math.sin(now * 0.02)
+            text_color = (255, int(60 * pulse), int(40 * pulse))
+        else:
+            text_color = (220, 100, 60)   # Orange/Red
+
+        # Heat percentage text
+        heat_text = f"{int(heat_pct * 100)}"
+        text_surf = self.font_small.render(heat_text, True, text_color)
+        text_rect = text_surf.get_rect(center=(cx, cy))
+        surface.blit(text_surf, text_rect)
+
+        # Warning border
+        if heat_warning or is_overheated:
+            pulse = 0.5 + 0.5 * math.sin(now * 0.015)
+            border_color = (int(200 * pulse), int(80 * pulse), 30)
+            pygame.draw.circle(surface, border_color, (cx, cy), radius, 2)
 
     def _draw_status_bar(self, surface, x, y, width, height, fill_pct, fill_color, bg_color, label):
         """Draw a single EVE-style status bar"""
@@ -6228,7 +6850,7 @@ class Game:
                 ship_text = self.font_small.render(ship, True, color)
                 self.render_surface.blit(ship_text, (400, y + 3))
 
-                # Difficulty
+                # Difficulty - EVE themed names
                 diff = entry.get('difficulty', 'normal')
                 diff_colors = {
                     'easy': (100, 255, 100),
@@ -6236,7 +6858,13 @@ class Game:
                     'hard': (255, 200, 100),
                     'nightmare': (255, 100, 100)
                 }
-                diff_text = self.font_small.render(diff.capitalize(), True, diff_colors.get(diff, COLOR_TEXT))
+                diff_names = {
+                    'easy': 'Carebear',
+                    'normal': 'Newbro',
+                    'hard': 'Bitter Vet',
+                    'nightmare': 'Triglavian'
+                }
+                diff_text = self.font_small.render(diff_names.get(diff, diff.capitalize()), True, diff_colors.get(diff, COLOR_TEXT))
                 self.render_surface.blit(diff_text, (500, y + 3))
 
                 # Date (smaller, right side)
@@ -6449,7 +7077,6 @@ class Game:
             "Enemy count increases each wave & stage",
             "Formations appear: V-shape, pincer, escort",
             "Boss appears on final wave of boss stages",
-            "Shop opens between stages for upgrades",
         ]
 
         for line in wave_info:
@@ -6457,7 +7084,30 @@ class Game:
             self.render_surface.blit(text, (left_x + 15, y))
             y += 22
 
-        y += 30
+        y += 20
+
+        # Combat maneuvers
+        header = header_font.render("COMBAT MANEUVERS", True, (150, 200, 150))
+        self.render_surface.blit(header, (left_x, y))
+        y += 28
+
+        maneuver_info = [
+            ("EMERGENCY ESCAPE (LB+RB / Q):", (255, 180, 100)),
+            ("  Drop to bottom + 5s invincibility", (160, 160, 160)),
+            ("  10s cooldown - escape, not mobility", (140, 140, 140)),
+            ("", (0, 0, 0)),
+            ("THRUST (LB or RB):", (255, 180, 100)),
+            ("  Quick horizontal dodge burst", (160, 160, 160)),
+            ("  Jaguar: UNLIMITED thrust - pure mobility", (255, 215, 0)),
+        ]
+
+        for line, color in maneuver_info:
+            if line:
+                text = small_font.render(line, True, color)
+                self.render_surface.blit(text, (left_x + 10, y))
+            y += 18
+
+        y += 15
 
         # === REFUGEE RESCUE SECTION ===
         header = section_font.render("LIBERATING SOULS", True, (100, 255, 100))
@@ -6518,39 +7168,69 @@ class Game:
 
         y += 25
 
-        # Powerups section
+        # Powerups section with EVE icons
         header = header_font.render("POWERUP DROPS", True, (150, 200, 150))
         self.render_surface.blit(header, (right_x, y))
-        y += 30
+        y += 28
 
-        powerup_info = [
-            ("Drop chance varies by difficulty:", (180, 180, 180)),
-            ("  Easy: 30%  |  Normal: 18%", (140, 200, 140)),
-            ("  Hard: 10%  |  Nightmare: 6%", (200, 140, 140)),
-            ("", (0, 0, 0)),
-            ("Weapon powerups (Damage/Rapid Fire):", (180, 180, 180)),
-            ("  Last until you OVERHEAT or die!", (255, 200, 100)),
-            ("  Manage heat to keep bonuses", (140, 140, 140)),
+        # Powerup descriptions with icons
+        powerups_display = [
+            ("UTILITY:", None, (180, 180, 180)),
+            ("Nanite Paste", "nanite_paste.png", "Cools weapons, clears heat"),
+            ("", None, (0, 0, 0)),
+            ("COMBAT BOOSTERS:", None, (180, 180, 180)),
+            ("Weapon Upgrade", "combat_booster.png", "+Damage (lost on overheat)"),
+            ("Rapid Fire", "combat_booster.png", "+Fire rate (lost on overheat)"),
+            ("Overdrive", "speed_booster.png", "5s speed boost"),
+            ("", None, (0, 0, 0)),
+            ("DEFENSIVE:", None, (180, 180, 180)),
+            ("Assault DC", "assault_damage_control.png", "5s invulnerability"),
+            ("Shield Hardener", "shield_hardener.png", "Repairs shields"),
+            ("Armor Hardener", "armor_hardener.png", "Repairs armor"),
+            ("Bulkheads", "reinforced_bulkheads.png", "Repairs hull"),
         ]
 
-        for line, color in powerup_info:
-            if line:
-                text = small_font.render(line, True, color)
-                self.render_surface.blit(text, (right_x + 15, y))
-            y += 22
+        eve_icon_path = "assets/eve_icons/powerups/"
+        for item in powerups_display:
+            if len(item) == 3:
+                name, icon_file, desc = item
+                if name == "":
+                    y += 8
+                    continue
+                if icon_file is None:
+                    # Header line
+                    text = small_font.render(name, True, desc)
+                    self.render_surface.blit(text, (right_x + 10, y))
+                    y += 20
+                else:
+                    # Try to load and display EVE icon
+                    try:
+                        icon_path = eve_icon_path + icon_file
+                        icon = pygame.image.load(icon_path).convert_alpha()
+                        icon = pygame.transform.scale(icon, (18, 18))
+                        self.render_surface.blit(icon, (right_x + 12, y))
+                    except:
+                        pygame.draw.circle(self.render_surface, (200, 150, 50),
+                                         (right_x + 21, y + 9), 8)
+                    # Name and description
+                    name_surf = small_font.render(name, True, (200, 200, 200))
+                    self.render_surface.blit(name_surf, (right_x + 36, y))
+                    desc_surf = small_font.render(desc, True, (140, 140, 140))
+                    self.render_surface.blit(desc_surf, (right_x + 140, y))
+                    y += 20
 
-        y += 25
+        y += 15
 
         # Difficulty tips
-        header = header_font.render("DIFFICULTY EFFECTS", True, (150, 200, 150))
+        header = header_font.render("DIFFICULTY TIERS", True, (150, 200, 150))
         self.render_surface.blit(header, (right_x, y))
         y += 30
 
         diff_info = [
-            ("Easy: 0.5x enemy HP, 1.5x your damage", (100, 200, 100)),
-            ("Normal: Balanced for new pilots", (180, 180, 180)),
-            ("Hard: 1.4x enemy HP, faster spawns", (200, 150, 100)),
-            ("Nightmare: 2.2x HP, relentless waves", (255, 100, 100)),
+            ("Carebear: 0.5x enemy HP, forgiving", (100, 200, 100)),
+            ("Newbro: Balanced, teaches mechanics", (180, 180, 180)),
+            ("Bitter Vet: 1.4x HP, no mercy", (200, 150, 100)),
+            ("Triglavian: 2.2x HP, hostile reality", (255, 100, 100)),
         ]
 
         for line, color in diff_info:

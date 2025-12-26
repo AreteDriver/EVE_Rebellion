@@ -219,11 +219,13 @@ class ProceduralNebula:
 
 
 class AmbientShip:
-    """Non-interactive background ship for atmosphere"""
+    """Non-interactive background ship for atmosphere - EVE-style silhouettes"""
 
-    SHIP_TYPES = ['frigate', 'cruiser', 'industrial', 'shuttle']
+    SHIP_TYPES = ['frigate', 'cruiser', 'industrial', 'shuttle', 'battleship', 'mining']
+    # Carriers are rare - not in normal rotation, spawned specially
 
-    def __init__(self, width: int = SCREEN_WIDTH, height: int = SCREEN_HEIGHT):
+    def __init__(self, width: int = SCREEN_WIDTH, height: int = SCREEN_HEIGHT,
+                 force_type: str = None):
         self.width = width
         self.height = height
 
@@ -231,11 +233,23 @@ class AmbientShip:
         self.direction = random.choice(['left', 'right', 'up', 'down'])
         self._init_position()
 
-        # Ship properties
-        self.ship_type = random.choice(self.SHIP_TYPES)
-        self.depth = random.uniform(0.3, 0.8)  # 0 = far, 1 = close
-        self.speed = (0.5 + self.depth) * random.uniform(0.8, 1.5)
-        self.size = int(8 + self.depth * 20)
+        # Ship properties - carrier can be forced, otherwise rare chance
+        if force_type:
+            self.ship_type = force_type
+        elif random.random() < 0.02:  # 2% chance of carrier
+            self.ship_type = 'carrier'
+        else:
+            self.ship_type = random.choice(self.SHIP_TYPES)
+
+        # Carriers are always very far back (distant, imposing silhouettes)
+        if self.ship_type == 'carrier':
+            self.depth = random.uniform(0.12, 0.22)  # Very far back
+            self.speed = 0.15 + self.depth * 0.3  # Slow, majestic movement
+            self.size = int(80 + self.depth * 60)  # Large even at distance
+        else:
+            self.depth = random.uniform(0.3, 0.8)  # 0 = far, 1 = close
+            self.speed = (0.5 + self.depth) * random.uniform(0.8, 1.5)
+            self.size = int(8 + self.depth * 20)
 
         # Visual
         self.sprite = self._create_sprite()
@@ -266,73 +280,382 @@ class AmbientShip:
             self.vx = random.uniform(-0.2, 0.2)
             self.vy = 1
 
-    def _create_sprite(self) -> pygame.Surface:
-        """Create ship sprite based on type"""
-        size = self.size
-        surf = pygame.Surface((size * 3, size * 2), pygame.SRCALPHA)
-        cx, cy = size * 1.5, size
+    def _apply_atmospheric_perspective(self, color: Tuple[int, int, int],
+                                        alpha: int) -> Tuple[int, int, int, int]:
+        """Apply atmospheric perspective - distant objects get blue-ish tint"""
+        # Farther = more blue tint, less saturation
+        distance_factor = 1.0 - self.depth  # 0.2-0.7 range
+        blue_shift = int(distance_factor * 40)
+        desat = distance_factor * 0.3
 
-        # Color based on depth (farther = dimmer)
-        brightness = int(100 + self.depth * 100)
+        r = int(color[0] * (1 - desat) + blue_shift)
+        g = int(color[1] * (1 - desat * 0.5) + blue_shift * 0.5)
+        b = int(color[2] + blue_shift)
+
+        return (max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)), alpha)
+
+    def _draw_engine_glow(self, surf: pygame.Surface, x: int, y: int,
+                          size: int, color: Tuple[int, int, int]):
+        """Draw multi-layer engine glow effect"""
+        # Outer glow (large, faint)
+        glow_surf = pygame.Surface((size * 4, size * 4), pygame.SRCALPHA)
+        for r in range(size * 2, 0, -2):
+            alpha = int(60 * (r / (size * 2)))
+            pygame.draw.circle(glow_surf, (*color, alpha),
+                             (size * 2, size * 2), r)
+        surf.blit(glow_surf, (x - size * 2, y - size * 2),
+                 special_flags=pygame.BLEND_RGBA_ADD)
+
+        # Core glow (bright center)
+        pygame.draw.circle(surf, (255, 255, 255, 200), (x, y), max(1, size // 3))
+        pygame.draw.circle(surf, (*color, 255), (x, y), max(1, size // 2))
+
+    def _draw_hull_details(self, surf: pygame.Surface, points: list,
+                           color: Tuple[int, int, int, int], size: int):
+        """Add hull panel lines and lighting details"""
+        # Subtle edge highlight (top-left lighting)
+        highlight = (min(255, color[0] + 40), min(255, color[1] + 40),
+                    min(255, color[2] + 35), min(255, color[3]))
+        shadow = (max(0, color[0] - 30), max(0, color[1] - 30),
+                 max(0, color[2] - 25), color[3])
+
+        # Draw highlight on upper edges
+        pygame.draw.polygon(surf, highlight, points, 1)
+
+        # Add window lights for larger ships
+        if size > 12 and random.random() > 0.3:
+            cx = sum(p[0] for p in points) / len(points)
+            cy = sum(p[1] for p in points) / len(points)
+            num_windows = max(1, size // 8)
+            for _ in range(num_windows):
+                wx = int(cx + random.uniform(-size * 0.4, size * 0.4))
+                wy = int(cy + random.uniform(-size * 0.2, size * 0.2))
+                window_color = random.choice([
+                    (255, 255, 200, 180),  # Warm interior
+                    (200, 220, 255, 180),  # Cool interior
+                    (255, 200, 150, 180),  # Orange light
+                ])
+                pygame.draw.circle(surf, window_color, (wx, wy), max(1, size // 12))
+
+    def _create_sprite(self) -> pygame.Surface:
+        """Create detailed EVE-style ship sprite"""
+        size = self.size
+        surf = pygame.Surface((size * 4, size * 3), pygame.SRCALPHA)
+        cx, cy = size * 2, size * 1.5
+
+        # Base brightness with depth falloff
+        brightness = int(80 + self.depth * 120)
+        # Alpha based on depth (distant = more transparent)
+        alpha = int(120 + self.depth * 135)
 
         if self.ship_type == 'frigate':
-            # Small angular ship
-            color = (brightness, brightness - 20, brightness - 40)
-            points = [
-                (cx, cy - size * 0.6),
-                (cx + size * 0.5, cy + size * 0.4),
-                (cx, cy + size * 0.2),
-                (cx - size * 0.5, cy + size * 0.4),
+            # Sleek angular frigate - Minmatar style
+            base_color = (brightness + 10, brightness - 10, brightness - 30)
+            color = self._apply_atmospheric_perspective(base_color, alpha)
+
+            # Main hull (angular, aggressive)
+            hull_points = [
+                (cx, cy - size * 0.7),           # Nose
+                (cx + size * 0.3, cy - size * 0.3),  # Right front
+                (cx + size * 0.6, cy + size * 0.3),  # Right wing
+                (cx + size * 0.2, cy + size * 0.5),  # Right back
+                (cx, cy + size * 0.3),            # Tail center
+                (cx - size * 0.2, cy + size * 0.5),  # Left back
+                (cx - size * 0.6, cy + size * 0.3),  # Left wing
+                (cx - size * 0.3, cy - size * 0.3),  # Left front
             ]
-            pygame.draw.polygon(surf, color, points)
-            # Engine glow
-            pygame.draw.circle(surf, (255, 150, 50),
-                             (int(cx), int(cy + size * 0.3)), size // 4)
+            pygame.draw.polygon(surf, color, hull_points)
+            self._draw_hull_details(surf, hull_points, color, size)
+
+            # Engine nacelles
+            self._draw_engine_glow(surf, int(cx - size * 0.3), int(cy + size * 0.45),
+                                  max(2, size // 5), (255, 150, 50))
+            self._draw_engine_glow(surf, int(cx + size * 0.3), int(cy + size * 0.45),
+                                  max(2, size // 5), (255, 150, 50))
 
         elif self.ship_type == 'cruiser':
-            # Medium elongated ship
-            color = (brightness - 20, brightness - 20, brightness)
-            pygame.draw.ellipse(surf, color,
-                              (cx - size, cy - size * 0.3, size * 2, size * 0.6))
-            pygame.draw.polygon(surf, color, [
-                (cx + size, cy),
-                (cx + size * 1.3, cy - size * 0.2),
-                (cx + size * 1.3, cy + size * 0.2),
-            ])
-            # Engines
-            pygame.draw.circle(surf, (100, 200, 255),
-                             (int(cx - size * 0.8), int(cy)), size // 5)
+            # Elongated cruiser - Amarr style (golden, ornate)
+            base_color = (brightness + 20, brightness, brightness - 40)
+            color = self._apply_atmospheric_perspective(base_color, alpha)
+
+            # Main hull body
+            hull_points = [
+                (cx + size * 1.2, cy),            # Bow
+                (cx + size * 0.8, cy - size * 0.25),
+                (cx - size * 0.3, cy - size * 0.35),
+                (cx - size * 0.8, cy - size * 0.25),
+                (cx - size * 1.0, cy),            # Stern
+                (cx - size * 0.8, cy + size * 0.25),
+                (cx - size * 0.3, cy + size * 0.35),
+                (cx + size * 0.8, cy + size * 0.25),
+            ]
+            pygame.draw.polygon(surf, color, hull_points)
+
+            # Command section (raised)
+            cmd_color = (min(255, color[0] + 20), min(255, color[1] + 15),
+                        color[2], color[3])
+            pygame.draw.ellipse(surf, cmd_color,
+                              (cx - size * 0.2, cy - size * 0.2, size * 0.6, size * 0.4))
+
+            self._draw_hull_details(surf, hull_points, color, size)
+
+            # Twin engines
+            self._draw_engine_glow(surf, int(cx - size * 0.9), int(cy - size * 0.15),
+                                  max(2, size // 4), (100, 180, 255))
+            self._draw_engine_glow(surf, int(cx - size * 0.9), int(cy + size * 0.15),
+                                  max(2, size // 4), (100, 180, 255))
 
         elif self.ship_type == 'industrial':
-            # Bulky cargo ship
-            color = (brightness - 30, brightness - 10, brightness - 30)
-            pygame.draw.rect(surf, color,
-                           (cx - size * 0.8, cy - size * 0.4, size * 1.6, size * 0.8))
-            pygame.draw.polygon(surf, color, [
-                (cx + size * 0.8, cy - size * 0.2),
-                (cx + size * 1.2, cy),
-                (cx + size * 0.8, cy + size * 0.2),
-            ])
+            # Bulky cargo hauler - blocky utilitarian design
+            base_color = (brightness - 20, brightness - 10, brightness - 25)
+            color = self._apply_atmospheric_perspective(base_color, alpha)
+
+            # Cargo section (large box)
+            cargo_rect = (cx - size * 0.7, cy - size * 0.45, size * 1.4, size * 0.9)
+            pygame.draw.rect(surf, color, cargo_rect, border_radius=3)
+
+            # Bridge section (front)
+            bridge_color = (min(255, color[0] + 15), min(255, color[1] + 10),
+                           color[2], color[3])
+            bridge_points = [
+                (cx + size * 0.7, cy - size * 0.3),
+                (cx + size * 1.1, cy),
+                (cx + size * 0.7, cy + size * 0.3),
+            ]
+            pygame.draw.polygon(surf, bridge_color, bridge_points)
+
+            # Cargo bay lines
+            line_color = (max(0, color[0] - 20), max(0, color[1] - 20),
+                         max(0, color[2] - 15), color[3])
+            for i in range(3):
+                lx = int(cx - size * 0.5 + i * size * 0.35)
+                pygame.draw.line(surf, line_color,
+                               (lx, int(cy - size * 0.4)),
+                               (lx, int(cy + size * 0.4)), 1)
+
             # Running lights
-            pygame.draw.circle(surf, (255, 100, 100),
-                             (int(cx - size * 0.7), int(cy - size * 0.3)), 2)
-            pygame.draw.circle(surf, (100, 255, 100),
-                             (int(cx - size * 0.7), int(cy + size * 0.3)), 2)
+            pygame.draw.circle(surf, (255, 80, 80, 200),
+                             (int(cx - size * 0.65), int(cy - size * 0.35)), 2)
+            pygame.draw.circle(surf, (80, 255, 80, 200),
+                             (int(cx - size * 0.65), int(cy + size * 0.35)), 2)
 
-        else:  # shuttle
-            # Tiny fast ship
-            color = (brightness, brightness, brightness - 20)
-            pygame.draw.polygon(surf, color, [
-                (cx + size * 0.6, cy),
-                (cx - size * 0.4, cy - size * 0.3),
-                (cx - size * 0.4, cy + size * 0.3),
-            ])
-            pygame.draw.circle(surf, (200, 255, 200),
-                             (int(cx - size * 0.3), int(cy)), size // 6)
+            # Engine cluster
+            self._draw_engine_glow(surf, int(cx - size * 0.85), int(cy),
+                                  max(2, size // 4), (255, 180, 100))
 
-        # Scale based on depth
+        elif self.ship_type == 'shuttle':
+            # Small fast shuttle
+            base_color = (brightness + 5, brightness + 5, brightness - 10)
+            color = self._apply_atmospheric_perspective(base_color, alpha)
+
+            hull_points = [
+                (cx + size * 0.7, cy),            # Nose
+                (cx + size * 0.3, cy - size * 0.25),
+                (cx - size * 0.4, cy - size * 0.2),
+                (cx - size * 0.5, cy),
+                (cx - size * 0.4, cy + size * 0.2),
+                (cx + size * 0.3, cy + size * 0.25),
+            ]
+            pygame.draw.polygon(surf, color, hull_points)
+
+            # Cockpit window
+            pygame.draw.ellipse(surf, (150, 200, 255, 150),
+                              (cx + size * 0.1, cy - size * 0.1, size * 0.3, size * 0.2))
+
+            self._draw_engine_glow(surf, int(cx - size * 0.45), int(cy),
+                                  max(2, size // 5), (180, 255, 180))
+
+        elif self.ship_type == 'battleship':
+            # Massive battleship silhouette
+            base_color = (brightness - 10, brightness - 15, brightness + 10)
+            color = self._apply_atmospheric_perspective(base_color, alpha)
+
+            # Massive hull
+            hull_points = [
+                (cx + size * 1.5, cy),            # Bow
+                (cx + size * 1.2, cy - size * 0.3),
+                (cx + size * 0.5, cy - size * 0.45),
+                (cx - size * 0.5, cy - size * 0.5),
+                (cx - size * 1.2, cy - size * 0.35),
+                (cx - size * 1.4, cy),            # Stern
+                (cx - size * 1.2, cy + size * 0.35),
+                (cx - size * 0.5, cy + size * 0.5),
+                (cx + size * 0.5, cy + size * 0.45),
+                (cx + size * 1.2, cy + size * 0.3),
+            ]
+            pygame.draw.polygon(surf, color, hull_points)
+
+            # Superstructure
+            super_color = (min(255, color[0] + 15), min(255, color[1] + 10),
+                          color[2], color[3])
+            pygame.draw.ellipse(surf, super_color,
+                              (cx - size * 0.4, cy - size * 0.3, size * 0.9, size * 0.6))
+
+            self._draw_hull_details(surf, hull_points, color, size)
+
+            # Multiple engine banks
+            for offset in [-0.25, 0, 0.25]:
+                self._draw_engine_glow(surf, int(cx - size * 1.3),
+                                      int(cy + size * offset),
+                                      max(2, size // 4), (100, 150, 255))
+
+        elif self.ship_type == 'mining':
+            # Mining barge with ore hold
+            base_color = (brightness - 15, brightness + 5, brightness - 20)
+            color = self._apply_atmospheric_perspective(base_color, alpha)
+
+            # Main body
+            pygame.draw.ellipse(surf, color,
+                              (cx - size * 0.8, cy - size * 0.35, size * 1.6, size * 0.7))
+
+            # Mining laser arm
+            arm_color = (max(0, color[0] - 15), max(0, color[1] - 10),
+                        max(0, color[2] - 10), color[3])
+            pygame.draw.line(surf, arm_color,
+                           (int(cx + size * 0.6), int(cy)),
+                           (int(cx + size * 1.2), int(cy - size * 0.3)), 2)
+            # Laser tip glow
+            pygame.draw.circle(surf, (100, 255, 150, 180),
+                             (int(cx + size * 1.2), int(cy - size * 0.3)), 3)
+
+            # Ore hold bulge
+            pygame.draw.ellipse(surf, color,
+                              (cx - size * 0.5, cy + size * 0.1, size * 0.8, size * 0.4))
+
+            self._draw_engine_glow(surf, int(cx - size * 0.75), int(cy),
+                                  max(2, size // 4), (255, 200, 100))
+
+        else:  # carrier
+            # Massive Amarr-style carrier - imposing silhouette far in background
+            # Story: enemy fleet carriers launching fighters against rebels
+            base_color = (brightness + 15, brightness + 5, brightness - 35)  # Golden Amarr
+            color = self._apply_atmospheric_perspective(base_color, alpha)
+
+            # Carriers need a larger canvas due to their massive size
+            # Recreate surface with carrier proportions
+            surf = pygame.Surface((size * 5, size * 3), pygame.SRCALPHA)
+            cx, cy = size * 2.5, size * 1.5
+
+            # === MAIN HULL - elongated capital ship ===
+            hull_points = [
+                (cx + size * 2.0, cy),                    # Bow point
+                (cx + size * 1.7, cy - size * 0.25),     # Upper bow
+                (cx + size * 1.2, cy - size * 0.35),     # Upper forward
+                (cx + size * 0.3, cy - size * 0.45),     # Upper mid
+                (cx - size * 0.8, cy - size * 0.5),      # Upper aft
+                (cx - size * 1.5, cy - size * 0.35),     # Upper stern
+                (cx - size * 1.8, cy),                    # Stern center
+                (cx - size * 1.5, cy + size * 0.35),     # Lower stern
+                (cx - size * 0.8, cy + size * 0.5),      # Lower aft
+                (cx + size * 0.3, cy + size * 0.45),     # Lower mid
+                (cx + size * 1.2, cy + size * 0.35),     # Lower forward
+                (cx + size * 1.7, cy + size * 0.25),     # Lower bow
+            ]
+            pygame.draw.polygon(surf, color, hull_points)
+
+            # === FLIGHT DECK - distinctive carrier feature ===
+            # Upper flight deck (where fighters launch)
+            deck_color = (max(0, color[0] - 20), max(0, color[1] - 18),
+                         max(0, color[2] - 15), color[3])
+            deck_points = [
+                (cx + size * 0.8, cy - size * 0.38),
+                (cx - size * 0.6, cy - size * 0.45),
+                (cx - size * 1.2, cy - size * 0.38),
+                (cx - size * 1.2, cy - size * 0.28),
+                (cx - size * 0.6, cy - size * 0.32),
+                (cx + size * 0.8, cy - size * 0.28),
+            ]
+            pygame.draw.polygon(surf, deck_color, deck_points)
+
+            # Flight deck runway markings
+            for i in range(5):
+                mark_x = int(cx + size * 0.6 - i * size * 0.35)
+                mark_y = int(cy - size * 0.35)
+                pygame.draw.line(surf, (min(255, color[0] + 40), min(255, color[1] + 35),
+                                       color[2], min(255, color[3] + 20)),
+                               (mark_x, mark_y), (mark_x - int(size * 0.1), mark_y), 2)
+
+            # === COMMAND TOWER / SUPERSTRUCTURE ===
+            tower_color = (min(255, color[0] + 25), min(255, color[1] + 20),
+                          color[2], color[3])
+            tower_points = [
+                (cx - size * 0.2, cy - size * 0.45),
+                (cx + size * 0.1, cy - size * 0.65),
+                (cx + size * 0.3, cy - size * 0.6),
+                (cx + size * 0.35, cy - size * 0.38),
+            ]
+            pygame.draw.polygon(surf, tower_color, tower_points)
+
+            # Tower windows (command bridge)
+            for i in range(3):
+                wx = int(cx + size * 0.05 + i * size * 0.08)
+                wy = int(cy - size * 0.55)
+                pygame.draw.rect(surf, (180, 200, 255, min(180, color[3])),
+                               (wx, wy, max(2, size // 15), max(1, size // 20)))
+
+            # === HULL PANELING & DETAILS ===
+            panel_color = (max(0, color[0] - 12), max(0, color[1] - 10),
+                          max(0, color[2] - 8), color[3])
+            # Horizontal hull lines
+            for i in range(4):
+                line_y = int(cy - size * 0.2 + i * size * 0.15)
+                pygame.draw.line(surf, panel_color,
+                               (int(cx + size * 1.5), line_y),
+                               (int(cx - size * 1.4), line_y), 1)
+
+            # Vertical ribbing
+            for i in range(6):
+                line_x = int(cx + size * 1.2 - i * size * 0.45)
+                pygame.draw.line(surf, panel_color,
+                               (line_x, int(cy - size * 0.35)),
+                               (line_x, int(cy + size * 0.35)), 1)
+
+            # === HANGAR BAY (lower hull) ===
+            hangar_color = (20, 18, 15, color[3])
+            pygame.draw.rect(surf, hangar_color,
+                           (int(cx - size * 0.5), int(cy + size * 0.25),
+                            int(size * 0.8), int(size * 0.18)))
+            # Hangar interior glow (active launch bay)
+            pygame.draw.rect(surf, (80, 60, 40, min(120, color[3])),
+                           (int(cx - size * 0.45), int(cy + size * 0.28),
+                            int(size * 0.7), int(size * 0.12)))
+
+            # === GOLDEN AMARR ACCENTS ===
+            accent_color = (200, 170, 100, min(255, color[3] + 30))
+            pygame.draw.polygon(surf, accent_color, hull_points, 2)
+            # Golden trim on flight deck
+            pygame.draw.polygon(surf, accent_color, deck_points, 1)
+
+            # === ENGINE BANKS (multiple large engines) ===
+            # Carriers have massive engine arrays
+            engine_positions = [-0.25, -0.08, 0.08, 0.25]
+            for offset in engine_positions:
+                engine_y = int(cy + size * offset)
+                engine_x = int(cx - size * 1.75)
+                # Large engine glow
+                self._draw_engine_glow(surf, engine_x, engine_y,
+                                      max(4, size // 6), (100, 150, 255))
+
+            # Central massive engine
+            self._draw_engine_glow(surf, int(cx - size * 1.7), int(cy),
+                                  max(6, size // 4), (120, 180, 255))
+
+            # === RUNNING LIGHTS ===
+            # Navigation lights on extremities
+            pygame.draw.circle(surf, (255, 80, 80, 200),
+                             (int(cx + size * 1.9), int(cy - size * 0.15)), 3)
+            pygame.draw.circle(surf, (80, 255, 80, 200),
+                             (int(cx + size * 1.9), int(cy + size * 0.15)), 3)
+            # Stern warning light
+            pygame.draw.circle(surf, (255, 200, 80, 180),
+                             (int(cx - size * 1.7), int(cy)), 4)
+
+            self._draw_hull_details(surf, hull_points, color, size)
+
+        # Scale based on depth for distant ships
         if self.depth < 0.5:
-            new_size = (int(surf.get_width() * 0.6), int(surf.get_height() * 0.6))
+            scale = 0.5 + self.depth
+            new_size = (int(surf.get_width() * scale), int(surf.get_height() * scale))
             surf = pygame.transform.smoothscale(surf, new_size)
 
         return surf
@@ -400,7 +723,12 @@ class AmbientTraffic:
 # ============================================================================
 
 class Asteroid:
-    """Drifting asteroid for Stage 1"""
+    """Drifting asteroid for Stage 1 - realistic rocky/metallic appearance"""
+
+    # Asteroid composition types
+    ROCK = 'rock'
+    METALLIC = 'metallic'
+    ICE = 'ice'
 
     def __init__(self, x: float, y: float, size: int, depth: float):
         self.x = x
@@ -411,53 +739,172 @@ class Asteroid:
         self.rot_speed = random.uniform(-0.5, 0.5)
         self.drift_x = random.uniform(-0.3, 0.3)
         self.drift_y = random.uniform(0.2, 0.8)
+        # Random composition
+        self.composition = random.choice([self.ROCK, self.ROCK, self.METALLIC, self.ICE])
         self.sprite = self._create_sprite()
 
     def _create_sprite(self) -> pygame.Surface:
-        """Create rocky asteroid sprite with baked-in transparency"""
+        """Create realistic asteroid sprite with baked-in transparency"""
         size = self.size
-        surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
-        cx, cy = size, size
+        surf = pygame.Surface((size * 2 + 4, size * 2 + 4), pygame.SRCALPHA)
+        cx, cy = size + 2, size + 2
 
-        # Generate irregular polygon
-        num_points = random.randint(7, 12)
+        # Generate irregular polygon with more natural variation
+        num_points = random.randint(8, 14)
         points = []
+        base_angles = []
         for i in range(num_points):
-            angle = (i / num_points) * math.pi * 2
-            r = size * random.uniform(0.6, 1.0)
+            angle = (i / num_points) * math.pi * 2 + random.uniform(-0.15, 0.15)
+            base_angles.append(angle)
+            # More irregular radius variation
+            r = size * random.uniform(0.55, 1.0)
             px = cx + r * math.cos(angle)
             py = cy + r * math.sin(angle)
             points.append((px, py))
 
-        # Bake alpha based on depth (40-140 range, clearly background)
-        alpha = int(40 + self.depth * 100)
+        # Bake alpha based on depth (50-150 range)
+        alpha = int(50 + self.depth * 100)
 
-        # Base color varies
-        base_gray = int(60 + self.depth * 40)
-        color = (base_gray + random.randint(-15, 15),
-                base_gray + random.randint(-15, 10),
-                base_gray + random.randint(-20, 5),
-                alpha)
+        # Color based on composition
+        if self.composition == self.METALLIC:
+            # Metallic gray with slight golden tint
+            base_val = int(70 + self.depth * 50)
+            color = (base_val + random.randint(0, 20),
+                    base_val + random.randint(-5, 15),
+                    base_val + random.randint(-15, 5),
+                    alpha)
+        elif self.composition == self.ICE:
+            # Bluish-white ice
+            base_val = int(80 + self.depth * 60)
+            color = (base_val + random.randint(-10, 5),
+                    base_val + random.randint(0, 15),
+                    base_val + random.randint(10, 30),
+                    alpha)
+        else:  # ROCK
+            # Brown-gray rock
+            base_val = int(55 + self.depth * 45)
+            color = (base_val + random.randint(-10, 20),
+                    base_val + random.randint(-15, 10),
+                    base_val + random.randint(-20, 5),
+                    alpha)
 
+        # Draw base shape
         pygame.draw.polygon(surf, color, points)
 
-        # Add craters
-        for _ in range(random.randint(2, 5)):
-            crater_x = cx + random.randint(-size // 2, size // 2)
-            crater_y = cy + random.randint(-size // 2, size // 2)
-            crater_r = random.randint(size // 8, size // 4)
-            crater_color = (max(0, color[0] - 25),
-                          max(0, color[1] - 25),
-                          max(0, color[2] - 20),
-                          alpha)
+        # === LIGHTING GRADIENT ===
+        # Create top-left lighting effect
+        light_angle = -math.pi / 4  # Upper-left light source
+        for i, (px, py) in enumerate(points):
+            # Calculate point's angle from center
+            point_angle = math.atan2(py - cy, px - cx)
+            # Angle difference from light source
+            angle_diff = abs(point_angle - light_angle)
+            if angle_diff > math.pi:
+                angle_diff = 2 * math.pi - angle_diff
+
+            # Points facing light are brighter
+            if angle_diff < math.pi / 2:
+                brightness_mult = 1.0 - (angle_diff / (math.pi / 2)) * 0.4
+            else:
+                brightness_mult = 0.6
+
+        # === SURFACE TEXTURE ===
+        # Add rocky texture bumps
+        for _ in range(random.randint(3, 8)):
+            bump_angle = random.uniform(0, math.pi * 2)
+            bump_dist = random.uniform(size * 0.2, size * 0.7)
+            bump_x = int(cx + bump_dist * math.cos(bump_angle))
+            bump_y = int(cy + bump_dist * math.sin(bump_angle))
+            bump_r = random.randint(max(2, size // 10), max(3, size // 5))
+
+            # Bumps can be lighter or darker
+            if random.random() > 0.5:
+                bump_color = (max(0, color[0] - 15), max(0, color[1] - 15),
+                             max(0, color[2] - 12), alpha)
+            else:
+                bump_color = (min(255, color[0] + 12), min(255, color[1] + 10),
+                             min(255, color[2] + 8), alpha)
+            pygame.draw.circle(surf, bump_color, (bump_x, bump_y), bump_r)
+
+        # === CRATERS ===
+        for _ in range(random.randint(1, 4)):
+            crater_angle = random.uniform(0, math.pi * 2)
+            crater_dist = random.uniform(0, size * 0.5)
+            crater_x = int(cx + crater_dist * math.cos(crater_angle))
+            crater_y = int(cy + crater_dist * math.sin(crater_angle))
+            crater_r = random.randint(max(2, size // 8), max(4, size // 4))
+
+            # Dark crater interior
+            crater_color = (max(0, color[0] - 30), max(0, color[1] - 28),
+                          max(0, color[2] - 25), alpha)
             pygame.draw.circle(surf, crater_color, (crater_x, crater_y), crater_r)
 
-        # Highlight edge
-        highlight = (min(255, color[0] + 30),
-                    min(255, color[1] + 30),
-                    min(255, color[2] + 25),
-                    min(255, alpha + 20))
-        pygame.draw.polygon(surf, highlight, points, 2)
+            # Light rim on upper-left (facing light)
+            rim_color = (min(255, color[0] + 20), min(255, color[1] + 18),
+                        min(255, color[2] + 15), min(255, alpha + 10))
+            pygame.draw.arc(surf, rim_color,
+                          (crater_x - crater_r, crater_y - crater_r,
+                           crater_r * 2, crater_r * 2),
+                          math.pi * 0.75, math.pi * 1.75, 1)
+
+        # === METALLIC ORE VEINS ===
+        if self.composition == self.METALLIC and size > 20:
+            num_veins = random.randint(1, 3)
+            for _ in range(num_veins):
+                vein_start_angle = random.uniform(0, math.pi * 2)
+                vein_end_angle = vein_start_angle + random.uniform(0.5, 1.5)
+                vein_dist = random.uniform(size * 0.3, size * 0.7)
+
+                vein_color = random.choice([
+                    (180, 150, 80, min(255, alpha + 30)),   # Gold
+                    (120, 180, 200, min(255, alpha + 30)),  # Platinum
+                    (160, 100, 60, min(255, alpha + 30)),   # Copper
+                ])
+
+                vein_points = []
+                for t in range(6):
+                    a = vein_start_angle + (vein_end_angle - vein_start_angle) * t / 5
+                    d = vein_dist + random.uniform(-size * 0.1, size * 0.1)
+                    vein_points.append((
+                        int(cx + d * math.cos(a)),
+                        int(cy + d * math.sin(a))
+                    ))
+
+                if len(vein_points) >= 2:
+                    pygame.draw.lines(surf, vein_color, False, vein_points, 2)
+
+        # === ICE CRYSTALS ===
+        if self.composition == self.ICE and size > 15:
+            for _ in range(random.randint(2, 5)):
+                crystal_angle = random.uniform(0, math.pi * 2)
+                crystal_dist = random.uniform(size * 0.2, size * 0.6)
+                crystal_x = int(cx + crystal_dist * math.cos(crystal_angle))
+                crystal_y = int(cy + crystal_dist * math.sin(crystal_angle))
+                crystal_r = random.randint(2, max(3, size // 6))
+
+                # Bright icy sparkle
+                ice_color = (200, 230, 255, min(255, alpha + 40))
+                pygame.draw.circle(surf, ice_color, (crystal_x, crystal_y), crystal_r)
+
+        # === EDGE HIGHLIGHT ===
+        # Draw lit edge (upper-left quadrant)
+        highlight = (min(255, color[0] + 35), min(255, color[1] + 32),
+                    min(255, color[2] + 28), min(255, alpha + 25))
+        shadow = (max(0, color[0] - 20), max(0, color[1] - 18),
+                 max(0, color[2] - 15), alpha)
+
+        # Draw partial outline for 3D effect
+        for i in range(len(points)):
+            p1 = points[i]
+            p2 = points[(i + 1) % len(points)]
+            # Get midpoint angle
+            mid_angle = math.atan2((p1[1] + p2[1]) / 2 - cy,
+                                   (p1[0] + p2[0]) / 2 - cx)
+            # Upper-left edges get highlight
+            if -math.pi < mid_angle < 0:
+                pygame.draw.line(surf, highlight, p1, p2, 1)
+            else:
+                pygame.draw.line(surf, shadow, p1, p2, 1)
 
         return surf
 
@@ -928,34 +1375,120 @@ class WreckageField:
             d['sprite'] = self._create_debris_sprite(d['size'], d['depth'])
 
     def _create_debris_sprite(self, size: int, depth: float) -> pygame.Surface:
-        """Create debris piece sprite with baked-in transparency"""
-        surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
-        cx, cy = size, size
+        """Create detailed debris piece with scorching and panel details"""
+        surf = pygame.Surface((size * 2 + 4, size * 2 + 4), pygame.SRCALPHA)
+        cx, cy = size + 2, size + 2
 
-        # Bake alpha based on depth (40-140 range)
-        alpha = int(40 + depth * 100)
+        # Bake alpha based on depth (50-150 range)
+        alpha = int(50 + depth * 100)
 
-        # Random angular shape
-        num_points = random.randint(4, 7)
+        # Debris type variation
+        debris_type = random.choice(['hull_plate', 'structural', 'armor', 'tech'])
+
+        # Random angular shape with jagged broken edges
+        num_points = random.randint(5, 9)
         points = []
         for i in range(num_points):
-            angle = (i / num_points) * math.pi * 2 + random.uniform(-0.3, 0.3)
-            r = size * random.uniform(0.5, 1.0)
+            angle = (i / num_points) * math.pi * 2 + random.uniform(-0.25, 0.25)
+            # More irregular edges for broken look
+            r = size * random.uniform(0.4, 1.0)
             points.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
 
-        # Hull plating colors with baked alpha
-        gray = random.randint(50, 90)
-        color = (gray, gray - 10, gray - 15, alpha)
-        pygame.draw.polygon(surf, color, points)
-        pygame.draw.polygon(surf, (gray + 30, gray + 20, gray + 15, alpha), points, 1)
+        # Color based on debris type
+        if debris_type == 'hull_plate':
+            # Amarr golden-brown hull
+            base_r, base_g, base_b = 85, 70, 50
+            accent = (180, 150, 100, min(255, alpha + 20))
+        elif debris_type == 'structural':
+            # Dark gray framework
+            base_r, base_g, base_b = 60, 55, 50
+            accent = (100, 95, 85, min(255, alpha + 15))
+        elif debris_type == 'armor':
+            # Darker armor plating
+            base_r, base_g, base_b = 50, 45, 40
+            accent = (90, 85, 75, min(255, alpha + 20))
+        else:  # tech
+            # Blueish tech debris
+            base_r, base_g, base_b = 50, 55, 65
+            accent = (80, 120, 150, min(255, alpha + 25))
 
-        # Damage marks
-        for _ in range(random.randint(1, 3)):
-            dx = random.randint(-size // 2, size // 2)
-            dy = random.randint(-size // 2, size // 2)
-            damage_r = max(2, size // 4)
-            pygame.draw.circle(surf, (30, 25, 20, alpha), (cx + dx, cy + dy),
-                             random.randint(2, damage_r))
+        # Apply atmospheric perspective (distant = more blue)
+        distance_factor = 1.0 - depth
+        blue_shift = int(distance_factor * 20)
+        color = (max(0, min(255, base_r - int(distance_factor * 15) + random.randint(-10, 10))),
+                max(0, min(255, base_g - int(distance_factor * 10) + random.randint(-8, 8))),
+                max(0, min(255, base_b + blue_shift + random.randint(-5, 10))),
+                alpha)
+
+        # Draw base shape
+        pygame.draw.polygon(surf, color, points)
+
+        # === HULL PANEL LINES ===
+        if size > 10:
+            line_color = (max(0, color[0] - 15), max(0, color[1] - 12),
+                         max(0, color[2] - 10), alpha)
+            # Random panel lines
+            for _ in range(random.randint(1, 3)):
+                # Draw across the debris
+                angle = random.uniform(0, math.pi)
+                start = (int(cx + size * 0.6 * math.cos(angle)),
+                        int(cy + size * 0.6 * math.sin(angle)))
+                end = (int(cx - size * 0.6 * math.cos(angle)),
+                      int(cy - size * 0.6 * math.sin(angle)))
+                pygame.draw.line(surf, line_color, start, end, 1)
+
+        # === SCORCHING / BURN MARKS ===
+        for _ in range(random.randint(1, 4)):
+            scorch_x = int(cx + random.uniform(-size * 0.5, size * 0.5))
+            scorch_y = int(cy + random.uniform(-size * 0.5, size * 0.5))
+            scorch_r = random.randint(max(2, size // 6), max(3, size // 3))
+
+            # Dark scorch center
+            scorch_color = (25, 20, 18, alpha)
+            pygame.draw.circle(surf, scorch_color, (scorch_x, scorch_y), scorch_r)
+
+            # Orange/red heat ring around fresh scorch
+            if random.random() < 0.4:
+                heat_color = (160, 60, 20, min(200, alpha + 40))
+                pygame.draw.circle(surf, heat_color, (scorch_x, scorch_y),
+                                 scorch_r + 2, 1)
+
+        # === GLOWING HOT EDGES ===
+        if random.random() < 0.3 and size > 8:
+            # Some debris has glowing molten edges from recent damage
+            glow_idx = random.randint(0, len(points) - 2)
+            glow_start = points[glow_idx]
+            glow_end = points[(glow_idx + 1) % len(points)]
+
+            # Hot edge glow
+            glow_color = (255, 120, 40, min(255, alpha + 60))
+            pygame.draw.line(surf, glow_color, glow_start, glow_end, 2)
+
+            # Brighter core
+            core_color = (255, 200, 100, min(255, alpha + 80))
+            mid_x = int((glow_start[0] + glow_end[0]) / 2)
+            mid_y = int((glow_start[1] + glow_end[1]) / 2)
+            pygame.draw.circle(surf, core_color, (mid_x, mid_y), 2)
+
+        # === EDGE LIGHTING ===
+        # Upper-left highlight, bottom-right shadow
+        highlight = (min(255, color[0] + 30), min(255, color[1] + 25),
+                    min(255, color[2] + 20), min(255, alpha + 20))
+        shadow = (max(0, color[0] - 20), max(0, color[1] - 18),
+                 max(0, color[2] - 15), alpha)
+
+        for i in range(len(points)):
+            p1 = points[i]
+            p2 = points[(i + 1) % len(points)]
+            mid_angle = math.atan2((p1[1] + p2[1]) / 2 - cy,
+                                   (p1[0] + p2[0]) / 2 - cx)
+            if -math.pi < mid_angle < 0:
+                pygame.draw.line(surf, highlight, p1, p2, 1)
+            else:
+                pygame.draw.line(surf, shadow, p1, p2, 1)
+
+        # === ACCENT DETAILS ===
+        pygame.draw.polygon(surf, accent, points, 1)
 
         return surf
 
@@ -977,86 +1510,176 @@ class WreckageField:
             self.large_wrecks.append(wreck)
 
     def _create_wreck_sprite(self, wreck_type: str, scale: float) -> pygame.Surface:
-        """Create large wreckage sprite with baked-in transparency"""
+        """Create detailed large wreckage sprite with authentic damage"""
         base_size = int(200 * scale)
-        surf = pygame.Surface((base_size * 2, base_size), pygame.SRCALPHA)
-        cx, cy = base_size, base_size // 2
+        surf = pygame.Surface((base_size * 2 + 20, base_size + 20), pygame.SRCALPHA)
+        cx, cy = base_size + 10, base_size // 2 + 10
 
         # Baked alpha for background clarity
-        alpha = 120
+        alpha = 130
 
         # Hull colors with baked alpha (Amarr gold/brown damaged)
-        hull_dark = (50, 40, 30, alpha)
-        hull_mid = (80, 65, 45, alpha)
-        hull_light = (110, 90, 60, alpha)
-        damage = (30, 25, 20, alpha)
-        fire_glow = (180, 80, 30, min(180, alpha + 60))
+        hull_dark = (55, 45, 35, alpha)
+        hull_mid = (85, 70, 50, alpha)
+        hull_light = (115, 95, 65, alpha)
+        hull_accent = (140, 115, 80, min(255, alpha + 20))
+        damage = (25, 20, 18, alpha)
+        fire_glow = (200, 100, 40, min(200, alpha + 70))
+        ember = (255, 150, 50, min(255, alpha + 80))
 
         if wreck_type == 'hull_section':
-            # Large curved hull plate
+            # Large curved hull plate with detailed damage
             points = [
-                (cx - base_size * 0.8, cy - base_size * 0.2),
-                (cx - base_size * 0.6, cy - base_size * 0.4),
-                (cx + base_size * 0.5, cy - base_size * 0.35),
-                (cx + base_size * 0.7, cy),
-                (cx + base_size * 0.4, cy + base_size * 0.3),
-                (cx - base_size * 0.7, cy + base_size * 0.25),
+                (cx - base_size * 0.8, cy - base_size * 0.15),
+                (cx - base_size * 0.65, cy - base_size * 0.4),
+                (cx - base_size * 0.2, cy - base_size * 0.42),
+                (cx + base_size * 0.4, cy - base_size * 0.35),
+                (cx + base_size * 0.7, cy - base_size * 0.1),
+                (cx + base_size * 0.65, cy + base_size * 0.2),
+                (cx + base_size * 0.3, cy + base_size * 0.35),
+                (cx - base_size * 0.5, cy + base_size * 0.3),
+                (cx - base_size * 0.75, cy + base_size * 0.1),
             ]
             pygame.draw.polygon(surf, hull_mid, points)
-            pygame.draw.polygon(surf, hull_light, points, 3)
 
-            # Damage holes
-            for _ in range(5):
-                hx = cx + random.randint(-base_size // 2, base_size // 2)
-                hy = cy + random.randint(-base_size // 4, base_size // 4)
-                hr = random.randint(base_size // 10, base_size // 5)
+            # Hull panel lines
+            for i in range(4):
+                line_y = int(cy - base_size * 0.25 + i * base_size * 0.15)
+                pygame.draw.line(surf, hull_dark,
+                               (int(cx - base_size * 0.6), line_y),
+                               (int(cx + base_size * 0.5), line_y), 1)
+
+            # Vertical ribbing
+            for i in range(5):
+                line_x = int(cx - base_size * 0.5 + i * base_size * 0.25)
+                pygame.draw.line(surf, hull_dark,
+                               (line_x, int(cy - base_size * 0.3)),
+                               (line_x, int(cy + base_size * 0.25)), 2)
+
+            # Damage holes with molten edges
+            for _ in range(6):
+                hx = int(cx + random.uniform(-base_size * 0.5, base_size * 0.4))
+                hy = int(cy + random.uniform(-base_size * 0.25, base_size * 0.2))
+                hr = random.randint(base_size // 12, base_size // 6)
+
+                # Hole
                 pygame.draw.circle(surf, damage, (hx, hy), hr)
-                # Fire glow in some holes
-                if random.random() < 0.3:
-                    pygame.draw.circle(surf, fire_glow, (hx, hy), hr - 5)
+
+                # Molten edge ring
+                pygame.draw.circle(surf, fire_glow, (hx, hy), hr + 3, 2)
+
+                # Ember core in some holes
+                if random.random() < 0.4:
+                    pygame.draw.circle(surf, ember, (hx, hy), max(2, hr // 2))
+
+            # Edge highlight
+            pygame.draw.polygon(surf, hull_light, points, 2)
 
         elif wreck_type == 'engine_block':
-            # Cylindrical engine section
+            # Cylindrical engine section with detailed nacelles
+            # Main engine housing
             pygame.draw.ellipse(surf, hull_dark,
-                              (cx - base_size * 0.6, cy - base_size * 0.3,
-                               base_size * 1.2, base_size * 0.6))
+                              (cx - base_size * 0.65, cy - base_size * 0.35,
+                               base_size * 1.3, base_size * 0.7))
             pygame.draw.ellipse(surf, hull_mid,
-                              (cx - base_size * 0.5, cy - base_size * 0.25,
-                               base_size, base_size * 0.5))
-            # Engine nozzle
-            pygame.draw.circle(surf, (40, 35, 30, alpha),
-                             (cx + base_size // 2, cy), base_size // 4)
-            pygame.draw.circle(surf, fire_glow,
-                             (cx + base_size // 2, cy), base_size // 6)
+                              (cx - base_size * 0.55, cy - base_size * 0.28,
+                               base_size * 1.1, base_size * 0.56))
+
+            # Engine bell/nozzle
+            nozzle_x = int(cx + base_size * 0.5)
+            pygame.draw.circle(surf, (35, 30, 28, alpha), (nozzle_x, cy), int(base_size * 0.28))
+            pygame.draw.circle(surf, (20, 18, 15, alpha), (nozzle_x, cy), int(base_size * 0.22))
+
+            # Residual engine glow (dying)
+            for r in range(int(base_size * 0.18), 0, -3):
+                glow_alpha = int(80 * (r / (base_size * 0.18)))
+                pygame.draw.circle(surf, (255, 120, 50, glow_alpha),
+                                 (nozzle_x, cy), r)
+
+            # Damage streaks
+            for _ in range(4):
+                streak_y = int(cy + random.uniform(-base_size * 0.2, base_size * 0.2))
+                pygame.draw.line(surf, damage,
+                               (int(cx - base_size * 0.4), streak_y),
+                               (int(cx + base_size * 0.3), streak_y + random.randint(-10, 10)), 3)
+
+            # Panel details
+            pygame.draw.ellipse(surf, hull_light,
+                              (cx - base_size * 0.55, cy - base_size * 0.28,
+                               base_size * 1.1, base_size * 0.56), 2)
 
         elif wreck_type == 'bridge':
-            # Command bridge section
-            pygame.draw.polygon(surf, hull_mid, [
-                (cx - base_size * 0.4, cy + base_size * 0.2),
-                (cx - base_size * 0.3, cy - base_size * 0.3),
-                (cx + base_size * 0.3, cy - base_size * 0.35),
-                (cx + base_size * 0.5, cy + base_size * 0.15),
-            ])
-            # Windows (broken)
-            for i in range(4):
-                wx = cx - base_size * 0.2 + i * base_size * 0.15
-                wy = cy - base_size * 0.15
-                pygame.draw.rect(surf, (20, 30, 40, alpha), (wx, wy, 10, 6))
-                if random.random() < 0.5:
-                    pygame.draw.rect(surf, (200, 180, 100, alpha), (wx, wy, 10, 6), 1)
+            # Command bridge section with windows and antenna
+            bridge_points = [
+                (cx - base_size * 0.4, cy + base_size * 0.25),
+                (cx - base_size * 0.35, cy - base_size * 0.2),
+                (cx - base_size * 0.15, cy - base_size * 0.35),
+                (cx + base_size * 0.2, cy - base_size * 0.38),
+                (cx + base_size * 0.45, cy - base_size * 0.15),
+                (cx + base_size * 0.5, cy + base_size * 0.2),
+            ]
+            pygame.draw.polygon(surf, hull_mid, bridge_points)
+
+            # Viewport windows (some broken, some dark)
+            for i in range(5):
+                wx = int(cx - base_size * 0.25 + i * base_size * 0.12)
+                wy = int(cy - base_size * 0.18)
+                w_width = int(base_size * 0.08)
+                w_height = int(base_size * 0.06)
+
+                if random.random() < 0.3:
+                    # Broken window - dark with cracks
+                    pygame.draw.rect(surf, (15, 12, 10, alpha), (wx, wy, w_width, w_height))
+                    # Crack lines
+                    pygame.draw.line(surf, (80, 70, 60, alpha),
+                                   (wx, wy), (wx + w_width, wy + w_height), 1)
+                else:
+                    # Intact dark window
+                    pygame.draw.rect(surf, (20, 35, 50, alpha), (wx, wy, w_width, w_height))
+                    # Window frame
+                    pygame.draw.rect(surf, hull_accent, (wx, wy, w_width, w_height), 1)
+
+            # Antenna/sensor array (bent)
+            pygame.draw.line(surf, hull_dark,
+                           (int(cx + base_size * 0.1), int(cy - base_size * 0.35)),
+                           (int(cx + base_size * 0.25), int(cy - base_size * 0.5)), 2)
+
+            pygame.draw.polygon(surf, hull_light, bridge_points, 2)
 
         else:  # hangar
-            # Open hangar bay
-            pygame.draw.rect(surf, hull_dark,
-                           (cx - base_size * 0.5, cy - base_size * 0.25,
-                            base_size, base_size * 0.5))
-            pygame.draw.rect(surf, (15, 12, 10, alpha),
-                           (cx - base_size * 0.4, cy - base_size * 0.15,
-                            base_size * 0.8, base_size * 0.3))
-            # Interior glow
-            pygame.draw.rect(surf, (50, 30, 20, alpha),
-                           (cx - base_size * 0.35, cy - base_size * 0.1,
-                            base_size * 0.7, base_size * 0.2))
+            # Open hangar bay with interior detail
+            # Outer frame
+            pygame.draw.rect(surf, hull_mid,
+                           (int(cx - base_size * 0.55), int(cy - base_size * 0.3),
+                            int(base_size * 1.1), int(base_size * 0.6)), border_radius=5)
+
+            # Dark interior
+            pygame.draw.rect(surf, (12, 10, 8, alpha),
+                           (int(cx - base_size * 0.45), int(cy - base_size * 0.2),
+                            int(base_size * 0.9), int(base_size * 0.4)))
+
+            # Hangar floor lines
+            for i in range(6):
+                line_x = int(cx - base_size * 0.4 + i * base_size * 0.15)
+                pygame.draw.line(surf, (40, 35, 30, alpha),
+                               (line_x, int(cy - base_size * 0.15)),
+                               (line_x, int(cy + base_size * 0.15)), 1)
+
+            # Interior emergency lighting (faint red)
+            pygame.draw.rect(surf, (80, 30, 20, min(100, alpha)),
+                           (int(cx - base_size * 0.4), int(cy - base_size * 0.15),
+                            int(base_size * 0.8), int(base_size * 0.3)))
+
+            # Scattered debris inside
+            for _ in range(3):
+                dx = int(cx + random.uniform(-base_size * 0.3, base_size * 0.3))
+                dy = int(cy + random.uniform(-base_size * 0.1, base_size * 0.1))
+                pygame.draw.circle(surf, hull_dark, (dx, dy), random.randint(3, 8))
+
+            # Frame highlight
+            pygame.draw.rect(surf, hull_light,
+                           (int(cx - base_size * 0.55), int(cy - base_size * 0.3),
+                            int(base_size * 1.1), int(base_size * 0.6)), 2, border_radius=5)
 
         return surf
 

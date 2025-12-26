@@ -639,7 +639,7 @@ class AmarrArchon:
 
 
 class SpaceBackground:
-    """Dynamic space background - Devil Blade intensity with EVE atmosphere"""
+    """Dynamic space background - intense arcade action with EVE atmosphere"""
 
     def __init__(self, width, height):
         self.width = width
@@ -659,7 +659,7 @@ class SpaceBackground:
         self.distant_structures = self.create_distant_structures(8)
         self.wrecks = self.create_ship_wrecks(5)
 
-        # Dynamic effects - Devil Blade intensity
+        # Dynamic effects - intense arcade atmosphere
         self.flashes = []  # Explosions
         self.flash_timer = 0
         self.laser_beams = []  # Sweeping laser beams
@@ -1435,7 +1435,7 @@ class SpaceBackground:
                 wreck['y'] = -wreck['size'] * 2
                 wreck['x'] = random.randint(0, self.width)
 
-        # === DEVIL BLADE INTENSITY EFFECTS ===
+        # === INTENSE BATTLE EFFECTS ===
 
         # Frequent battle flashes
         self.flash_timer -= 1
@@ -1614,7 +1614,7 @@ class SpaceBackground:
                 self.story_event = None
 
     def draw(self, surface):
-        """Draw background layers with Devil Blade intensity"""
+        """Draw background layers with intense battle atmosphere"""
         # Nebula
         y_offset = -self.height + int(self.scroll_y)
         surface.blit(self.nebula_layer, (0, y_offset))

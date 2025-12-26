@@ -975,10 +975,398 @@ class EnhancedExplosion:
                 surface.blit(sec_surf, (sec_x - sec_size - 5, sec_y - sec_size - 5))
 
 
+# ============================================================================
+# SHIELD IMPACT RIPPLE EFFECT
+# ============================================================================
+
+class ShieldImpactRipple:
+    """
+    Visual ripple effect when shields absorb damage.
+    Shows an expanding ring at the impact point with EVE-style blue shimmer.
+    """
+
+    def __init__(self, x: float, y: float, ship_x: float, ship_y: float,
+                 ship_width: int, ship_height: int, intensity: float = 1.0):
+        self.x = x  # Impact point
+        self.y = y
+        self.ship_x = ship_x  # Ship center for shield bubble
+        self.ship_y = ship_y
+        self.ship_width = ship_width
+        self.ship_height = ship_height
+        self.intensity = min(2.0, intensity)  # Cap intensity
+
+        self.frame = 0
+        self.max_frames = 20
+        self.alive = True
+
+        # Calculate impact angle from ship center
+        dx = x - ship_x
+        dy = y - ship_y
+        self.impact_angle = math.atan2(dy, dx)
+
+        # Ripple particles
+        self.particles = []
+        num_particles = int(8 + intensity * 6)
+        for _ in range(num_particles):
+            spread = random.uniform(-0.5, 0.5)
+            angle = self.impact_angle + spread
+            speed = random.uniform(1, 3) * intensity
+            self.particles.append({
+                'x': x,
+                'y': y,
+                'vx': math.cos(angle) * speed * 0.5,
+                'vy': math.sin(angle) * speed * 0.5,
+                'life': random.randint(10, 18),
+                'size': random.randint(2, 4)
+            })
+
+    def update(self) -> bool:
+        self.frame += 1
+
+        # Update particles
+        for p in self.particles:
+            p['x'] += p['vx']
+            p['y'] += p['vy']
+            p['vx'] *= 0.92
+            p['vy'] *= 0.92
+            p['life'] -= 1
+
+        self.particles = [p for p in self.particles if p['life'] > 0]
+
+        if self.frame >= self.max_frames:
+            self.alive = False
+            return False
+        return True
+
+    def draw(self, surface: pygame.Surface):
+        progress = self.frame / self.max_frames
+
+        # === IMPACT FLASH ===
+        if self.frame < 5:
+            flash_alpha = int(180 * (1 - self.frame / 5) * self.intensity)
+            flash_size = int(15 + self.frame * 4)
+            flash_surf = pygame.Surface((flash_size * 2, flash_size * 2), pygame.SRCALPHA)
+            pygame.draw.circle(flash_surf, (150, 200, 255, flash_alpha),
+                             (flash_size, flash_size), flash_size)
+            pygame.draw.circle(flash_surf, (200, 230, 255, min(255, flash_alpha + 50)),
+                             (flash_size, flash_size), flash_size // 2)
+            surface.blit(flash_surf, (int(self.x) - flash_size, int(self.y) - flash_size))
+
+        # === EXPANDING RIPPLE ARC ===
+        if progress < 0.8:
+            ripple_progress = progress / 0.8
+            # Arc expands outward from impact point
+            arc_radius = int(20 + ripple_progress * 40 * self.intensity)
+            arc_alpha = int(150 * (1 - ripple_progress))
+            arc_width = max(2, int(4 * (1 - ripple_progress)))
+
+            # Draw arc centered on impact, facing away from ship
+            arc_surf = pygame.Surface((arc_radius * 2 + 20, arc_radius * 2 + 20), pygame.SRCALPHA)
+            center = arc_radius + 10
+
+            # Draw partial arc (about 120 degrees)
+            start_angle = self.impact_angle - 1.0
+            end_angle = self.impact_angle + 1.0
+
+            points = []
+            steps = 16
+            for i in range(steps + 1):
+                angle = start_angle + (end_angle - start_angle) * (i / steps)
+                px = center + arc_radius * math.cos(angle)
+                py = center + arc_radius * math.sin(angle)
+                points.append((px, py))
+
+            if len(points) >= 2:
+                # Outer glow
+                pygame.draw.lines(arc_surf, (80, 160, 255, arc_alpha // 2), False, points, arc_width + 4)
+                # Main arc
+                pygame.draw.lines(arc_surf, (120, 200, 255, arc_alpha), False, points, arc_width)
+                # Bright core
+                pygame.draw.lines(arc_surf, (200, 230, 255, arc_alpha), False, points, max(1, arc_width - 2))
+
+            surface.blit(arc_surf, (int(self.x) - center, int(self.y) - center))
+
+        # === SHIELD SHIMMER (hexagonal pattern suggestion) ===
+        if progress < 0.5 and self.intensity > 0.5:
+            shimmer_alpha = int(60 * (1 - progress / 0.5))
+            # Draw small hexagon-like shapes near impact
+            for i in range(3):
+                hex_x = self.x + random.randint(-20, 20)
+                hex_y = self.y + random.randint(-20, 20)
+                hex_size = random.randint(4, 8)
+                self._draw_mini_hex(surface, int(hex_x), int(hex_y), hex_size, shimmer_alpha)
+
+        # === PARTICLES ===
+        for p in self.particles:
+            if p['life'] > 0:
+                alpha = int(200 * (p['life'] / 18))
+                size = max(1, p['size'] * p['life'] // 18)
+                pygame.draw.circle(surface, (150, 200, 255),
+                                 (int(p['x']), int(p['y'])), size)
+                if size > 2:
+                    pygame.draw.circle(surface, (220, 240, 255),
+                                     (int(p['x']), int(p['y'])), size // 2)
+
+    def _draw_mini_hex(self, surface: pygame.Surface, x: int, y: int, size: int, alpha: int):
+        """Draw a small hexagon shape"""
+        points = []
+        for i in range(6):
+            angle = i * math.pi / 3
+            px = x + size * math.cos(angle)
+            py = y + size * math.sin(angle)
+            points.append((px, py))
+
+        hex_surf = pygame.Surface((size * 3, size * 3), pygame.SRCALPHA)
+        offset_points = [(p[0] - x + size * 1.5, p[1] - y + size * 1.5) for p in points]
+        pygame.draw.polygon(hex_surf, (100, 180, 255, alpha), offset_points, 1)
+        surface.blit(hex_surf, (x - size * 1.5, y - size * 1.5))
+
+
+class ShieldImpactManager:
+    """Manages multiple shield impact effects"""
+
+    def __init__(self):
+        self.impacts: List[ShieldImpactRipple] = []
+
+    def add_impact(self, impact_x: float, impact_y: float,
+                   ship_x: float, ship_y: float,
+                   ship_width: int, ship_height: int,
+                   damage: float = 10, max_damage: float = 50):
+        """Add a new shield impact effect"""
+        intensity = min(2.0, damage / max_damage * 2)
+        impact = ShieldImpactRipple(impact_x, impact_y, ship_x, ship_y,
+                                    ship_width, ship_height, intensity)
+        self.impacts.append(impact)
+
+    def update(self):
+        for impact in self.impacts:
+            impact.update()
+        self.impacts = [i for i in self.impacts if i.alive]
+
+    def draw(self, surface: pygame.Surface):
+        for impact in self.impacts:
+            impact.draw(surface)
+
+    def clear(self):
+        self.impacts.clear()
+
+
+# ============================================================================
+# SCREEN SHAKE SYSTEM
+# ============================================================================
+
+class ScreenShake:
+    """
+    Camera shake effect for impacts, explosions, and dramatic moments.
+    Supports multiple concurrent shake sources with falloff.
+    """
+
+    def __init__(self):
+        self.shakes: List[dict] = []
+        self.offset_x = 0
+        self.offset_y = 0
+
+    def add_shake(self, intensity: float, duration: int, falloff: str = 'linear'):
+        """
+        Add a shake effect.
+
+        Args:
+            intensity: Maximum shake amount in pixels (e.g., 5-20)
+            duration: Duration in frames (e.g., 10-30)
+            falloff: 'linear', 'exponential', or 'constant'
+        """
+        self.shakes.append({
+            'intensity': intensity,
+            'duration': duration,
+            'remaining': duration,
+            'falloff': falloff
+        })
+
+    def add_trauma(self, trauma: float):
+        """
+        Add trauma-based shake (cumulative, max 1.0).
+        Good for continuous damage.
+        """
+        # Convert trauma to intensity/duration
+        intensity = trauma * 15
+        duration = int(10 + trauma * 10)
+        self.add_shake(intensity, duration, 'exponential')
+
+    def update(self):
+        """Update shake and calculate offset"""
+        self.offset_x = 0
+        self.offset_y = 0
+
+        for shake in self.shakes:
+            shake['remaining'] -= 1
+
+            if shake['remaining'] > 0:
+                # Calculate intensity based on falloff
+                progress = shake['remaining'] / shake['duration']
+
+                if shake['falloff'] == 'exponential':
+                    current_intensity = shake['intensity'] * (progress ** 2)
+                elif shake['falloff'] == 'constant':
+                    current_intensity = shake['intensity']
+                else:  # linear
+                    current_intensity = shake['intensity'] * progress
+
+                # Random offset
+                self.offset_x += random.uniform(-current_intensity, current_intensity)
+                self.offset_y += random.uniform(-current_intensity, current_intensity)
+
+        # Remove finished shakes
+        self.shakes = [s for s in self.shakes if s['remaining'] > 0]
+
+        # Round to integers for pixel-perfect rendering
+        self.offset_x = int(self.offset_x)
+        self.offset_y = int(self.offset_y)
+
+    def get_offset(self) -> Tuple[int, int]:
+        """Get current shake offset to apply to camera/render"""
+        return (self.offset_x, self.offset_y)
+
+    def is_shaking(self) -> bool:
+        """Check if any shake is active"""
+        return len(self.shakes) > 0
+
+    def clear(self):
+        """Clear all shakes"""
+        self.shakes.clear()
+        self.offset_x = 0
+        self.offset_y = 0
+
+
+# ============================================================================
+# MUZZLE FLASH SYSTEM
+# ============================================================================
+
+class MuzzleFlash:
+    """
+    Quick bright flash when weapons fire.
+    Shows a brief flash at the muzzle with fading glow.
+    """
+
+    def __init__(self, x: float, y: float, size: str = 'medium', color: Tuple[int, int, int] = None):
+        """
+        Create a muzzle flash effect.
+
+        Args:
+            x, y: Flash position
+            size: 'small' (frigates), 'medium' (cruisers), 'large' (bosses)
+            color: Override color, defaults to orange-yellow
+        """
+        self.x = x
+        self.y = y
+
+        # Size-based parameters
+        size_params = {
+            'small': {'radius': 8, 'duration': 4},
+            'medium': {'radius': 14, 'duration': 5},
+            'large': {'radius': 22, 'duration': 6}
+        }
+        params = size_params.get(size, size_params['medium'])
+
+        self.max_radius = params['radius']
+        self.max_frames = params['duration']
+        self.frame = 0
+        self.alive = True
+
+        # Flash color (default to orange-yellow weapon fire)
+        if color is None:
+            self.color = (255, 200, 100)  # Warm weapon flash
+        else:
+            self.color = color
+
+        # Core bright color
+        self.core_color = (255, 255, 220)  # White-hot center
+
+    def update(self) -> bool:
+        self.frame += 1
+        if self.frame >= self.max_frames:
+            self.alive = False
+            return False
+        return True
+
+    def draw(self, surface: pygame.Surface):
+        if not self.alive:
+            return
+
+        progress = self.frame / self.max_frames
+
+        # Flash starts bright, fades quickly
+        alpha = int(255 * (1 - progress * progress))  # Quadratic falloff
+        radius = int(self.max_radius * (1 - progress * 0.5))  # Slight shrink
+
+        if radius < 2:
+            return
+
+        # Create flash surface
+        flash_size = radius * 2 + 4
+        flash_surf = pygame.Surface((flash_size, flash_size), pygame.SRCALPHA)
+        center = flash_size // 2
+
+        # Outer glow
+        glow_alpha = max(0, min(255, alpha // 2))
+        pygame.draw.circle(flash_surf,
+                          (self.color[0], self.color[1], self.color[2], glow_alpha),
+                          (center, center), radius)
+
+        # Mid ring
+        mid_alpha = max(0, min(255, int(alpha * 0.8)))
+        mid_radius = max(1, radius * 2 // 3)
+        pygame.draw.circle(flash_surf,
+                          (self.core_color[0], self.core_color[1], self.core_color[2], mid_alpha),
+                          (center, center), mid_radius)
+
+        # Bright core
+        if self.frame < 2:
+            core_radius = max(1, radius // 3)
+            pygame.draw.circle(flash_surf,
+                              (255, 255, 255, min(255, alpha + 50)),
+                              (center, center), core_radius)
+
+        surface.blit(flash_surf, (int(self.x) - center, int(self.y) - center))
+
+
+class MuzzleFlashManager:
+    """Manages multiple muzzle flash effects"""
+
+    def __init__(self):
+        self.flashes: List[MuzzleFlash] = []
+
+    def add_flash(self, x: float, y: float, size: str = 'medium',
+                  color: Tuple[int, int, int] = None):
+        """Add a muzzle flash at position"""
+        flash = MuzzleFlash(x, y, size, color)
+        self.flashes.append(flash)
+
+    def add_multi_flash(self, positions: List[Tuple[float, float]],
+                        size: str = 'medium', color: Tuple[int, int, int] = None):
+        """Add multiple flashes at once (for multi-barrel weapons)"""
+        for x, y in positions:
+            self.add_flash(x, y, size, color)
+
+    def update(self):
+        for flash in self.flashes:
+            flash.update()
+        self.flashes = [f for f in self.flashes if f.alive]
+
+    def draw(self, surface: pygame.Surface):
+        for flash in self.flashes:
+            flash.draw(surface)
+
+    def clear(self):
+        self.flashes.clear()
+
+
 # Global effect instances
 _particle_system = None
 _screen_effects = None
 _ship_damage_effects = {}
+_shield_impact_manager = None
+_screen_shake = None
+_muzzle_flash_manager = None
 
 
 def get_particle_system():
@@ -1012,3 +1400,41 @@ def clear_ship_damage_effects(ship_id: int = None):
         _ship_damage_effects = {}
     elif ship_id in _ship_damage_effects:
         del _ship_damage_effects[ship_id]
+
+
+def get_shield_impact_manager() -> ShieldImpactManager:
+    """Get global shield impact manager"""
+    global _shield_impact_manager
+    if _shield_impact_manager is None:
+        _shield_impact_manager = ShieldImpactManager()
+    return _shield_impact_manager
+
+
+def get_screen_shake() -> ScreenShake:
+    """Get global screen shake system"""
+    global _screen_shake
+    if _screen_shake is None:
+        _screen_shake = ScreenShake()
+    return _screen_shake
+
+
+def get_muzzle_flash_manager() -> MuzzleFlashManager:
+    """Get global muzzle flash manager"""
+    global _muzzle_flash_manager
+    if _muzzle_flash_manager is None:
+        _muzzle_flash_manager = MuzzleFlashManager()
+    return _muzzle_flash_manager
+
+
+def clear_all_effects():
+    """Clear all visual effects (call on game reset)"""
+    global _particle_system, _ship_damage_effects, _shield_impact_manager, _screen_shake, _muzzle_flash_manager
+    if _particle_system:
+        _particle_system.clear()
+    _ship_damage_effects = {}
+    if _shield_impact_manager:
+        _shield_impact_manager.clear()
+    if _screen_shake:
+        _screen_shake.clear()
+    if _muzzle_flash_manager:
+        _muzzle_flash_manager.clear()

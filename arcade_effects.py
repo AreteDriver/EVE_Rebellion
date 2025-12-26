@@ -1,5 +1,5 @@
 """
-Devil Blade Reboot Visual Effects
+Minmatar Rebellion Visual Effects
 Pixel-perfect retro effects matching the game's aesthetic
 """
 
@@ -72,7 +72,7 @@ class PixelExplosion:
 class ScreenFlash:
     """
     Full-screen flash effect for dramatic moments
-    Devil Blade uses these for boss deaths, extreme close kills, etc.
+    Used for boss deaths, extreme close kills, etc.
     """
     
     def __init__(self, color: Tuple[int, int, int] = (255, 255, 255),

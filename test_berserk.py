@@ -5,10 +5,10 @@ Run this to verify the system works before integrating
 """
 
 from berserk_system import BerserkSystem, DangerIndicator
-from devil_blade_effects import EffectManager
+from arcade_effects import EffectManager
 
 def test_berserk_system():
-    print("🎮 Testing Devil Blade Berserk System\n")
+    print("🎮 Testing Berserk Scoring System\n")
     
     # Create system
     berserk = BerserkSystem()
@@ -84,18 +84,17 @@ def test_effects():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("DEVIL BLADE BERSERK SYSTEM - STANDALONE TEST")
+    print("BERSERK SCORING SYSTEM - STANDALONE TEST")
     print("=" * 60)
-    
+
     try:
         test_berserk_system()
         test_effects()
-        
+
         print("\n" + "=" * 60)
         print("✅ ALL TESTS PASSED!")
         print("=" * 60)
         print("\nThe Berserk System is ready for integration!")
-        print("See DEVIL_BLADE_INTEGRATION.md for next steps.")
         
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")

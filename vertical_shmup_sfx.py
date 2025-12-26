@@ -1,6 +1,6 @@
 """
 VERTICAL SHMUP SOUND EFFECTS
-EVE Rebellion - Devil Blade Reboot Style
+EVE Rebellion - Arcade Style
 
 Procedurally generated sound effects for:
 - Weapons (autocannon, missiles, lasers)

@@ -1,6 +1,6 @@
 """
 VERTICAL SHMUP SOUNDTRACK GENERATOR
-EVE Rebellion - Devil Blade Reboot Inspired Audio
+EVE Rebellion - Arcade Style Audio
 
 Based on vertical shmup audio design:
 - Tense, building ambient layers (not constant chaos)

@@ -1,5 +1,5 @@
 """
-Minmatar Rebellion - Devil Blade Combat System
+Minmatar Rebellion - Arcade Combat System
 Implements satisfying arcade scoring, combo mechanics, and enemy AI patterns
 """
 
@@ -187,7 +187,7 @@ class ScoringSystem:
             screen.blit(text_surface, pos)
 
 class WaveSpawner:
-    """Generates enemy waves with Devil Blade style patterns"""
+    """Generates enemy waves with arcade-style patterns"""
     
     def __init__(self, screen_width: int, screen_height: int):
         self.width = screen_width

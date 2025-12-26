@@ -1,5 +1,5 @@
 """
-Devil Blade Reboot-inspired Berserk System for Minmatar Rebellion
+Berserk System for Minmatar Rebellion
 
 Core mechanics:
 - Berserk multiplier increases the closer enemies are when destroyed
@@ -20,8 +20,8 @@ from typing import Optional, Tuple
 
 class BerserkSystem:
     """
-    Devil Blade Reboot's signature Berserk System
-    
+    Arcade-style Berserk scoring system
+
     Distance Ranges (from player):
     - EXTREME CLOSE: 0-80 pixels → 5.0x multiplier (INSANE!)
     - CLOSE: 80-150 pixels → 3.0x multiplier (DANGEROUS!)
@@ -272,7 +272,7 @@ class BerserkSystem:
     def draw_hud(self, surface: pygame.Surface, x: int, y: int,
                 font_small: pygame.font.Font, font_large: pygame.font.Font):
         """
-        Draw Berserk HUD element (minimal, Devil Blade style)
+        Draw Berserk HUD element (minimal arcade style)
         Shows current multiplier and risk level
         """
         # Current multiplier indicator (only if > 1.0)
@@ -460,7 +460,7 @@ class BerserkSystem:
 class DangerIndicator:
     """
     Visual indicator showing current danger level
-    Minimal, pixel-art style matching Devil Blade aesthetic
+    Minimal, pixel-art arcade style
     """
     
     def __init__(self, width: int = 200, height: int = 10):
@@ -529,7 +529,7 @@ class DangerIndicator:
 # Utility function for easy integration
 def create_berserk_game_systems():
     """
-    Convenience function to create all Devil Blade-style systems
+    Convenience function to create all Berserk scoring systems
     Returns: (berserk_system, danger_indicator)
     """
     berserk = BerserkSystem()

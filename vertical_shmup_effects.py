@@ -1,6 +1,6 @@
 """
 VERTICAL SHMUP WEAPON EFFECTS
-EVE Rebellion - Devil Blade Reboot Visual Style
+EVE Rebellion - Arcade Visual Style
 
 Visual effects for:
 - Projectile trails (autocannon, missiles, lasers)

@@ -139,7 +139,7 @@ python -c "import pygame; import numpy; print('Ready to rebel!')"
 
 ### The Berserk System
 
-Inspired by Devil Blade, your score multiplier depends on how close you are when you kill:
+Your score multiplier depends on how close you are when you destroy an enemy:
 
 | Range | Distance | Multiplier | Risk |
 |-------|----------|------------|------|
@@ -334,7 +334,7 @@ EVE_Rebellion/
 │   └── capital_ship_enemy.py   # Capital ship boss class
 │
 ├── berserk_system.py       # Distance-based scoring
-├── devil_blade_combat.py   # Combo mechanics
+├── arcade_combat.py        # Combo mechanics
 ├── controller_input.py     # Gamepad support
 ├── cinematic_system.py     # Cutscenes
 └── vertical_shmup_*.py     # Effects, music, controls
@@ -437,7 +437,6 @@ Your support helps keep these projects maintained and improving. o7
 ## Acknowledgments
 
 - **CCP Games** - For creating the EVE Online universe
-- **Devil Blade Reboot** - Inspiration for the Berserk scoring system
 - **Pygame Community** - For the excellent game framework
 - **Minmatar Fleet** - You know who you are. Fly aggressive. o7
 

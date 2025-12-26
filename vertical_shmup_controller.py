@@ -1,8 +1,8 @@
 """
 VERTICAL SHMUP CONTROLLER
-EVE Rebellion - Devil Blade Reboot Style
+EVE Rebellion - Arcade Style
 
-Based on Devil Blade Reboot (SHIGATAKE GAMES, May 2024)
+Features:
 - Point-blank proximity scoring
 - Berserk mode (Heat system)
 - Boost mechanic (5x gain with drain)
@@ -54,8 +54,8 @@ class PlayStationButton(IntEnum):
 class VerticalShmupController:
     """
     Controller input for vertical shoot-em-ups.
-    Based on Devil Blade Reboot's control philosophy.
-    
+    Arcade-style control philosophy.
+
     Key Mechanics:
     - Slower, precise movement (vertical shmup standard)
     - Formation switch: Spread (fast) ↔ Focused (slow + narrow)
@@ -73,7 +73,7 @@ class VerticalShmupController:
         self.sensitivity_move = 1.0
         self.invert_y = False
         
-        # Formation state (Devil Blade: Wide ↔ Narrow)
+        # Formation state (Wide ↔ Narrow)
         self.formation = "spread"  # "spread" or "focused"
         self.focused_speed_mult = 0.5  # 50% speed in focused mode
         
@@ -109,7 +109,7 @@ class VerticalShmupController:
             self.joystick.init()
             self.connected = True
             print(f"Controller connected: {self.joystick.get_name()}")
-            print(f"Control scheme: Vertical Shmup (Devil Blade style)")
+            print(f"Control scheme: Vertical Shmup (Arcade style)")
         else:
             print("No controller detected")
     
@@ -341,8 +341,8 @@ class VerticalShmupController:
     def proximity_pulse(self, distance: float):
         """
         Haptic pulse on point-blank kill.
-        
-        Devil Blade: Closer enemy death = higher multiplier
+
+        Closer enemy death = higher multiplier.
         Haptic confirms max multiplier achieved.
         
         Args:
@@ -435,7 +435,7 @@ def apply_vertical_shmup_movement(controller: VerticalShmupController,
 
 if __name__ == "__main__":
     print("=== VERTICAL SHMUP CONTROLLER ===")
-    print("Based on Devil Blade Reboot (SHIGATAKE GAMES)")
+    print("EVE Rebellion - Arcade Style Controls")
     print()
     print("Controls:")
     print("  Left Stick: Ship movement")
