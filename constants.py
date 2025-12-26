@@ -1,9 +1,9 @@
 """Game constants and configuration for Minmatar Rebellion"""
 import pygame
 
-# Display
-SCREEN_WIDTH = 600
-SCREEN_HEIGHT = 800
+# Display - Widescreen desktop (3x original width for immersive experience)
+SCREEN_WIDTH = 1800
+SCREEN_HEIGHT = 1000
 FPS = 60
 
 # Screen shake
@@ -16,39 +16,48 @@ SHAKE_DECAY = 0.85
 DIFFICULTY_SETTINGS = {
     'easy': {
         'name': 'Easy',
-        'enemy_health_mult': 0.7,
-        'enemy_damage_mult': 0.7,
-        'enemy_fire_rate_mult': 1.3,  # Higher = slower
-        'player_damage_mult': 1.2,
+        'enemy_health_mult': 0.5,      # Easy to kill
+        'enemy_damage_mult': 0.4,      # Low damage
+        'enemy_fire_rate_mult': 1.8,   # Slow shooting
+        'player_damage_mult': 1.5,     # Player hits hard
         'refugee_mult': 1.5,
-        'powerup_chance': 0.2
+        'powerup_chance': 0.30,        # Lots of powerups
+        'enemy_speed_mult': 0.7,       # Slow enemies
+        'spawn_rate_mult': 1.4         # Slower spawns
     },
     'normal': {
         'name': 'Normal',
-        'enemy_health_mult': 1.0,
-        'enemy_damage_mult': 1.0,
-        'enemy_fire_rate_mult': 1.0,
-        'player_damage_mult': 1.0,
+        'enemy_health_mult': 0.8,      # Slightly easier than before
+        'enemy_damage_mult': 0.8,      # Manageable damage
+        'enemy_fire_rate_mult': 1.2,   # Slightly slower fire
+        'player_damage_mult': 1.1,     # Slight damage boost
         'refugee_mult': 1.0,
-        'powerup_chance': 0.15
+        'powerup_chance': 0.18,
+        'enemy_speed_mult': 0.9,
+        'spawn_rate_mult': 1.1
     },
     'hard': {
         'name': 'Hard',
-        'enemy_health_mult': 1.3,
-        'enemy_damage_mult': 1.3,
-        'enemy_fire_rate_mult': 0.8,  # Lower = faster
-        'player_damage_mult': 0.9,
-        'refugee_mult': 0.8,
-        'powerup_chance': 0.1
+        'enemy_health_mult': 1.4,      # Tougher but not brutal
+        'enemy_damage_mult': 1.3,      # Noticeable damage
+        'enemy_fire_rate_mult': 0.75,  # Faster but manageable
+        'player_damage_mult': 0.9,     # Slight reduction
+        'refugee_mult': 0.7,
+        'powerup_chance': 0.10,
+        'enemy_speed_mult': 1.1,       # Slightly faster
+        'spawn_rate_mult': 0.85
     },
     'nightmare': {
         'name': 'Nightmare',
-        'enemy_health_mult': 1.6,
-        'enemy_damage_mult': 1.5,
-        'enemy_fire_rate_mult': 0.6,
-        'player_damage_mult': 0.8,
-        'refugee_mult': 0.6,
-        'powerup_chance': 0.08
+        # Very challenging but not impossible
+        'enemy_health_mult': 2.2,      # Tanky but killable
+        'enemy_damage_mult': 1.8,      # Hurts a lot
+        'enemy_fire_rate_mult': 0.5,   # Fast shooting
+        'player_damage_mult': 0.7,     # Reduced damage
+        'refugee_mult': 0.4,
+        'powerup_chance': 0.06,
+        'enemy_speed_mult': 1.25,      # Fast enemies
+        'spawn_rate_mult': 0.75
     }
 }
 
@@ -120,7 +129,7 @@ AMMO_TYPES = {
 
 # Player stats
 PLAYER_SPEED = 5
-PLAYER_BASE_FIRE_RATE = 150  # ms between shots
+PLAYER_BASE_FIRE_RATE = 50  # ms between shots (3x faster - mow them down)
 PLAYER_ROCKET_COOLDOWN = 500  # ms between rockets
 PLAYER_MAX_ROCKETS = 10
 PLAYER_START_SHIELDS = 100
@@ -148,7 +157,7 @@ ENEMY_STATS = {
         'speed': 2.5,
         'fire_rate': 1500,
         'score': 100,
-        'size': (60, 78)  # Frigates
+        'size': (69, 90)  # Frigates
     },
     'punisher': {
         'name': 'Punisher',
@@ -158,27 +167,62 @@ ENEMY_STATS = {
         'speed': 1.5,
         'fire_rate': 2000,
         'score': 150,
-        'size': (66, 86)  # Frigates
+        'size': (76, 99)  # Frigates
+    },
+    'tormentor': {
+        'name': 'Tormentor',
+        'shields': 50,
+        'armor': 40,
+        'hull': 25,
+        'speed': 2.2,
+        'fire_rate': 1400,
+        'score': 120,
+        'size': (65, 85)  # Frigates - laser boat
+    },
+    'crucifier': {
+        'name': 'Crucifier',
+        'shields': 45,
+        'armor': 35,
+        'hull': 20,
+        'speed': 2.8,
+        'fire_rate': 1600,
+        'score': 110,
+        'size': (60, 80)  # Frigates - fast EWAR
     },
     'omen': {
         'name': 'Omen',
-        'shields': 100,
-        'armor': 150,
-        'hull': 80,
-        'speed': 1.2,
+        'shields': 150,
+        'armor': 200,
+        'hull': 100,
+        'speed': 0.9,
         'fire_rate': 1200,
-        'score': 500,
-        'size': (100, 130)  # Cruisers
+        'score': 800,
+        'size': (320, 420),  # MASSIVE cruiser - dwarfs player ships
+        'has_hardpoints': True,
+        'hardpoints': [  # (offset_x, offset_y, type, health)
+            (-80, 50, 'dual_laser', 60),
+            (80, 50, 'dual_laser', 60),
+            (-50, 120, 'laser', 40),
+            (50, 120, 'laser', 40),
+        ]
     },
     'maller': {
         'name': 'Maller',
-        'shields': 50,
-        'armor': 250,
-        'hull': 100,
-        'speed': 0.8,
+        'shields': 80,
+        'armor': 350,
+        'hull': 150,
+        'speed': 0.6,
         'fire_rate': 1800,
-        'score': 600,
-        'size': (105, 135)  # Cruisers
+        'score': 1000,
+        'size': (350, 460),  # MASSIVE armor cruiser - tank
+        'has_hardpoints': True,
+        'hardpoints': [
+            (-90, 40, 'dual_laser', 80),
+            (90, 40, 'dual_laser', 80),
+            (0, 80, 'heavy_laser', 100),  # Center heavy turret
+            (-60, 140, 'laser', 50),
+            (60, 140, 'laser', 50),
+        ]
     },
     'bestower': {
         'name': 'Bestower',
@@ -189,61 +233,61 @@ ENEMY_STATS = {
         'fire_rate': 0,  # Non-combat - Amarr industrial
         'score': 200,
         'refugees': 5,
-        'size': (88, 150)  # Industrial
+        'size': (180, 310)  # Industrial - tall hauler
     },
     'apocalypse': {
         'name': 'Apocalypse',
-        'shields': 300,
-        'armor': 400,
-        'hull': 200,
+        'shields': 600,
+        'armor': 900,
+        'hull': 500,
         'speed': 0.5,
         'fire_rate': 800,
         'score': 2000,
-        'size': (130, 195),  # Battleship
+        'size': (280, 420),  # Battleship - 5x frigate (~1200m)
         'boss': True
     },
     'abaddon': {
         'name': 'Abaddon',
-        'shields': 500,
-        'armor': 600,
-        'hull': 300,
+        'shields': 1000,
+        'armor': 1500,
+        'hull': 800,
         'speed': 0.3,
         'fire_rate': 600,
         'score': 5000,
-        'size': (160, 240),  # Battleship boss
+        'size': (340, 510),  # Battleship boss - massive armored beast
         'boss': True
     },
     'amarr_capital': {
         'name': 'Golden Supercarrier',
-        'shields': 500,
-        'armor': 1500,
-        'hull': 1000,
+        'shields': 2000,
+        'armor': 4000,
+        'hull': 2500,
         'speed': 0.3,
         'fire_rate': 1500,
-        'score': 5000,
-        'size': (320, 480),  # Capital ship
+        'score': 10000,
+        'size': (500, 750),  # Capital ship - truly massive
         'boss': True
     },
     'machariel': {
         'name': 'Machariel',
-        'shields': 200,
-        'armor': 400,
-        'hull': 300,
+        'shields': 400,
+        'armor': 800,
+        'hull': 600,
         'speed': 1.0,
         'fire_rate': 800,
-        'score': 2000,
-        'size': (130, 195),  # Pirate battleship
+        'score': 3000,
+        'size': (280, 420),  # Pirate battleship
         'boss': True
     },
     'stratios': {
         'name': 'Stratios',
-        'shields': 150,
-        'armor': 150,
-        'hull': 100,
+        'shields': 300,
+        'armor': 350,
+        'hull': 200,
         'speed': 1.2,
         'fire_rate': 1000,
-        'score': 1500,
-        'size': (98, 130),  # Cruiser-size
+        'score': 2000,
+        'size': (200, 280),  # Cruiser-size cloaky hunter
         'boss': True
     },
     # New enemy types
@@ -255,7 +299,7 @@ ENEMY_STATS = {
         'speed': 4.0,
         'fire_rate': 2500,
         'score': 25,
-        'size': (32, 32),  # Drones
+        'size': (37, 37),  # Drones
         'behavior': 'swarm'
     },
     'bomber': {
@@ -266,7 +310,7 @@ ENEMY_STATS = {
         'speed': 0.8,
         'fire_rate': 3000,
         'score': 300,
-        'size': (75, 105),  # Bombers
+        'size': (86, 121),  # Bombers
         'behavior': 'bomber'
     },
     'interceptor': {
@@ -277,7 +321,7 @@ ENEMY_STATS = {
         'speed': 5.0,
         'fire_rate': 1000,
         'score': 200,
-        'size': (48, 66),  # Interceptors
+        'size': (55, 76),  # Interceptors
         'behavior': 'aggressive'
     },
     'coercer': {
@@ -288,19 +332,33 @@ ENEMY_STATS = {
         'speed': 2.0,
         'fire_rate': 1200,
         'score': 125,
-        'size': (64, 84),  # Destroyers
+        'size': (74, 97),  # Destroyers
         'behavior': 'strafe'
     },
     'harbinger': {
         'name': 'Harbinger',
-        'shields': 200,
-        'armor': 300,
-        'hull': 150,
-        'speed': 0.6,
+        'shields': 500,
+        'armor': 800,
+        'hull': 400,
+        'speed': 0.45,
         'fire_rate': 1000,
-        'score': 800,
-        'size': (120, 165),  # Battlecruisers
-        'behavior': 'artillery'
+        'score': 2500,
+        'size': (450, 600),  # MASSIVE battlecruiser - mini-boss sized
+        'behavior': 'artillery',
+        'has_hardpoints': True,
+        'hardpoints': [
+            # Front heavy turrets
+            (-100, 30, 'heavy_laser', 100),
+            (100, 30, 'heavy_laser', 100),
+            # Mid dual turrets
+            (-120, 120, 'dual_laser', 80),
+            (120, 120, 'dual_laser', 80),
+            # Rear defense turrets
+            (-80, 200, 'dual_laser', 60),
+            (80, 200, 'dual_laser', 60),
+            # Center mega turret
+            (0, 150, 'heavy_laser', 120),
+        ]
     },
     'dragoon': {
         'name': 'Dragoon',
@@ -310,7 +368,7 @@ ENEMY_STATS = {
         'speed': 1.5,
         'fire_rate': 1800,
         'score': 350,
-        'size': (84, 112),  # Drone carriers
+        'size': (97, 129),  # Drone carriers
         'behavior': 'drone_carrier',
         'drones': 4  # Spawns more drones
     }

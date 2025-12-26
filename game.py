@@ -9,7 +9,7 @@ from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, Wingman,
                      RefugeePod, Powerup, Explosion, Star, ParallaxBackground)
 from sounds import get_sound_manager, get_music_manager, play_sound
 from controller_input import ControllerInput, XboxButton
-from space_background import SpaceBackground
+from space_background import SpaceBackground, AmarrArchon
 from expansion.capital_ship_enemy import CapitalShipEnemy
 from berserk_system import BerserkSystem
 from cinematic_system import CinematicManager, TribeType
@@ -17,6 +17,7 @@ from tutorial import TutorialManager
 from high_scores import HighScoreManager, AchievementManager
 from particle_effects import (ParticleEmitter, ScreenEffects, DamageNumberManager,
                               WarpTransition, HitMarker, ComboEffects)
+from environmental_hazards import HazardManager
 
 
 class SplashScreen:
@@ -373,11 +374,26 @@ class Game:
     
     def __init__(self):
         pygame.init()
-        self.space_background = SpaceBackground(SCREEN_WIDTH, SCREEN_HEIGHT)
-        pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-        
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+        # Fullscreen desktop mode - get actual screen resolution
+        display_info = pygame.display.Info()
+        self.fullscreen = True
+        if self.fullscreen:
+            self.actual_width = display_info.current_w
+            self.actual_height = display_info.current_h
+            self.screen = pygame.display.set_mode((self.actual_width, self.actual_height), pygame.FULLSCREEN)
+        else:
+            self.actual_width = SCREEN_WIDTH
+            self.actual_height = SCREEN_HEIGHT
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+        # Render at game resolution, scale to screen
         self.render_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+        self.space_background = SpaceBackground(SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.archon_carrier = AmarrArchon(SCREEN_WIDTH, SCREEN_HEIGHT)
+        pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
+
         pygame.display.set_caption("Minmatar Rebellion")
 
         # Load window icon
@@ -410,6 +426,9 @@ class Game:
 
         # Berserk scoring system
         self.berserk = BerserkSystem()
+
+        # Environmental hazards
+        self.hazards = HazardManager()
 
         # Visual effects
         self.screen_flash_alpha = 0
@@ -501,6 +520,7 @@ class Game:
         self.selected_ship = 'rifter'  # rifter, wolf, jaguar
         self.ship_options = ['rifter', 'wolf', 'jaguar']
         self.ship_select_index = 0
+        self.t2_ships_unlocked = True  # TESTING: Wolf and Jaguar unlocked
 
         # Difficulty selection
         self.difficulty_options = ['easy', 'normal', 'hard', 'nightmare']
@@ -511,7 +531,7 @@ class Game:
         self.mode_index = 0
 
         # Menu navigation
-        self.menu_options = ['start', 'settings', 'leaderboard', 'credits']
+        self.menu_options = ['start', 'how_to_play', 'settings', 'leaderboard', 'credits', 'quit']
         self.menu_index = 0
 
         # Menu transitions and animations
@@ -544,6 +564,8 @@ class Game:
         self.enemy_bullets = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.wingmen = pygame.sprite.Group()  # Allied wingmen for boss fights
+        self.kill_counter = 0  # Track kills for wingman spawns
+        self.kills_per_wingman = 15  # Spawn wingman every 15 kills
         self.pods = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
@@ -569,8 +591,17 @@ class Game:
         self.wave_delay = 0
         self.stage_complete = False
 
+        # Reset wave progression trackers
+        self._bc_spawned_this_stage = False
+        self._cruiser_count = 0
+        self._destroyer_wing_timer = 0
+
         # Reset berserk system for new game
         self.berserk.reset_session()
+
+        # Initialize environmental hazards for first stage
+        self.hazards.clear()
+        self.hazards.set_stage_hazards(self.current_stage)
 
         # Messages
         self.message = ""
@@ -613,21 +644,22 @@ class Game:
 
         stage = STAGES[self.current_stage]
 
-        # Progressive wave scaling formula
+        # Progressive wave scaling formula - LOTS of enemies to plow through
         # Base enemies + wave bonus + stage bonus + difficulty modifier
-        base_enemies = 3
-        wave_bonus = self.current_wave * 0.5  # +0.5 enemies per wave
-        stage_bonus = self.current_stage * 1.5  # +1.5 enemies per stage
+        base_enemies = 12
+        wave_bonus = self.current_wave * 3  # +3 enemies per wave
+        stage_bonus = self.current_stage * 5  # +5 enemies per stage
 
-        # Difficulty modifiers
+        # Difficulty modifiers - more enemies on harder difficulties
         diff_mult = {
-            'easy': 0.7,
-            'normal': 1.0,
-            'hard': 1.3,
-            'nightmare': 1.6
+            'easy': 0.8,
+            'normal': 1.2,
+            'hard': 1.6,
+            'nightmare': 2.0
         }.get(self.difficulty, 1.0)
 
         num_enemies = int((base_enemies + wave_bonus + stage_bonus) * diff_mult)
+        num_enemies = min(num_enemies, 60)  # Cap per wave but there are many waves
 
         # Check for boss wave
         if (stage['boss'] and self.current_wave == stage['waves'] - 1):
@@ -707,8 +739,55 @@ class Game:
         if random.random() < industrial_chance:
             self.wave_enemies += 1
     
+    def _get_spawn_position(self):
+        """Get a spawn position from 260-degree frontal arc (top, sides, diagonals)"""
+        # Spawn direction weights: top (60%), left side (15%), right side (15%), diagonals (10%)
+        spawn_type = random.choices(
+            ['top', 'carrier', 'left', 'right', 'top_left', 'top_right'],
+            weights=[30, 30, 12, 12, 8, 8]
+        )[0]
+
+        if spawn_type == 'carrier' and hasattr(self, 'archon_carrier'):
+            # Spawn from Archon carrier hangar
+            carrier_x, carrier_y = self.archon_carrier.get_spawn_position()
+            x = carrier_x + random.randint(-150, 150)
+            x = max(50, min(SCREEN_WIDTH - 50, x))
+            y = carrier_y
+            self.archon_carrier.trigger_launch()
+            return x, y, 0  # Angle 0 = straight down
+
+        elif spawn_type == 'top':
+            # Standard top spawn
+            x = random.randint(100, SCREEN_WIDTH - 100)
+            y = -50
+            return x, y, 0
+
+        elif spawn_type == 'left':
+            # Left side spawn - enemies fly in from left
+            x = -50
+            y = random.randint(100, SCREEN_HEIGHT // 2)
+            return x, y, math.radians(45)  # Angle toward center-down
+
+        elif spawn_type == 'right':
+            # Right side spawn - enemies fly in from right
+            x = SCREEN_WIDTH + 50
+            y = random.randint(100, SCREEN_HEIGHT // 2)
+            return x, y, math.radians(-45)  # Angle toward center-down
+
+        elif spawn_type == 'top_left':
+            # Top-left diagonal
+            x = random.randint(-50, SCREEN_WIDTH // 4)
+            y = -50
+            return x, y, math.radians(20)
+
+        else:  # top_right
+            # Top-right diagonal
+            x = random.randint(SCREEN_WIDTH * 3 // 4, SCREEN_WIDTH + 50)
+            y = -50
+            return x, y, math.radians(-20)
+
     def spawn_enemy(self):
-        """Spawn a single enemy (or drone swarm if drone type)"""
+        """Spawn a single enemy from 260-degree frontal arc with progressive composition"""
         if self.wave_spawned >= self.wave_enemies:
             return
 
@@ -718,24 +797,143 @@ class Game:
 
         stage = STAGES[self.current_stage]
 
-        # Chance for industrial
+        # Chance for industrial - guarantee at least one per wave in later stages
         if (self.wave_spawned == self.wave_enemies - 1 and
             random.random() < stage['industrial_chance'] * 2):
             enemy_type = 'bestower'
         else:
-            enemy_type = random.choice(stage['enemies'])
+            # Progressive enemy composition based on wave progress and kills
+            enemy_type = self._get_progressive_enemy_type(stage)
 
-        x = random.randint(50, SCREEN_WIDTH - 50)
-        y = -50
+        # Get spawn position from multi-directional system
+        x, y, entry_angle = self._get_spawn_position()
 
         # Drones spawn in swarms of 3-5 with formation
         if enemy_type == 'drone':
             self._spawn_drone_swarm(x, y)
         else:
             enemy = Enemy(enemy_type, x, y, self.difficulty_settings)
+            # Set entry angle for side-spawning enemies
+            if entry_angle != 0:
+                enemy.entry_angle = entry_angle
+                enemy.entering_from_side = True
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
             self.wave_spawned += 1
+
+    def _get_progressive_enemy_type(self, stage):
+        """
+        Select enemy type based on wave progress for structured escalation:
+        - Early wave: Mostly frigates
+        - Mid wave: Destroyers join from diagonals
+        - Late wave: Cruisers appear
+        - Every 3-4 waves: Battlecruiser mini-boss chance
+
+        Creates feeling of escalating battle intensity.
+        """
+        wave_progress = self.wave_spawned / max(1, self.wave_enemies)
+        current_wave = self.current_wave
+
+        # Track destroyer wing spawns (trigger diagonal attacks)
+        if not hasattr(self, '_destroyer_wing_timer'):
+            self._destroyer_wing_timer = 0
+            self._cruiser_count = 0
+            self._bc_spawned_this_stage = False
+
+        available = stage['enemies']
+
+        # Categorize available enemies
+        frigates = [e for e in available if e in ['executioner', 'punisher', 'tormentor', 'crucifier', 'drone']]
+        destroyers = [e for e in available if e in ['coercer']]
+        cruisers = [e for e in available if e in ['omen', 'maller']]
+        battlecruisers = [e for e in available if e in ['harbinger']]
+
+        # Default to frigates if categories are empty
+        if not frigates:
+            frigates = [available[0]] if available else ['executioner']
+
+        # === WAVE STRUCTURE ===
+
+        # Early wave (0-30%): Frigates only, but trigger destroyer wing attack occasionally
+        if wave_progress < 0.3:
+            # Every 15 spawns, chance for destroyer diagonal wing
+            self._destroyer_wing_timer += 1
+            if self._destroyer_wing_timer >= 15 and destroyers and current_wave >= 1:
+                if random.random() < 0.4:  # 40% chance
+                    self._spawn_destroyer_wing()
+                    self._destroyer_wing_timer = 0
+            return random.choice(frigates)
+
+        # Mid wave (30-60%): Mix frigates and destroyers
+        elif wave_progress < 0.6:
+            if destroyers and random.random() < 0.35:
+                return random.choice(destroyers)
+            return random.choice(frigates)
+
+        # Late wave (60-85%): Cruisers enter the battle
+        elif wave_progress < 0.85:
+            if cruisers and random.random() < 0.25:
+                self._cruiser_count += 1
+                return random.choice(cruisers)
+            elif destroyers and random.random() < 0.3:
+                return random.choice(destroyers)
+            return random.choice(frigates)
+
+        # End wave (85-100%): Battlecruiser mini-boss after enough cruisers
+        else:
+            # Spawn BC mini-boss after 3+ cruisers killed and every 3rd wave
+            if (battlecruisers and
+                self._cruiser_count >= 3 and
+                current_wave >= 2 and
+                current_wave % 3 == 0 and
+                not self._bc_spawned_this_stage):
+                self._bc_spawned_this_stage = True
+                self._cruiser_count = 0
+                self.show_message("BATTLECRUISER APPROACHING!", 90)
+                self.play_sound('warning')
+                return random.choice(battlecruisers)
+
+            # Otherwise continue with cruiser/destroyer mix
+            if cruisers and random.random() < 0.3:
+                return random.choice(cruisers)
+            elif destroyers and random.random() < 0.35:
+                return random.choice(destroyers)
+            return random.choice(frigates)
+
+    def _spawn_destroyer_wing(self):
+        """
+        Spawn a wing of destroyers that attack from diagonal corners.
+        They cross the screen diagonally and respawn from top if not destroyed.
+        """
+        # Alternate spawn sides
+        from_left = random.choice([True, False])
+
+        # Wing of 3-5 destroyers
+        wing_size = random.randint(3, 5)
+
+        for i in range(wing_size):
+            if from_left:
+                # Spawn from top-left, move to bottom-right
+                x = -40 - i * 30
+                y = -60 - i * 40
+                vx = 3.0 + random.uniform(-0.3, 0.3)
+            else:
+                # Spawn from top-right, move to bottom-left
+                x = SCREEN_WIDTH + 40 + i * 30
+                y = -60 - i * 40
+                vx = -3.0 + random.uniform(-0.3, 0.3)
+
+            vy = 2.5 + random.uniform(-0.2, 0.4)
+
+            enemy = Enemy('coercer', x, y, self.difficulty_settings)
+            enemy.pattern = Enemy.PATTERN_DIAGONAL
+            enemy.patrol_vx = vx
+            enemy.patrol_vy = vy
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
+
+        direction = "LEFT FLANK" if from_left else "RIGHT FLANK"
+        self.show_message(f"DESTROYER WING - {direction}!", 60)
 
     def _spawn_drone_swarm(self, center_x, center_y):
         """Spawn a swarm of 3-5 drones in formation"""
@@ -795,8 +993,28 @@ class Game:
 
         self.show_message("Wingmen deployed!", 60)
 
+    def _spawn_wingman(self):
+        """Spawn a single Rifter wingman to join the player (33% wave reward)"""
+        # Find an open position (avoid stacking)
+        existing_offsets = [w.offset_x for w in self.wingmen]
+        possible_offsets = [-80, -50, 50, 80, -110, 110]
+
+        for offset in possible_offsets:
+            if offset not in existing_offsets:
+                wingman = Wingman(self.player, offset)
+                wingman.rect.centerx = self.player.rect.centerx + offset
+                wingman.rect.centery = self.player.rect.centery + 40
+                self.wingmen.add(wingman)
+                self.all_sprites.add(wingman)
+                self.show_message("Rifter pilot joins your wing!", 90)
+                self.play_sound('pickup_major', 0.6)
+                return
+
+        # Max wingmen reached
+        self.show_message("Wing at full capacity", 60)
+
     def _spawn_endless_enemy(self):
-        """Spawn enemy for endless mode with wave-based variety"""
+        """Spawn enemy for endless mode from 260-degree frontal arc"""
         wave = self.endless_wave
 
         # Enemy pool expands as waves progress
@@ -815,10 +1033,14 @@ class Game:
         else:
             enemy_type = random.choice(pool)
 
-        x = random.randint(50, SCREEN_WIDTH - 50)
-        y = -50
+        # Get spawn position from multi-directional system
+        x, y, entry_angle = self._get_spawn_position()
 
         enemy = Enemy(enemy_type, x, y, self.difficulty_settings)
+        # Set entry angle for side-spawning enemies
+        if entry_angle != 0:
+            enemy.entry_angle = entry_angle
+            enemy.entering_from_side = True
         self.enemies.add(enemy)
         self.all_sprites.add(enemy)
         self.wave_spawned += 1
@@ -859,6 +1081,8 @@ class Game:
             self._spawn_line_formation(enemy_types)
         elif formation_type == 'diamond':
             self._spawn_diamond_formation(enemy_types)
+        elif formation_type == 'roaming_fleet':
+            self._spawn_roaming_fleet(enemy_types)
 
     def _spawn_v_formation(self, enemy_types):
         """Spawn 5 enemies in V-shape pointing down"""
@@ -973,6 +1197,102 @@ class Game:
         self.wave_spawned += 4
         self.show_message("DIAMOND FORMATION!", 60)
 
+    def _spawn_roaming_fleet(self, enemy_types):
+        """
+        Spawn a realistic EVE-style roaming fleet that crosses the screen diagonally.
+        Fleets don't vibrate in place - they cross through hunting for targets.
+        Composition: 10-20 frigs, 5-10 dessies, 1-5 cruisers, 2-3 BCs
+        """
+        # Determine fleet composition
+        num_frigates = random.randint(8, 15)
+        num_destroyers = random.randint(4, 8)
+        num_cruisers = random.randint(1, 3)
+        num_battlecruisers = random.randint(1, 2)
+
+        total = num_frigates + num_destroyers + num_cruisers + num_battlecruisers
+
+        # Entry point: left or right side
+        from_left = random.choice([True, False])
+        start_x = -100 if from_left else SCREEN_WIDTH + 100
+        end_x = SCREEN_WIDTH + 200 if from_left else -200
+
+        # Entry y range (upper portion of screen)
+        start_y = random.randint(-150, 100)
+
+        # Diagonal velocity (crossing the screen)
+        vx = 1.5 if from_left else -1.5
+        vy = random.uniform(0.3, 0.8)  # Slight downward angle
+
+        # Fleet arrangement - staggered rows
+        spacing_x = 35
+        spacing_y = 30
+        row_width = 8  # Ships per row
+
+        ships_spawned = 0
+
+        # Spawn battlecruisers first (center/lead position)
+        for i in range(num_battlecruisers):
+            row = i // row_width
+            col = i % row_width
+            x = start_x + (col - row_width // 2) * spacing_x * 2
+            y = start_y + row * spacing_y * 2
+            enemy = Enemy('harbinger', x, y, self.difficulty_settings)
+            enemy.movement_pattern = Enemy.PATTERN_DIAGONAL
+            enemy.patrol_vx = vx * 0.8  # Slower, heavier
+            enemy.patrol_vy = vy
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
+            ships_spawned += 1
+
+        # Cruisers behind BCs
+        for i in range(num_cruisers):
+            offset = ships_spawned + i
+            row = 1 + offset // row_width
+            col = offset % row_width
+            x = start_x + (col - row_width // 2) * spacing_x * 1.5
+            y = start_y + row * spacing_y + 60
+            etype = random.choice(['omen', 'maller'])
+            enemy = Enemy(etype, x, y, self.difficulty_settings)
+            enemy.movement_pattern = Enemy.PATTERN_DIAGONAL
+            enemy.patrol_vx = vx * 0.9
+            enemy.patrol_vy = vy
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
+            ships_spawned += 1
+
+        # Destroyers flanking
+        for i in range(num_destroyers):
+            side = i % 2  # Alternate sides
+            row = 2 + i // 4
+            x = start_x + ((-1 if side == 0 else 1) * (spacing_x * 4 + i * 15))
+            y = start_y + row * spacing_y + 120
+            enemy = Enemy('coercer', x, y, self.difficulty_settings)
+            enemy.movement_pattern = Enemy.PATTERN_DIAGONAL
+            enemy.patrol_vx = vx * 1.1  # Faster
+            enemy.patrol_vy = vy
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
+            ships_spawned += 1
+
+        # Frigates swarming around
+        for i in range(num_frigates):
+            scatter_x = random.randint(-80, 80)
+            scatter_y = random.randint(150, 300)
+            x = start_x + scatter_x
+            y = start_y + scatter_y + i * 20
+            etype = random.choice(['executioner', 'punisher', 'tormentor'])
+            enemy = Enemy(etype, x, y, self.difficulty_settings)
+            enemy.movement_pattern = Enemy.PATTERN_DIAGONAL
+            enemy.patrol_vx = vx * (1.0 + random.uniform(-0.2, 0.3))  # Varied speeds
+            enemy.patrol_vy = vy + random.uniform(-0.1, 0.2)
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
+            ships_spawned += 1
+
+        self.wave_spawned += ships_spawned
+        fleet_name = "HOSTILE FLEET" if from_left else "ENEMY ROAM"
+        self.show_message(f"{fleet_name} CROSSING - {ships_spawned} CONTACTS!", 90)
+
     def maybe_spawn_formation(self):
         """Chance to spawn a formation instead of single enemies"""
         # Formation chance increases with progression
@@ -990,6 +1310,12 @@ class Game:
                 formations.append('escort')
             elif self.game_mode != 'endless' and self.current_stage >= 1:
                 formations.append('escort')
+
+            # Roaming fleets appear more often (they feel more realistic)
+            if self.game_mode == 'endless' and self.endless_wave >= 3:
+                formations.extend(['roaming_fleet', 'roaming_fleet'])  # Double weight
+            elif self.game_mode != 'endless' and self.current_stage >= 2:
+                formations.append('roaming_fleet')
 
             self.spawn_formation(random.choice(formations))
             return True
@@ -1093,27 +1419,78 @@ class Game:
 
         self.show_message("BOMB!", 90)
 
-    def _barrel_roll(self):
-        """Execute barrel roll maneuver - brief invincibility with spin"""
-        if self.player.barrel_roll_cooldown > 0:
+    def _toggle_fire_pattern(self):
+        """Toggle between focused and spread fire patterns"""
+        # Cooldown to prevent accidental double-toggle
+        fire_pattern_cooldown = getattr(self, '_fire_pattern_cooldown', 0)
+        if fire_pattern_cooldown > 0:
+            return  # Still on cooldown
+
+        if not hasattr(self.player, 'fire_pattern'):
+            self.player.fire_pattern = 'focused'
+
+        if self.player.fire_pattern == 'focused':
+            self.player.fire_pattern = 'spread'
+            self.show_message("SPREAD FIRE", 45)
+        else:
+            self.player.fire_pattern = 'focused'
+            self.show_message("FOCUSED FIRE", 45)
+
+        self._fire_pattern_cooldown = 20  # ~0.33 second cooldown at 60fps
+        self.play_sound('ammo_switch')
+
+    def _thrust_jet(self, direction=1):
+        """Execute thrust jet maneuver - quick horizontal burst in direction
+
+        Args:
+            direction: -1 for left thrust, 1 for right thrust
+        """
+        # Jaguar has unlimited jets - no cooldown for horizontal
+        if self.player.thrust_cooldown > 0 and not self.player.is_jaguar:
             self.play_sound('error')
             return False
 
-        self.player.barrel_roll_active = True
-        self.player.barrel_roll_timer = self.player.barrel_roll_duration
-        self.player.barrel_roll_cooldown = self.player.barrel_roll_cooldown_time
-        self.player.barrel_roll_angle = 0
+        self.player.thrust_active = True
+        self.player.thrust_timer = self.player.thrust_duration
+        # Jaguar: NO cooldown for left/right, others: normal cooldown
+        self.player.thrust_cooldown = 0 if self.player.is_jaguar else self.player.thrust_cooldown_time
+        self.player.thrust_direction = direction
+        self.player.thrust_velocity = 25  # Initial burst speed (pixels/frame)
 
-        # Grant brief invincibility
-        self.player.invulnerable_until = pygame.time.get_ticks() + 350  # ~0.35 sec
+        # Brief invincibility during thrust
+        self.player.invulnerable_until = pygame.time.get_ticks() + 200  # 0.2 sec
 
         self.play_sound('powerup')
-        self.show_message("BARREL ROLL!", 40)
         self.controller.trigger_decision_haptic()
 
-        # Quick screen effect
-        self.screen_flash_alpha = 30
-        self.screen_flash_color = (100, 150, 255)
+        # Engine flare effect
+        self.screen_flash_alpha = 25
+        self.screen_flash_color = (255, 150, 50) if direction > 0 else (50, 150, 255)
+        return True
+
+    def _thrust_forward(self):
+        """Execute forward thrust boost - both bumpers pressed"""
+        # Jaguar has unlimited jets - minimal cooldown for forward
+        if self.player.thrust_cooldown > 0 and not self.player.is_jaguar:
+            self.play_sound('error')
+            return False
+
+        self.player.thrust_active = True
+        self.player.thrust_timer = self.player.thrust_duration + 6  # Slightly longer
+        # Jaguar: minimal cooldown (10 frames ~0.17 sec), others: normal cooldown
+        self.player.thrust_cooldown = 10 if self.player.is_jaguar else self.player.thrust_cooldown_time
+        self.player.thrust_direction = 0  # Forward (no horizontal)
+        self.player.thrust_velocity = 30  # Faster forward boost
+
+        # Brief invincibility during forward thrust
+        self.player.invulnerable_until = pygame.time.get_ticks() + 250
+
+        self.play_sound('powerup')
+        self.controller.trigger_decision_haptic()
+
+        # Bright forward engine flare
+        self.screen_flash_alpha = 35
+        self.screen_flash_color = (255, 200, 100)
         return True
 
     def _emergency_brake(self):
@@ -1141,42 +1518,62 @@ class Game:
 
     def _update_maneuvers(self):
         """Update active combat maneuvers"""
-        # Barrel roll update
-        if self.player.barrel_roll_active:
-            self.player.barrel_roll_timer -= 1
-            # Spin 360 degrees over duration with ease-in-out
-            progress = 1 - (self.player.barrel_roll_timer / self.player.barrel_roll_duration)
-            # Smooth ease-in-out curve for natural spin feel
-            if progress < 0.5:
-                eased = 2 * progress * progress
+        # Thrust jet update
+        if self.player.thrust_active:
+            self.player.thrust_timer -= 1
+
+            # Calculate progress (0 to 1)
+            duration = self.player.thrust_duration + (6 if self.player.thrust_direction == 0 else 0)
+            progress = 1 - (self.player.thrust_timer / duration)
+
+            # Velocity starts high and decelerates (ease-out)
+            velocity_mult = 1 - (progress * progress)
+            current_velocity = self.player.thrust_velocity * velocity_mult
+
+            if self.player.thrust_direction == 0:
+                # Forward boost - move UP (toward enemies)
+                self.player.rect.y -= current_velocity
             else:
-                eased = 1 - ((-2 * progress + 2) ** 2) / 2
-            self.player.barrel_roll_angle = eased * 360
+                # Horizontal thrust
+                self.player.rect.x += self.player.thrust_direction * current_velocity
 
-            # Emit spiral particle trail during roll
-            if self.player.barrel_roll_timer % 3 == 0:
-                angle_rad = math.radians(self.player.barrel_roll_angle)
-                # Spiral outward from ship center
-                for offset in [-15, 15]:
-                    px = self.player.rect.centerx + math.cos(angle_rad) * offset
-                    py = self.player.rect.centery + math.sin(angle_rad) * offset
-                    # Blue-white energy sparks
+            # Keep on screen
+            self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
+
+            # Emit thrust trail
+            if self.player.thrust_timer % 2 == 0:
+                if self.player.thrust_direction == 0:
+                    # Forward boost - trail behind (below) the ship
+                    px = self.player.rect.centerx + random.randint(-10, 10)
+                    py = self.player.rect.bottom + 5
                     color = random.choice([
-                        (150, 200, 255), (100, 180, 255), (200, 220, 255)
+                        (255, 220, 100), (255, 180, 50), (255, 140, 0)
                     ])
-                    self.particle_emitter.emit_sparks(px, py, color, count=2, direction=angle_rad)
+                    trail_angle = math.pi / 2  # Down
+                else:
+                    # Horizontal - trail from opposite side
+                    trail_side = -self.player.thrust_direction
+                    px = self.player.rect.centerx + trail_side * 20
+                    py = self.player.rect.centery + random.randint(-5, 5)
 
-            if self.player.barrel_roll_timer <= 0:
-                self.player.barrel_roll_active = False
-                self.player.barrel_roll_angle = 0
-                # Burst of particles on completion
-                self.particle_emitter.emit_explosion(
-                    self.player.rect.centerx, self.player.rect.centery,
-                    (150, 200, 255), count=16, speed=4, size=3
-                )
+                    if self.player.thrust_direction > 0:
+                        color = random.choice([
+                            (255, 200, 100), (255, 150, 50), (255, 100, 0)
+                        ])
+                    else:
+                        color = random.choice([
+                            (100, 200, 255), (50, 150, 255), (0, 100, 255)
+                        ])
+                    trail_angle = math.pi if self.player.thrust_direction > 0 else 0
 
-        if self.player.barrel_roll_cooldown > 0:
-            self.player.barrel_roll_cooldown -= 1
+                self.particle_emitter.emit_sparks(px, py, color, count=3, direction=trail_angle)
+
+            if self.player.thrust_timer <= 0:
+                self.player.thrust_active = False
+                self.player.thrust_velocity = 0
+
+        if self.player.thrust_cooldown > 0:
+            self.player.thrust_cooldown -= 1
 
         # Emergency brake update
         if self.player.emergency_brake_active:
@@ -1199,6 +1596,53 @@ class Game:
 
         if self.player.emergency_brake_cooldown > 0:
             self.player.emergency_brake_cooldown -= 1
+
+    def _apply_hazard_effects(self):
+        """Apply environmental hazard effects to player"""
+        if self.state != 'playing':
+            return
+
+        player_x = self.player.rect.centerx
+        player_y = self.player.rect.centery
+        total_damage = 0
+
+        # Asteroid collision damage
+        asteroid_damage = self.hazards.get_asteroid_collisions(self.player.rect)
+        if asteroid_damage > 0:
+            total_damage += asteroid_damage
+            self.shake.trigger(10, 8)
+            self.play_sound('hull_hit', 0.7)
+            self.particle_emitter.emit_explosion(player_x, player_y, (150, 100, 50), 20, 8, 5)
+
+        # Solar flare damage
+        flare_damage = self.hazards.get_flare_damage()
+        if flare_damage > 0:
+            # Flare hits shields first
+            total_damage += flare_damage
+            self.screen_flash_alpha = 80
+            self.screen_flash_color = (255, 220, 100)
+
+        # Mine explosion damage
+        mine_damage = self.hazards.get_mine_damage(player_x, player_y)
+        if mine_damage > 0:
+            total_damage += mine_damage
+            self.shake.trigger(15, 10)
+            self.play_sound('explosion', 0.8)
+
+        # Apply accumulated damage
+        if total_damage > 0:
+            self.player.take_damage(total_damage)
+            self.damage_numbers.add_number(player_x, player_y, total_damage, (255, 100, 100))
+
+        # Warp bubble pull effect
+        pull_x, pull_y = self.hazards.get_bubble_pull(player_x, player_y)
+        if pull_x != 0 or pull_y != 0:
+            self.player.rect.x += int(pull_x)
+            self.player.rect.y += int(pull_y)
+            self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
+
+        # Nebula slow effect - stored for player movement modifier
+        self._nebula_slow = self.hazards.get_nebula_slow(player_x, player_y)
 
     def _handle_dpad_input(self):
         """Handle D-Pad input for quick actions"""
@@ -1288,13 +1732,19 @@ class Game:
                     if self.controller.is_button_just_pressed(XboxButton.A):
                         option = self.menu_options[self.menu_index]
                         if option == 'start':
-                            self.state = 'ship_select'
+                            self.state = 'difficulty'  # Difficulty first, then ship
+                        elif option == 'how_to_play':
+                            self.state = 'how_to_play'
+                            self.how_to_play_scroll = 0
                         elif option == 'settings':
                             self.state = 'settings'
                         elif option == 'leaderboard':
                             self.state = 'leaderboard'
                         elif option == 'credits':
                             self.state = 'credits'
+                        elif option == 'quit':
+                            pygame.quit()
+                            sys.exit()
                         self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.BACK):
                         # Quick access to settings
@@ -1314,11 +1764,16 @@ class Game:
                     elif abs(move_y) < 0.3:
                         self._controller_moved = False
                     if self.controller.is_button_just_pressed(XboxButton.A):
-                        self.selected_ship = self.ship_options[self.ship_select_index]
-                        self.state = 'difficulty'
-                        self.play_sound('menu_select')
+                        selected_key = self.ship_options[self.ship_select_index]
+                        is_locked = selected_key in ['wolf', 'jaguar'] and not self.t2_ships_unlocked
+                        if is_locked:
+                            self.play_sound('menu_error')  # Can't select locked ship
+                        else:
+                            self.selected_ship = selected_key
+                            self.state = 'mode_select'  # Go to mode select after ship
+                            self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.B):
-                        self.state = 'menu'
+                        self.state = 'difficulty'  # Back to difficulty
                         self.play_sound('menu_select')
                 elif self.state == 'difficulty':
                     # 2x2 grid navigation for difficulty
@@ -1355,7 +1810,7 @@ class Game:
                         self.set_difficulty(self.difficulty_options[self.difficulty_index])
                         self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.B):
-                        self.state = 'ship_select'
+                        self.state = 'menu'  # Back to main menu
                         self.play_sound('menu_select')
                 elif self.state == 'mode_select':
                     # Navigation for mode selection
@@ -1374,7 +1829,7 @@ class Game:
                     if self.controller.is_button_just_pressed(XboxButton.A):
                         self.start_game(self.mode_options[self.mode_index])
                     elif self.controller.is_button_just_pressed(XboxButton.B):
-                        self.state = 'difficulty'
+                        self.state = 'ship_select'  # Back to ship selection
                         self.play_sound('menu_select')
                 elif self.state == 'playing':
                     if self.controller.is_button_just_pressed(XboxButton.START):
@@ -1390,27 +1845,30 @@ class Game:
                             self.screen_flash_alpha = 40
                             self.screen_flash_color = (100, 200, 255)
                     if self.controller.is_button_just_pressed(XboxButton.A):
-                        # Cycle ammo type (also on D-Pad left/right)
-                        self.player.cycle_ammo()
-                        self.play_sound('ammo_switch')
-                    if self.controller.is_button_just_pressed(XboxButton.X):
-                        # Fire rockets
-                        if self.player.rockets > 0:
-                            result = self.player.shoot_rocket()
-                            if result:
-                                # Handle both single rocket and list (Jaguar fires 2)
-                                rockets = result if isinstance(result, list) else [result]
-                                for rocket in rockets:
-                                    self.rockets.add(rocket)
-                                    self.all_sprites.add(rocket)
-                                self.play_sound('rocket')
-                    # Combat maneuvers on bumpers
-                    if self.controller.is_button_just_pressed(XboxButton.RB):
-                        # Barrel roll - invincibility spin
-                        self._barrel_roll()
-                    if self.controller.is_button_just_pressed(XboxButton.LB):
-                        # Emergency brake - pull to bottom
+                        # Emergency brake - quick pull to bottom of screen
                         self._emergency_brake()
+                    if self.controller.is_button_just_pressed(XboxButton.X):
+                        # Toggle fire pattern: focused <-> spread
+                        self._toggle_fire_pattern()
+                    if self.controller.is_button_just_pressed(XboxButton.B):
+                        # Toggle fire pattern (alternate button)
+                        self._toggle_fire_pattern()
+                    # Combat maneuvers on bumpers - thrust jets
+                    # Both bumpers = forward boost, single bumper = directional thrust
+                    lb_held = self.controller.is_button_held(XboxButton.LB)
+                    rb_held = self.controller.is_button_held(XboxButton.RB)
+                    lb_just = self.controller.is_button_just_pressed(XboxButton.LB)
+                    rb_just = self.controller.is_button_just_pressed(XboxButton.RB)
+
+                    if lb_held and rb_held and (lb_just or rb_just):
+                        # Both bumpers pressed - FORWARD BOOST
+                        self._thrust_forward()
+                    elif lb_just and not rb_held:
+                        # LB only - Thrust LEFT
+                        self._thrust_jet(direction=-1)
+                    elif rb_just and not lb_held:
+                        # RB only - Thrust RIGHT
+                        self._thrust_jet(direction=1)
                     # L3/R3 for HUD toggles
                     if self.controller.is_button_just_pressed(XboxButton.L_STICK):
                         # Toggle HUD mode (full -> minimal -> off -> full)
@@ -1495,7 +1953,44 @@ class Game:
                     if self.controller.is_button_just_pressed(XboxButton.B):
                         self.state = 'menu'
                         self.play_sound('menu_select')
-                elif self.state in ['leaderboard', 'credits']:
+                elif self.state == 'pause_settings':
+                    # Settings navigation with controller (from pause menu)
+                    move_x, move_y = self.controller.get_movement_vector()
+                    if move_y < -0.5 and not getattr(self, '_settings_controller_moved', False):
+                        self.settings_index = (self.settings_index - 1) % len(self.settings_options)
+                        self.play_sound('menu_select')
+                        self._settings_controller_moved = True
+                    elif move_y > 0.5 and not getattr(self, '_settings_controller_moved', False):
+                        self.settings_index = (self.settings_index + 1) % len(self.settings_options)
+                        self.play_sound('menu_select')
+                        self._settings_controller_moved = True
+                    elif abs(move_y) < 0.3:
+                        self._settings_controller_moved = False
+
+                    option_key, _, option_type = self.settings_options[self.settings_index]
+                    if option_type == 'toggle':
+                        if self.controller.is_button_just_pressed(XboxButton.A):
+                            self.settings[option_key] = not self.settings[option_key]
+                            self.play_sound('ammo_switch')
+                            self._apply_settings()
+                    elif option_type == 'slider':
+                        if move_x < -0.5 and not getattr(self, '_settings_x_moved', False):
+                            self.settings[option_key] = max(0, self.settings[option_key] - 10)
+                            self.play_sound('ammo_switch')
+                            self._apply_settings()
+                            self._settings_x_moved = True
+                        elif move_x > 0.5 and not getattr(self, '_settings_x_moved', False):
+                            self.settings[option_key] = min(100, self.settings[option_key] + 10)
+                            self.play_sound('ammo_switch')
+                            self._apply_settings()
+                            self._settings_x_moved = True
+                        elif abs(move_x) < 0.3:
+                            self._settings_x_moved = False
+
+                    if self.controller.is_button_just_pressed(XboxButton.B):
+                        self.state = 'paused'
+                        self.play_sound('menu_select')
+                elif self.state in ['leaderboard', 'credits', 'how_to_play']:
                     if self.controller.is_button_just_pressed(XboxButton.B):
                         self.state = 'menu'
                         self.play_sound('menu_select')
@@ -1510,12 +2005,12 @@ class Game:
 
                 elif self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                        self.state = 'ship_select'
+                        self.state = 'difficulty'  # Difficulty first
                         self.play_sound('menu_select')
                     elif event.key == pygame.K_t:
                         # Start tutorial
                         self.tutorial.start_tutorial()
-                        self.state = 'ship_select'
+                        self.state = 'difficulty'
                     elif event.key == pygame.K_o:
                         # Open settings
                         self.state = 'settings'
@@ -1529,6 +2024,10 @@ class Game:
                         self.state = 'credits'
                         self.credits_scroll = 0
                         self.play_sound('menu_select')
+                    elif event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
+                        # Quit game
+                        pygame.quit()
+                        sys.exit()
                     elif event.key == pygame.K_m:
                         self.music_enabled = not self.music_enabled
                         if self.music_enabled:
@@ -1546,11 +2045,16 @@ class Game:
                         self.ship_select_index = (self.ship_select_index + 1) % len(self.ship_options)
                         self.play_sound('menu_select')
                     elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                        self.selected_ship = self.ship_options[self.ship_select_index]
-                        self.state = 'difficulty'
-                        self.play_sound('menu_select')
+                        selected_key = self.ship_options[self.ship_select_index]
+                        is_locked = selected_key in ['wolf', 'jaguar'] and not self.t2_ships_unlocked
+                        if is_locked:
+                            self.play_sound('menu_error')  # Can't select locked ship
+                        else:
+                            self.selected_ship = selected_key
+                            self.state = 'mode_select'  # Go to mode select after ship
+                            self.play_sound('menu_select')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = 'menu'
+                        self.state = 'difficulty'  # Back to difficulty
                         self.play_sound('menu_select')
 
                 elif self.state == 'difficulty':
@@ -1563,7 +2067,7 @@ class Game:
                     elif event.key == pygame.K_4:
                         self.set_difficulty('nightmare')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = 'ship_select'
+                        self.state = 'menu'  # Back to main menu
                         self.play_sound('menu_select')
 
                 elif self.state == 'mode_select':
@@ -1574,7 +2078,7 @@ class Game:
                     elif event.key == pygame.K_3:
                         self.start_game('boss_rush')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = 'difficulty'
+                        self.state = 'ship_select'  # Back to ship selection
                         self.play_sound('menu_select')
 
                 elif self.state == 'playing':
@@ -1644,6 +2148,10 @@ class Game:
                         self.play_sound('menu_select')
 
                 elif self.state == 'credits':
+                    if event.key == pygame.K_ESCAPE:
+                        self.state = 'menu'
+
+                elif self.state == 'how_to_play':
                     if event.key == pygame.K_ESCAPE:
                         self.state = 'menu'
                         self.play_sound('menu_select')
@@ -1798,6 +2306,8 @@ class Game:
                     # Load boss rush high scores
                     self.boss_rush_high_score = saved.get('boss_rush_high_score', 0)
                     self.boss_rush_best_time = saved.get('boss_rush_best_time', 0)
+                    # Load T2 ship unlock status
+                    self.t2_ships_unlocked = saved.get('t2_ships_unlocked', False)
                 # Apply loaded settings
                 self._apply_settings_no_save()
         except (json.JSONDecodeError, IOError):
@@ -1820,16 +2330,17 @@ class Game:
             save_data['endless_high_score'] = self.endless_high_score
             save_data['boss_rush_high_score'] = self.boss_rush_high_score
             save_data['boss_rush_best_time'] = self.boss_rush_best_time
+            save_data['t2_ships_unlocked'] = self.t2_ships_unlocked
             with open(settings_file, 'w') as f:
                 json.dump(save_data, f, indent=2)
         except IOError:
             pass  # Silently fail if can't save
 
     def set_difficulty(self, difficulty):
-        """Set game difficulty and go to mode selection"""
+        """Set game difficulty and go to ship selection"""
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
-        self.state = 'mode_select'
+        self.state = 'ship_select'  # Go to ship selection after difficulty
         self.play_sound('menu_select')
 
     def start_game(self, mode='campaign'):
@@ -2007,11 +2518,23 @@ class Game:
                 self.state = 'victory'
                 self.play_sound('victory', 0.8)
                 self._record_game_end(victory=True)
+                # Unlock T2 ships on first campaign completion!
+                if not self.t2_ships_unlocked:
+                    self.t2_ships_unlocked = True
+                    self._save_settings()
+                    self.show_message("T2 ASSAULT FRIGATES UNLOCKED!", 300)
             else:
                 self.current_wave = 0
                 self.wave_delay = 60
                 self.stage_complete = False
+                # Set up hazards for new stage
+                self.hazards.clear()
+                self.hazards.set_stage_hazards(self.current_stage)
                 self.state = 'playing'
+                # Reset wave progression trackers for new stage
+                self._bc_spawned_this_stage = False
+                self._cruiser_count = 0
+                self._destroyer_wing_timer = 0
                 self.show_message(STAGES[self.current_stage]['name'], 180)
                 self.play_sound('wave_start')
                 # Change music theme for new stage
@@ -2027,6 +2550,8 @@ class Game:
         # Update scrolling background
         if hasattr(self, "space_background"):
             self.space_background.update(2.0)
+        if hasattr(self, "archon_carrier"):
+            self.archon_carrier.update()
 
         """Update game state"""
         # Handle splash screen
@@ -2057,6 +2582,14 @@ class Game:
         # Update player
         self.player.update(keys)
         self.player.update_ability_cooldown()
+
+        # Update Jaguar shield deflector timers
+        if hasattr(self.player, 'update_frontal_shield'):
+            self.player.update_frontal_shield()
+
+        # Update Wolf armor regen
+        if hasattr(self.player, 'update_armor_regen'):
+            self.player.update_armor_regen()
 
         # Check if player just overheated - show powerup loss message
         if self.player.is_overheated and not was_overheated:
@@ -2094,40 +2627,111 @@ class Game:
         # Player shooting
         controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
         if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
-            bullets = self.player.shoot()
-            if bullets:
-                self.play_sound('autocannon', 0.3)
-                if self.tutorial.active:
-                    self.tutorial.track_shot()
-                # Muzzle flash effect
-                ammo = AMMO_TYPES.get(self.player.current_ammo, {})
-                flash_color = ammo.get('tracer', (255, 200, 100))
-                for bullet in bullets:
-                    self.particle_emitter.emit_sparks(
-                        bullet.rect.centerx, bullet.rect.top + 5,
-                        flash_color, 2)
-            for bullet in bullets:
-                self.player_bullets.add(bullet)
-                self.all_sprites.add(bullet)
+            ship_class = getattr(self.player, 'ship_class', 'Rifter')
 
-        # Rockets
+            # Jaguar: Seeking rocket streams as main weapon
+            if ship_class == 'Jaguar':
+                # Update rocket stream cooldown
+                if hasattr(self.player, 'rocket_stream_cooldown') and self.player.rocket_stream_cooldown > 0:
+                    self.player.rocket_stream_cooldown -= 1
+
+                projectiles = self.player.shoot()  # Returns rockets for Jaguar
+                if projectiles:
+                    self.play_sound('rocket', 0.15)  # Quieter for streams
+                    if self.tutorial.active:
+                        self.tutorial.track_shot()
+                    for rocket in projectiles:
+                        # Set targets for seeking
+                        if hasattr(rocket, 'set_targets'):
+                            rocket.set_targets(self.enemies)
+                        # Smaller muzzle flash for stream rockets
+                        self.particle_emitter.emit_sparks(
+                            rocket.rect.centerx, rocket.rect.top + 5,
+                            (100, 180, 255), 2)
+                        self.player_bullets.add(rocket)
+                        self.all_sprites.add(rocket)
+            else:
+                # Other ships: Normal autocannon fire
+                bullets = self.player.shoot()
+                if bullets:
+                    self.play_sound('autocannon', 0.3)
+                    if self.tutorial.active:
+                        self.tutorial.track_shot()
+                    ammo = AMMO_TYPES.get(self.player.current_ammo, {})
+                    flash_color = ammo.get('tracer', (255, 200, 100))
+                    for bullet in bullets:
+                        self.particle_emitter.emit_sparks(
+                            bullet.rect.centerx, bullet.rect.top + 5,
+                            flash_color, 2)
+                for bullet in bullets:
+                    self.player_bullets.add(bullet)
+                    self.all_sprites.add(bullet)
+
+        # Rockets / Special Abilities (LT)
         controller_rocket = self.controller.is_alternate_fire() if (self.controller and self.controller.connected) else False
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2] or controller_rocket:
-            result = self.player.shoot_rocket()
-            if result:
-                self.play_sound('rocket', 0.5)
-                # Handle both single rocket and list (Jaguar fires 2)
-                rockets = result if isinstance(result, list) else [result]
-                for rocket in rockets:
-                    # Rocket muzzle flash - bigger and orange
-                    self.particle_emitter.emit_explosion(
-                        rocket.rect.centerx, rocket.rect.top + 5,
-                        (255, 150, 50), 6, 3, 3)
-                    self.player_bullets.add(rocket)
-                    self.all_sprites.add(rocket)
-                if self.tutorial.active:
-                    self.tutorial.track_rocket()
-        
+            ship_class = getattr(self.player, 'ship_class', 'Rifter')
+
+            # Jaguar: LT activates SHIELD BUBBLE (7s immunity, 20s cooldown)
+            if ship_class == 'Jaguar':
+                if self.player.can_frontal_shield():
+                    if self.player.activate_frontal_shield():
+                        self.play_sound('shield_boost', 0.8)
+                        self.show_message("SHIELD BUBBLE ACTIVE!", 60)
+                        # Visual burst effect
+                        self.particle_emitter.emit_explosion(
+                            self.player.rect.centerx, self.player.rect.centery,
+                            (80, 180, 255), 40, 12, 8)
+
+            # Wolf: LT fires UNLIMITED DUAL SEEKING ROCKETS
+            elif ship_class == 'Wolf':
+                # Wolf has unlimited seeking rockets on LT - no ammo cost
+                wolf_rocket_cooldown = getattr(self.player, 'wolf_rocket_cooldown', 0)
+                if wolf_rocket_cooldown <= 0:
+                    # Fire dual seeking rockets
+                    from sprites import Rocket
+                    for offset in [-12, 12]:
+                        rocket = Rocket(
+                            self.player.rect.centerx + offset,
+                            self.player.rect.top,
+                            seeking=True
+                        )
+                        rocket.damage = int(ROCKET_DAMAGE * 0.6 * self.player.get_damage_bonus())
+                        rocket.turn_rate = 0.25
+                        rocket.set_targets(self.enemies)
+                        self.particle_emitter.emit_explosion(
+                            rocket.rect.centerx, rocket.rect.top + 5,
+                            (255, 150, 50), 6, 3, 3)
+                        self.player_bullets.add(rocket)
+                        self.all_sprites.add(rocket)
+                    self.play_sound('rocket', 0.4)
+                    self.player.wolf_rocket_cooldown = 12  # Fast fire rate
+
+            else:
+                # Rifter: Fire rockets normally (uses ammo)
+                result = self.player.shoot_rocket()
+                if result:
+                    self.play_sound('rocket', 0.5)
+                    rockets = result if isinstance(result, list) else [result]
+                    for rocket in rockets:
+                        if hasattr(rocket, 'seeking') and rocket.seeking:
+                            rocket.set_targets(self.enemies)
+                        self.particle_emitter.emit_explosion(
+                            rocket.rect.centerx, rocket.rect.top + 5,
+                            (255, 150, 50), 6, 3, 3)
+                        self.player_bullets.add(rocket)
+                        self.all_sprites.add(rocket)
+                    if self.tutorial.active:
+                        self.tutorial.track_rocket()
+
+        # Decrement Wolf rocket cooldown
+        if hasattr(self.player, 'wolf_rocket_cooldown') and self.player.wolf_rocket_cooldown > 0:
+            self.player.wolf_rocket_cooldown -= 1
+
+        # Decrement fire pattern toggle cooldown
+        if hasattr(self, '_fire_pattern_cooldown') and self._fire_pattern_cooldown > 0:
+            self._fire_pattern_cooldown -= 1
+
         # Update sprites
         self.player_bullets.update()
         self.enemy_bullets.update()
@@ -2135,6 +2739,11 @@ class Game:
         # Update enemies with player position for AI
         for enemy in self.enemies:
             enemy.update(self.player.rect)
+
+            # Update hardpoints for cruisers/BCs
+            if hasattr(enemy, 'has_hardpoints') and enemy.has_hardpoints:
+                for hardpoint in enemy.get_hardpoints():
+                    hardpoint.update()
 
         # Update wingmen and have them shoot
         for wingman in self.wingmen:
@@ -2178,6 +2787,12 @@ class Game:
 
         # Update berserk system (for popups)
         self.berserk.update()
+
+        # Update environmental hazards
+        self.hazards.update(self.player.rect)
+
+        # Apply hazard effects to player
+        self._apply_hazard_effects()
 
         # Decay screen flash
         if self.screen_flash_alpha > 0:
@@ -2263,7 +2878,60 @@ class Game:
                             enemy.rect.centery + random.randint(-20, 20),
                             (255, 50, 50), 3)
         
-        # Check collisions - player bullets vs enemies
+        # Check collisions - player bullets vs HARDPOINTS first (BOSS enemies only)
+        for bullet in list(self.player_bullets):
+            bullet_hit = False
+
+            # Check hardpoints only on BOSS enemies with hardpoints
+            for enemy in self.enemies:
+                if not hasattr(enemy, 'has_hardpoints') or not enemy.has_hardpoints:
+                    continue
+                if not enemy.is_boss:
+                    continue  # Hardpoints only active for bosses
+
+                for hardpoint in enemy.get_active_hardpoints():
+                    if bullet.rect.colliderect(hardpoint.rect):
+                        # Hit hardpoint!
+                        self.particle_emitter.emit_sparks(
+                            bullet.rect.centerx, bullet.rect.centery,
+                            (255, 150, 50), 6)  # Orange sparks for turret hits
+                        self.hit_markers.add(bullet.rect.centerx, bullet.rect.centery)
+
+                        # Damage number on hardpoint
+                        if self.settings.get('show_damage_numbers', True):
+                            dmg = getattr(bullet, 'damage', 10)
+                            self.damage_numbers.spawn(
+                                hardpoint.rect.centerx, hardpoint.rect.top - 5,
+                                dmg, (255, 180, 80))  # Orange for turret damage
+
+                        # Apply damage to hardpoint
+                        if hardpoint.take_damage(bullet.damage):
+                            # Hardpoint destroyed!
+                            self.show_message("TURRET DESTROYED!", 45)
+                            self.play_sound('explosion_small', 0.7)
+                            self.shake.add(SHAKE_SMALL)
+
+                            # Mini explosion
+                            explosion = Explosion(hardpoint.rect.centerx, hardpoint.rect.centery,
+                                                 20, (255, 150, 50))
+                            self.effects.add(explosion)
+
+                            # Check if all hardpoints destroyed
+                            if enemy.check_hardpoints_destroyed():
+                                self.show_message("WEAPONS OFFLINE - TARGET STRUCTURE!", 90)
+                                self.play_sound('warning')
+
+                        bullet.kill()
+                        bullet_hit = True
+                        break
+
+                if bullet_hit:
+                    break
+
+            if bullet_hit:
+                continue
+
+        # Check collisions - player bullets vs enemies (main hull)
         for bullet in self.player_bullets:
             hits = pygame.sprite.spritecollide(bullet, self.enemies, False)
             for enemy in hits:
@@ -2278,6 +2946,10 @@ class Game:
                 # Spawn damage number if enabled
                 if self.settings.get('show_damage_numbers', True):
                     dmg = getattr(bullet, 'damage', 10)
+                    # Show reduced damage if hardpoints active
+                    if hasattr(enemy, 'has_hardpoints') and enemy.has_hardpoints:
+                        if not enemy.check_hardpoints_destroyed():
+                            dmg = int(dmg * 0.1)  # Show reduced damage
                     dmg_color = bullet.color if hasattr(bullet, 'color') else (255, 255, 255)
                     self.damage_numbers.spawn(
                         enemy.rect.centerx, enemy.rect.top - 5,
@@ -2372,15 +3044,40 @@ class Game:
                     
                     # Maybe drop powerup
                     self.spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
-                    
+
                     enemy.kill()
+
+                    # Kill counter for wingman spawns (Rifter only)
+                    if not self.player.is_wolf and not self.player.is_jaguar:
+                        self.kill_counter += 1
+                        if self.kill_counter >= self.kills_per_wingman:
+                            self.kill_counter = 0
+                            self._spawn_wingman()
+                            self.show_message("WINGMAN REINFORCEMENT!", 60)
                 break
-        
+
         # Enemy bullets vs player
         hits = pygame.sprite.spritecollide(self.player, self.enemy_bullets, True)
         for bullet in hits:
+            # Jaguar shield bubble - blocks ALL damage from any direction
+            if self.player.is_frontal_shield_active():
+                if getattr(self.player, 'shield_bubble_mode', False):
+                    # Full 360 bubble - blocks everything
+                    self.particle_emitter.emit_sparks(
+                        bullet.rect.centerx, bullet.rect.centery,
+                        (80, 180, 255), 8)
+                    continue  # Skip damage
+                else:
+                    # Frontal only - check if hit came from front (above player center)
+                    if self.player.is_hit_from_front(bullet.rect.centery):
+                        # Blocked by frontal shield - just sparks, no damage
+                        self.particle_emitter.emit_sparks(
+                            bullet.rect.centerx, bullet.rect.centery,
+                            (80, 180, 255), 6)
+                        continue  # Skip damage
+
             damage = int(bullet.damage * self.difficulty_settings['enemy_damage_mult'])
-            
+
             # Determine which layer took the hit for sound
             if self.player.shields > 0:
                 self.play_sound('shield_hit', 0.5)
@@ -2388,7 +3085,7 @@ class Game:
                 self.play_sound('armor_hit', 0.5)
             else:
                 self.play_sound('hull_hit', 0.6)
-            
+
             self.shake.add(SHAKE_SMALL)
 
             # Apply damage resistance from abilities
@@ -2516,6 +3213,11 @@ class Game:
             self._update_endless_waves()
             return
 
+        # Nightmare mode = endless onslaught with boss every 5th wave
+        if self.difficulty == 'nightmare':
+            self._update_nightmare_waves()
+            return
+
         # Boss rush mode
         if self.game_mode == 'boss_rush':
             self._update_boss_rush()
@@ -2536,18 +3238,32 @@ class Game:
                     self.show_message(f"Wave {self.current_wave + 1}/{stage['waves']}", 90)
                     self.play_sound('wave_start', 0.4)
 
-        # Spawn enemies gradually
+        # Spawn enemies RAPIDLY - plow through endless hordes
+        spawn_rate_mult = self.difficulty_settings.get('spawn_rate_mult', 1.0)
+        spawn_delay = int(15 * spawn_rate_mult)  # Much faster base spawns
         self.spawn_timer += 1
-        if self.spawn_timer >= 45 and self.wave_spawned < self.wave_enemies:
+        if self.spawn_timer >= spawn_delay and self.wave_spawned < self.wave_enemies:
             self.spawn_timer = 0
-            # Chance for formation spawn (only if enough enemies remain)
-            if self.wave_spawned < self.wave_enemies - 3:
-                # Try formation spawn, fall back to regular spawn
-                if not self.maybe_spawn_formation():
+            # High chance for formation spawn - groups of enemies
+            if self.wave_spawned < self.wave_enemies - 5:
+                if random.random() < 0.5:  # 50% formation chance
+                    if not self.maybe_spawn_formation():
+                        self.spawn_enemy()
+                else:
                     self.spawn_enemy()
             else:
-                # Not enough enemies left for formation, spawn regular
                 self.spawn_enemy()
+
+        # Diagonal fleet crossings in ALL modes (not just nightmare)
+        if not hasattr(self, '_campaign_fleet_timer'):
+            self._campaign_fleet_timer = 0
+            self._campaign_fleet_left = True
+        self._campaign_fleet_timer += 1
+        fleet_interval = 180 if self.difficulty == 'easy' else 120 if self.difficulty == 'normal' else 90
+        if self._campaign_fleet_timer >= fleet_interval:
+            self._campaign_fleet_timer = 0
+            self._spawn_diagonal_fleet(from_left=self._campaign_fleet_left)
+            self._campaign_fleet_left = not self._campaign_fleet_left
 
         # Wave complete?
         if len(self.enemies) == 0 and self.wave_spawned >= self.wave_enemies and self.wave_enemies > 0:
@@ -2555,6 +3271,8 @@ class Game:
             self.wave_enemies = 0
             self.wave_spawned = 0
             self.wave_delay = 90
+
+            # Wingmen now spawn via kill counter gauge (every 15 kills for Rifter)
 
             # Stage complete?
             if self.current_wave >= stage['waves']:
@@ -2605,7 +3323,177 @@ class Game:
             self.wave_spawned = 0
             # Shorter delays as waves progress
             self.wave_delay = max(30, 90 - self.endless_wave * 2)
-    
+
+    def _update_nightmare_waves(self):
+        """Nightmare mode = endless onslaught. Boss every 5th wave. 100 Amarr to 1 Minmatar - survive as long as you can."""
+        # Track time (use endless_time for nightmare too)
+        if not hasattr(self, 'nightmare_wave'):
+            self.nightmare_wave = 0
+            self.nightmare_time = 0
+            self.nightmare_fleet_timer = 0
+
+        self.nightmare_time += 1
+        self.nightmare_fleet_timer += 1
+
+        # Wave delay
+        if self.wave_delay > 0:
+            self.wave_delay -= 1
+            return
+
+        # Need to spawn new wave?
+        if self.wave_enemies == 0:
+            self._spawn_nightmare_wave()
+
+        # Spawn enemies RAPIDLY - Amarr have endless resources
+        spawn_delay = max(8, 20 - self.nightmare_wave)  # Very fast spawns
+        self.spawn_timer += 1
+        if self.spawn_timer >= spawn_delay and self.wave_spawned < self.wave_enemies:
+            self.spawn_timer = 0
+            # Higher chance for fleet formations in nightmare
+            if self.wave_spawned < self.wave_enemies - 5:
+                if random.random() < 0.4:  # 40% fleet formation chance
+                    self._spawn_nightmare_fleet()
+                elif not self.maybe_spawn_formation():
+                    self.spawn_enemy()
+            else:
+                self.spawn_enemy()
+
+        # Spawn diagonal crossing fleets frequently - alternating sides
+        if self.nightmare_fleet_timer >= 120:  # Every 2 seconds
+            self.nightmare_fleet_timer = 0
+            # Alternate sides each spawn
+            if not hasattr(self, '_fleet_from_left'):
+                self._fleet_from_left = True
+            self._spawn_diagonal_fleet(from_left=self._fleet_from_left)
+            self._fleet_from_left = not self._fleet_from_left
+
+        # Carrier drone waves
+        if hasattr(self, 'archon_carrier') and random.random() < 0.01:  # 1% per frame = frequent
+            self._spawn_carrier_drones()
+
+        # Wave complete?
+        if len(self.enemies) == 0 and self.wave_spawned >= self.wave_enemies and self.wave_enemies > 0:
+            self.nightmare_wave += 1
+            self.wave_enemies = 0
+            self.wave_spawned = 0
+            # Minimal delay between waves - relentless
+            self.wave_delay = max(15, 45 - self.nightmare_wave * 2)
+            # Wingmen spawn via kill counter (every 15 kills for Rifter)
+
+    def _spawn_nightmare_wave(self):
+        """Spawn nightmare wave - massive enemy counts with boss every 5th wave"""
+        self.nightmare_wave += 1
+        wave = self.nightmare_wave
+
+        # Massive enemy counts - 100 Amarr to 1 Minmatar ratio
+        base_enemies = 25 + wave * 5
+        base_enemies = min(base_enemies, 80)  # Cap at 80 per wave
+
+        # Boss every 5th wave
+        if wave % 5 == 0:
+            # Boss wave - spawn appropriate boss based on wave progress
+            if wave >= 20:
+                boss_type = 'amarr_capital'
+                boss = CapitalShipEnemy(SCREEN_WIDTH // 2, self.difficulty_settings)
+            elif wave >= 15:
+                boss_type = 'abaddon'
+                boss = Enemy(boss_type, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
+            elif wave >= 10:
+                boss_type = 'apocalypse'
+                boss = Enemy(boss_type, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
+            else:
+                boss_types = ['harbinger', 'prophecy', 'zealot']
+                boss_type = random.choice(boss_types)
+                boss = Enemy(boss_type, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
+
+            self.enemies.add(boss)
+            self.all_sprites.add(boss)
+            self.current_boss = boss
+            # Boss + massive escort
+            self.wave_enemies = 1 + base_enemies
+            self.wave_spawned = 1
+            self.show_message(f"WAVE {wave} - BOSS APPROACHING!", 120)
+            self.play_sound('boss_entrance', 0.7)
+            self.play_sound('warning')
+        else:
+            self.wave_enemies = base_enemies
+            self.wave_spawned = 0
+            self.show_message(f"WAVE {wave} - INCOMING!", 60)
+            self.play_sound('wave_start')
+
+    def _spawn_nightmare_fleet(self):
+        """Spawn a formation of same-type ships in nightmare"""
+        ship_types = ['executioner', 'punisher', 'tormentor', 'coercer']
+        ship_type = random.choice(ship_types)
+
+        # Spawn 5-10 of same ship type in formation
+        count = random.randint(5, 10)
+        x_center = random.randint(100, SCREEN_WIDTH - 100)
+
+        # Pick a diagonal direction for the whole formation
+        from_left = x_center < SCREEN_WIDTH // 2
+        vx = random.uniform(1.5, 3.0) if from_left else random.uniform(-3.0, -1.5)
+
+        for i in range(count):
+            x_offset = (i - count // 2) * 40
+            x = max(40, min(SCREEN_WIDTH - 40, x_center + x_offset))
+            enemy = Enemy(ship_type, x, -50 - i * 20, self.difficulty_settings)
+            enemy.movement_pattern = Enemy.PATTERN_DIAGONAL
+            enemy.patrol_vx = vx + random.uniform(-0.3, 0.3)
+            enemy.patrol_vy = random.uniform(2.0, 3.0)
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
+            self.wave_spawned += 1
+
+    def _spawn_diagonal_fleet(self, from_left=None):
+        """Spawn fleet of SAME hull type that crosses screen diagonally"""
+        if from_left is None:
+            from_left = random.choice([True, False])
+
+        # Always same hull type for fleet cohesion
+        ship_types = ['executioner', 'punisher', 'tormentor', 'coercer']
+        ship_type = random.choice(ship_types)
+
+        # Large fleets - 12-20 ships of same type
+        count = random.randint(12, 20)
+
+        for i in range(count):
+            if from_left:
+                x = -50 - i * 25
+                y = random.randint(-50, 50) + i * 12
+                vx = random.uniform(3, 5)
+            else:
+                x = SCREEN_WIDTH + 50 + i * 25
+                y = random.randint(-50, 50) + i * 12
+                vx = random.uniform(-5, -3)
+
+            enemy = Enemy(ship_type, x, y, self.difficulty_settings)
+            enemy.movement_pattern = Enemy.PATTERN_DIAGONAL
+            enemy.patrol_vx = vx
+            enemy.patrol_vy = random.uniform(2, 3.5)
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
+
+    def _spawn_carrier_drones(self):
+        """Spawn wave of drones from carrier in nightmare mode"""
+        if not hasattr(self, 'archon_carrier'):
+            return
+
+        carrier_x, carrier_y = self.archon_carrier.get_spawn_position()
+        num_drones = random.randint(4, 8)
+
+        for i in range(num_drones):
+            x = carrier_x + random.randint(-100, 100)
+            x = max(40, min(SCREEN_WIDTH - 40, x))
+            y = carrier_y + random.randint(0, 30)
+
+            drone_type = random.choice(['drone', 'drone', 'interceptor', 'bomber'])
+            enemy = Enemy(drone_type, x, y, self.difficulty_settings)
+            self.enemies.add(enemy)
+            self.all_sprites.add(enemy)
+
+        self.archon_carrier.trigger_launch()
+
     def draw(self):
         """Render everything"""
         # Draw to render surface first (for screen shake)
@@ -2655,6 +3543,8 @@ class Game:
             self.draw_leaderboard()
         elif self.state == 'credits':
             self.draw_credits()
+        elif self.state == 'how_to_play':
+            self.draw_how_to_play()
 
         # Draw warp transition effect
         self.warp_transition.draw(self.render_surface)
@@ -2664,11 +3554,17 @@ class Game:
             shake_x, shake_y = self.shake.offset_x, self.shake.offset_y
         else:
             shake_x, shake_y = 0, 0
-        self.screen.blit(self.render_surface, (shake_x, shake_y))
+
+        # Scale render surface to actual screen (fullscreen support)
+        if self.fullscreen and (self.actual_width != SCREEN_WIDTH or self.actual_height != SCREEN_HEIGHT):
+            scaled = pygame.transform.scale(self.render_surface, (self.actual_width, self.actual_height))
+            self.screen.blit(scaled, (shake_x, shake_y))
+        else:
+            self.screen.blit(self.render_surface, (shake_x, shake_y))
 
         # Apply screen flash overlay (for berserk kills)
         if self.screen_flash_alpha > 0:
-            flash_overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            flash_overlay = pygame.Surface((self.actual_width, self.actual_height), pygame.SRCALPHA)
             flash_overlay.fill((*self.screen_flash_color, int(self.screen_flash_alpha)))
             self.screen.blit(flash_overlay, (0, 0))
 
@@ -2881,80 +3777,116 @@ class Game:
         # Draw space background
         if hasattr(self, "space_background"):
             self.space_background.draw(self.render_surface)
+        # Draw Archon carrier in background (only during gameplay)
+        if hasattr(self, "archon_carrier") and self.state == 'playing':
+            self.archon_carrier.draw(self.render_surface)
+
+        # Draw environmental hazards (behind most sprites)
+        if self.state == 'playing':
+            self.hazards.draw(self.render_surface)
 
         """Draw gameplay elements"""
+        # Draw rocket trails BEFORE sprites (so trails appear behind rockets)
+        for sprite in self.player_bullets:
+            if hasattr(sprite, 'draw_trail'):
+                sprite.draw_trail(self.render_surface)
+
         # Draw sprites
         for sprite in self.all_sprites:
             if sprite != self.player:
                 self.render_surface.blit(sprite.image, sprite.rect)
 
+        # Draw hardpoints only on BOSS enemies (cruisers/BCs marked as boss)
+        for enemy in self.enemies:
+            if hasattr(enemy, 'has_hardpoints') and enemy.has_hardpoints and enemy.is_boss:
+                for hardpoint in enemy.get_active_hardpoints():
+                    if not hardpoint.destroyed:
+                        self.render_surface.blit(hardpoint.image, hardpoint.rect)
+
         # Draw player powerup glow effects
         self._draw_player_powerup_glow()
 
-        # Draw player last (on top) - apply barrel roll rotation if active
-        if self.player.barrel_roll_active:
-            progress = 1 - (self.player.barrel_roll_timer / self.player.barrel_roll_duration)
-            angle = self.player.barrel_roll_angle
+        # Draw player last (on top) - apply thrust jet effect if active
+        if self.player.thrust_active:
+            duration = self.player.thrust_duration + (6 if self.player.thrust_direction == 0 else 0)
+            progress = 1 - (self.player.thrust_timer / duration)
+            direction = self.player.thrust_direction
             cx, cy = self.player.rect.center
 
-            # Draw energy shield glow behind player
-            shield_radius = 30 + int(10 * math.sin(progress * math.pi * 4))
-            shield_alpha = int(80 + 40 * math.sin(progress * math.pi * 6))
-            shield_surf = pygame.Surface((shield_radius * 2 + 20, shield_radius * 2 + 20), pygame.SRCALPHA)
-            # Outer glow
-            pygame.draw.circle(shield_surf, (100, 180, 255, shield_alpha // 2),
-                             (shield_radius + 10, shield_radius + 10), shield_radius + 8)
-            # Inner shield
-            pygame.draw.circle(shield_surf, (150, 200, 255, shield_alpha),
-                             (shield_radius + 10, shield_radius + 10), shield_radius)
-            pygame.draw.circle(shield_surf, (200, 230, 255, shield_alpha + 20),
-                             (shield_radius + 10, shield_radius + 10), shield_radius - 5, 2)
-            shield_rect = shield_surf.get_rect(center=(cx, cy))
-            self.render_surface.blit(shield_surf, shield_rect)
+            # Draw motion blur trail (ghost images trailing behind movement)
+            for i in range(4):
+                ghost_alpha = int(80 - i * 20)
+                if ghost_alpha > 0:
+                    if direction == 0:
+                        # Forward boost - trail below
+                        ghost_x = cx
+                        ghost_y = cy + (i + 1) * 15 * (1 - progress)
+                        tint_color = (255, 180, 50, 30)
+                    else:
+                        # Horizontal - trail opposite to movement
+                        ghost_x = cx + direction * -20 * (i + 1) * (1 - progress)
+                        ghost_y = cy
+                        tint_color = (255, 150, 50, 30) if direction > 0 else (50, 150, 255, 30)
 
-            # Draw afterimage trail (3 ghost images)
-            for i in range(3):
-                ghost_progress = max(0, progress - (i + 1) * 0.15)
-                if ghost_progress > 0:
-                    ghost_angle = ghost_progress * 360
-                    ghost_alpha = int(60 - i * 20)
-                    # Create ghost image
-                    ghost = pygame.transform.rotate(self.player.image, ghost_angle)
-                    ghost_surf = ghost.copy()
+                    ghost_surf = self.player.image.copy()
                     ghost_surf.set_alpha(ghost_alpha)
-                    # Tint blue
                     tint = pygame.Surface(ghost_surf.get_size(), pygame.SRCALPHA)
-                    tint.fill((100, 150, 255, 30))
+                    tint.fill(tint_color)
                     ghost_surf.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-                    ghost_rect = ghost_surf.get_rect(center=(cx, cy))
+                    ghost_rect = ghost_surf.get_rect(center=(ghost_x, ghost_y))
                     self.render_surface.blit(ghost_surf, ghost_rect)
 
-            # Draw main rotated player with slight scale pulse
-            scale_factor = 1.0 + 0.1 * math.sin(progress * math.pi * 2)
-            scaled_w = int(self.player.image.get_width() * scale_factor)
-            scaled_h = int(self.player.image.get_height() * scale_factor)
-            scaled = pygame.transform.scale(self.player.image, (scaled_w, scaled_h))
-            rotated = pygame.transform.rotate(scaled, angle)
-            rotated_rect = rotated.get_rect(center=(cx, cy))
-            self.render_surface.blit(rotated, rotated_rect)
+            # Draw engine flare
+            flare_intensity = 1 - progress
+            flare_size = int(15 + 10 * flare_intensity)
 
-            # Draw spinning energy arcs
-            arc_count = 4
-            for i in range(arc_count):
-                arc_angle = angle + (i * 90)
-                arc_rad = math.radians(arc_angle)
-                arc_len = 25
-                start_x = cx + math.cos(arc_rad) * 15
-                start_y = cy + math.sin(arc_rad) * 15
-                end_x = cx + math.cos(arc_rad) * (15 + arc_len)
-                end_y = cy + math.sin(arc_rad) * (15 + arc_len)
-                # Gradient line effect
-                for j in range(3):
-                    alpha = 150 - j * 40
-                    t = j / 3
-                    lx = start_x + (end_x - start_x) * t
-                    ly = start_y + (end_y - start_y) * t
-                    pygame.draw.circle(self.render_surface, (150, 200, 255, alpha), (int(lx), int(ly)), 2 - j // 2)
+            if direction == 0:
+                # Forward - flare below ship
+                flare_x = cx
+                flare_y = cy + 30
+                flare_color = (255, 200, 100)
+            else:
+                # Horizontal - flare opposite to movement
+                flare_x = cx - direction * 25
+                flare_y = cy
+                flare_color = (255, 200, 100) if direction > 0 else (100, 200, 255)
+
+            # Engine flare glow
+            flare_surf = pygame.Surface((flare_size * 4, flare_size * 4), pygame.SRCALPHA)
+            flare_alpha = int(150 * flare_intensity)
+            pygame.draw.circle(flare_surf, (*flare_color, flare_alpha // 2),
+                             (flare_size * 2, flare_size * 2), flare_size * 2)
+            pygame.draw.circle(flare_surf, (*flare_color, flare_alpha),
+                             (flare_size * 2, flare_size * 2), flare_size)
+            pygame.draw.circle(flare_surf, (255, 255, 255, min(255, flare_alpha + 50)),
+                             (flare_size * 2, flare_size * 2), flare_size // 2)
+            flare_rect = flare_surf.get_rect(center=(flare_x, flare_y))
+            self.render_surface.blit(flare_surf, flare_rect)
+
+            # Draw speed streaks
+            for i in range(5):
+                if direction == 0:
+                    # Forward - vertical streaks
+                    streak_x = cx + random.randint(-25, 25)
+                    streak_y = cy + random.randint(15, 50)
+                    streak_len = random.randint(20, 40)
+                    streak_alpha = int(100 * flare_intensity)
+                    streak_color = (255, 220, 150)
+                    pygame.draw.line(self.render_surface, streak_color,
+                                   (streak_x, streak_y), (streak_x, streak_y + streak_len), 2)
+                else:
+                    # Horizontal streaks
+                    streak_y = cy + random.randint(-20, 20)
+                    streak_x = cx - direction * random.randint(10, 40)
+                    streak_len = random.randint(15, 30)
+                    streak_alpha = int(100 * flare_intensity)
+                    streak_color = (255, 220, 150) if direction > 0 else (150, 220, 255)
+                    end_x = streak_x - direction * streak_len
+                    pygame.draw.line(self.render_surface, streak_color,
+                                   (streak_x, streak_y), (end_x, streak_y), 2)
+
+            # Draw main player
+            self.render_surface.blit(self.player.image, self.player.rect)
         else:
             self.render_surface.blit(self.player.image, self.player.rect)
 
@@ -3046,138 +3978,287 @@ class Game:
 
         # Invulnerability already shown by gold glow - no additional outline needed
 
+        # === JAGUAR FRONTAL SHIELD VISUAL ===
+        if hasattr(self.player, 'is_frontal_shield_active') and self.player.is_frontal_shield_active():
+            now = pygame.time.get_ticks()
+            pulse = 0.7 + 0.3 * math.sin(now * 0.015)
+            fast_pulse = 0.8 + 0.2 * math.sin(now * 0.04)
+            shield_pct = self.player.get_frontal_shield_percent()
+            is_bubble = getattr(self.player, 'shield_bubble_mode', False)
+
+            px, py = self.player.rect.center
+
+            if is_bubble:
+                # === FULL 360° SHIELD BUBBLE ===
+                bubble_radius = 55
+                surf_size = bubble_radius * 2 + 40
+                shield_surf = pygame.Surface((surf_size, surf_size), pygame.SRCALPHA)
+                cx, cy = surf_size // 2, surf_size // 2
+
+                # Outer glow layers
+                for i in range(10, 0, -1):
+                    alpha = int(20 * pulse * i / 10 * shield_pct)
+                    r = bubble_radius + i * 3
+                    pygame.draw.circle(shield_surf, (60, 140, 255, alpha), (cx, cy), r, 3)
+
+                # Main bubble (semi-transparent fill)
+                bubble_fill = pygame.Surface((surf_size, surf_size), pygame.SRCALPHA)
+                pygame.draw.circle(bubble_fill, (80, 160, 255, int(40 * shield_pct)), (cx, cy), bubble_radius)
+                shield_surf.blit(bubble_fill, (0, 0))
+
+                # Inner rings
+                for i in range(5, 0, -1):
+                    alpha = int(60 * pulse * i / 5 * shield_pct)
+                    r = bubble_radius - i * 3
+                    if r > 10:
+                        pygame.draw.circle(shield_surf, (100 + i * 20, 180 + i * 10, 255, alpha), (cx, cy), r, 2)
+
+                # Bright edge
+                pygame.draw.circle(shield_surf, (120, 210, 255, int(200 * fast_pulse * shield_pct)),
+                                 (cx, cy), bubble_radius, 3)
+
+                # Energy ripples (expanding circles)
+                ripple_phase = (now * 0.15) % 30
+                for r_offset in range(0, 60, 30):
+                    r = int((ripple_phase + r_offset) % 60)
+                    if r < bubble_radius:
+                        ripple_alpha = int(80 * (1 - r / bubble_radius) * shield_pct)
+                        pygame.draw.circle(shield_surf, (150, 220, 255, ripple_alpha), (cx, cy), bubble_radius - r, 1)
+
+                # Hexagonal energy pattern
+                for angle in range(0, 360, 30):
+                    rad = math.radians(angle)
+                    line_pulse = 0.6 + 0.4 * math.sin(now * 0.02 + angle * 0.05)
+                    x1 = cx + int((bubble_radius - 10) * math.cos(rad))
+                    y1 = cy + int((bubble_radius - 10) * math.sin(rad))
+                    x2 = cx + int((bubble_radius + 5) * math.cos(rad))
+                    y2 = cy + int((bubble_radius + 5) * math.sin(rad))
+                    pygame.draw.line(shield_surf, (180, 230, 255, int(100 * line_pulse * shield_pct)),
+                                   (x1, y1), (x2, y2), 2)
+
+                # Edge sparkles
+                if random.random() < 0.4 * shield_pct:
+                    spark_angle = random.uniform(0, math.pi * 2)
+                    sx = cx + int(bubble_radius * math.cos(spark_angle))
+                    sy = cy + int(bubble_radius * math.sin(spark_angle))
+                    pygame.draw.circle(shield_surf, (255, 255, 255, 220), (sx, sy), random.randint(2, 4))
+
+                # Center energy core
+                core_alpha = int(100 * pulse * shield_pct)
+                pygame.draw.circle(shield_surf, (120, 200, 255, core_alpha), (cx, cy), 15)
+                pygame.draw.circle(shield_surf, (200, 240, 255, int(core_alpha * 0.7)), (cx, cy), 8)
+
+                # Blit centered on player
+                shield_rect = shield_surf.get_rect(center=(px, py))
+                self.render_surface.blit(shield_surf, shield_rect)
+
+            else:
+                # === FRONTAL ARC SHIELD ===
+                arc_width = 130
+                arc_height = 90
+                py_arc = self.player.rect.top - 15
+
+                shield_surf = pygame.Surface((arc_width + 60, arc_height + 40), pygame.SRCALPHA)
+                cx, cy = (arc_width + 60) // 2, arc_height + 10
+                arc_rect = pygame.Rect(cx - arc_width // 2, cy - arc_height, arc_width, arc_height * 2)
+
+                # Outer glow
+                for i in range(8, 0, -1):
+                    alpha = int(25 * pulse * i / 8 * shield_pct)
+                    expand = i * 3
+                    glow_rect = pygame.Rect(arc_rect.x - expand, arc_rect.y - expand,
+                                           arc_rect.width + expand * 2, arc_rect.height + expand * 2)
+                    pygame.draw.arc(shield_surf, (60, 120, 255, alpha), glow_rect,
+                                  math.radians(180), math.radians(360), 4)
+
+                # Inner arcs
+                for i in range(5, 0, -1):
+                    alpha = int(50 * pulse * i / 5 * shield_pct)
+                    pygame.draw.arc(shield_surf, (80 + i * 20, 160 + i * 15, 255, alpha), arc_rect,
+                                  math.radians(180), math.radians(360), 2 + i)
+
+                # Bright edge
+                pygame.draw.arc(shield_surf, (120, 210, 255, int(220 * fast_pulse * shield_pct)),
+                              arc_rect, math.radians(180), math.radians(360), 3)
+
+                # Energy lines
+                for angle in range(185, 356, 20):
+                    rad = math.radians(angle)
+                    line_pulse = 0.6 + 0.4 * math.sin(now * 0.02 + angle * 0.1)
+                    x1 = cx + int((arc_width // 2 - 15) * math.cos(rad))
+                    y1 = cy + int((arc_height - 15) * math.sin(rad))
+                    x2 = cx + int((arc_width // 2 + 8) * math.cos(rad))
+                    y2 = cy + int((arc_height + 8) * math.sin(rad))
+                    pygame.draw.line(shield_surf, (180, 230, 255, int(100 * line_pulse * shield_pct)),
+                                   (x1, y1), (x2, y2), 2)
+
+                shield_rect = shield_surf.get_rect(center=(px, py_arc))
+                self.render_surface.blit(shield_surf, shield_rect)
+
     def draw_hud(self):
-        """Draw heads-up display"""
+        """Draw EVE-style heads-up display with circular capacitor and status arcs"""
         # HUD mode: 0=full, 1=minimal (health only), 2=off
         if self.hud_mode == 2:
             return  # HUD off
 
-        # Health bars
-        bar_width = 150
-        bar_height = 12
-        x = 10
-        y = 10
-        
-        # Shields
-        pygame.draw.rect(self.render_surface, (50, 50, 80), (x, y, bar_width, bar_height))
-        shield_pct = self.player.shields / self.player.max_shields
-        pygame.draw.rect(self.render_surface, COLOR_SHIELD, (x, y, int(bar_width * shield_pct), bar_height))
-        pygame.draw.rect(self.render_surface, (100, 100, 150), (x, y, bar_width, bar_height), 1)
-        
-        # Armor
-        y += bar_height + 3
-        pygame.draw.rect(self.render_surface, (50, 40, 30), (x, y, bar_width, bar_height))
-        armor_pct = self.player.armor / self.player.max_armor
-        pygame.draw.rect(self.render_surface, COLOR_ARMOR, (x, y, int(bar_width * armor_pct), bar_height))
-        pygame.draw.rect(self.render_surface, (100, 80, 60), (x, y, bar_width, bar_height), 1)
-        
-        # Hull
-        y += bar_height + 3
-        pygame.draw.rect(self.render_surface, (40, 40, 40), (x, y, bar_width, bar_height))
-        hull_pct = self.player.hull / self.player.max_hull
-        pygame.draw.rect(self.render_surface, COLOR_HULL, (x, y, int(bar_width * hull_pct), bar_height))
-        pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y, bar_width, bar_height), 1)
+        # EVE-style status panel - CENTER BOTTOM for easy reference
+        cx = SCREEN_WIDTH // 2  # Center of screen
+        cy = SCREEN_HEIGHT - 75  # Near bottom
 
-        # Minimal HUD mode: only show health bars and score
+        # Draw EVE-style status panel
+        self._draw_eve_status_panel(cx, cy)
+
+        # Heat warning symbol (熱) above HUD when at 75%+ heat
+        heat_pct = self.player.heat / self.player.max_heat
+        if heat_pct >= 0.75:
+            self._draw_heat_warning_symbol(cx, cy - 85, heat_pct)
+
+        # Minimal HUD mode: only show status panel and score
         if self.hud_mode == 1:
             # Just draw score on right side
             score_text = self.font.render(f"Score: {self.player.score:,}", True, COLOR_TEXT)
             self.render_surface.blit(score_text, (SCREEN_WIDTH - 160, 10))
             return
 
-        # Weapon heat bar
-        y += bar_height + 3
-        heat_pct = self.player.heat / self.player.max_heat
-        # Background
-        pygame.draw.rect(self.render_surface, (30, 20, 20), (x, y, bar_width, bar_height - 2))
-        # Heat fill - color goes from yellow to red as it increases
-        if self.player.is_overheated:
-            heat_color = (255, 50, 50) if (pygame.time.get_ticks() // 100) % 2 == 0 else (200, 30, 30)
-        elif heat_pct > 0.7:
-            heat_color = (255, int(100 * (1 - heat_pct)), 0)
-        else:
-            heat_color = (255, 150, 50)
-        pygame.draw.rect(self.render_surface, heat_color, (x, y, int(bar_width * heat_pct), bar_height - 2))
-        # Border
-        border_color = (255, 80, 80) if self.player.is_overheated else (80, 50, 50)
-        pygame.draw.rect(self.render_surface, border_color, (x, y, bar_width, bar_height - 2), 1)
-        # Label
-        if self.player.is_overheated:
-            heat_text = self.font_small.render("OVERHEAT!", True, (255, 100, 100))
-        else:
-            heat_text = self.font_small.render("HEAT", True, (150, 100, 80))
-        self.render_surface.blit(heat_text, (x + bar_width + 5, y - 1))
+        # Vertical thrust cooldown bar (left side of status panel)
+        self._draw_thrust_gauge(cx - 75, cy)
 
-        # Ammo indicator - compact
-        y += bar_height + 6
+        # Ammo and rockets - positioned bottom left
+        ammo_x = 10
+        ammo_y = SCREEN_HEIGHT - 100
+
+        # Ammo indicator
         ammo = AMMO_TYPES[self.player.current_ammo]
-        pygame.draw.rect(self.render_surface, ammo['color'], (x, y, 14, 14))
-        pygame.draw.rect(self.render_surface, (200, 200, 200), (x, y, 14, 14), 1)
+        pygame.draw.rect(self.render_surface, ammo['color'], (ammo_x, ammo_y, 14, 14))
+        pygame.draw.rect(self.render_surface, (200, 200, 200), (ammo_x, ammo_y, 14, 14), 1)
+        ammo_text = self.font_small.render(ammo['name'][:6], True, ammo['color'])
+        self.render_surface.blit(ammo_text, (ammo_x + 18, ammo_y))
 
-        # Rockets - compact visual (dots)
-        rocket_x = x + 20
-        for i in range(self.player.rockets):
-            pygame.draw.circle(self.render_surface, (255, 120, 60), (rocket_x + i * 8, y + 7), 3)
+        # Rockets - visual dots
+        ammo_y += 18
+        rocket_count = min(self.player.rockets, 16)  # Cap display
+        for i in range(rocket_count):
+            color = (100, 180, 255) if getattr(self.player, 'ship_class', 'Rifter') == 'Jaguar' else (255, 120, 60)
+            pygame.draw.circle(self.render_surface, color, (ammo_x + 5 + (i % 8) * 10, ammo_y + 5 + (i // 8) * 10), 3)
 
-        # Ability cooldown - compact bar
-        y += 20
-        ability_w = 60
-        ability_h = 6
-        ability_info = self.player.get_ability_info()
-        if self.player.can_use_ability():
-            fill = 1.0
-            ab_color = (100, 255, 100)
-        elif self.player.is_ability_active():
-            fill = 1.0
-            ab_color = (255, 200, 100)
-        else:
-            fill = 1.0 - (self.player.ability_cooldown / self.player.ability_base_cooldown)
-            ab_color = (80, 80, 80)
-        pygame.draw.rect(self.render_surface, (30, 30, 30), (x, y, ability_w, ability_h))
-        pygame.draw.rect(self.render_surface, ab_color, (x, y, int(ability_w * fill), ability_h))
-
-        # Bomb indicator - compact (circles)
-        y += 10
+        # Bomb indicator
+        ammo_y += 25
         for i in range(self.player.bombs):
-            pygame.draw.circle(self.render_surface, (255, 80, 180), (x + 5 + i * 12, y + 4), 4)
-            pygame.draw.circle(self.render_surface, (255, 150, 200), (x + 5 + i * 12, y + 4), 2)
+            pygame.draw.circle(self.render_surface, (255, 80, 180), (ammo_x + 5 + i * 12, ammo_y), 4)
+            pygame.draw.circle(self.render_surface, (255, 150, 200), (ammo_x + 5 + i * 12, ammo_y), 2)
 
-        # Combat maneuver gauges - positioned at bottom right
-        self._draw_maneuver_gauges(SCREEN_WIDTH - 70, SCREEN_HEIGHT - 40)
+        # Wingman gauge (Rifter only) - polished EVE-style progress bar
+        if not self.player.is_wolf and not self.player.is_jaguar:
+            ammo_y += 22
+            gauge_width = 90
+            gauge_height = 12
+            progress = self.kill_counter / self.kills_per_wingman
 
-        # Active powerup indicators
-        y += 15
+            # Outer glow when near full
+            if progress > 0.7:
+                glow_surf = pygame.Surface((gauge_width + 10, gauge_height + 10), pygame.SRCALPHA)
+                glow_alpha = int(60 + 40 * math.sin(pygame.time.get_ticks() * 0.008))
+                pygame.draw.rect(glow_surf, (220, 180, 80, glow_alpha), (0, 0, gauge_width + 10, gauge_height + 10), border_radius=4)
+                self.render_surface.blit(glow_surf, (ammo_x - 5, ammo_y - 5))
+
+            # Background with gradient look
+            pygame.draw.rect(self.render_surface, (25, 25, 35), (ammo_x, ammo_y, gauge_width, gauge_height), border_radius=3)
+            pygame.draw.rect(self.render_surface, (35, 35, 45), (ammo_x + 1, ammo_y + 1, gauge_width - 2, gauge_height - 2), border_radius=2)
+
+            # Segmented fill (15 segments for 15 kills)
+            segment_width = (gauge_width - 4) / self.kills_per_wingman
+            for i in range(self.kill_counter):
+                seg_x = ammo_x + 2 + i * segment_width
+                # Gradient color from copper to gold
+                t = i / self.kills_per_wingman
+                r = int(160 + 60 * t)
+                g = int(100 + 80 * t)
+                b = int(40 + 40 * t)
+                pygame.draw.rect(self.render_surface, (r, g, b),
+                               (seg_x, ammo_y + 2, segment_width - 1, gauge_height - 4), border_radius=1)
+
+            # Border
+            pygame.draw.rect(self.render_surface, (120, 100, 60), (ammo_x, ammo_y, gauge_width, gauge_height), 1, border_radius=3)
+
+            # Label with icon
+            label_color = (220, 180, 100) if progress > 0.5 else (150, 130, 90)
+            wingman_label = self.font_small.render(f"WINGMAN", True, label_color)
+            self.render_surface.blit(wingman_label, (ammo_x, ammo_y - 14))
+            # Kill count on right
+            count_label = self.font_small.render(f"{self.kill_counter}/{self.kills_per_wingman}", True, label_color)
+            self.render_surface.blit(count_label, (ammo_x + gauge_width - 25, ammo_y - 14))
+
+            # Active wingman count (ship icons)
+            if len(self.wingmen) > 0:
+                icon_x = ammo_x + gauge_width + 8
+                icon_y = ammo_y + 2
+                for i in range(len(self.wingmen)):
+                    # Mini ship icon
+                    pygame.draw.polygon(self.render_surface, (200, 150, 80),
+                                       [(icon_x + i*12, icon_y), (icon_x + 4 + i*12, icon_y + 8), (icon_x - 4 + i*12, icon_y + 8)])
+                    pygame.draw.polygon(self.render_surface, (255, 200, 100),
+                                       [(icon_x + i*12, icon_y + 1), (icon_x + 2 + i*12, icon_y + 6), (icon_x - 2 + i*12, icon_y + 6)])
+
+        # Active powerup indicators - above center HUD
         now = pygame.time.get_ticks()
         active_powerups = []
 
-        # Check for active powerups (shown as solid bars - they last until overheat)
         if now < self.player.invulnerable_until:
-            active_powerups.append(('INVULN', (255, 215, 0)))
+            remaining = (self.player.invulnerable_until - now) / 1000
+            active_powerups.append(('INVULN', (255, 215, 0), remaining))
         if now < self.player.double_damage_until:
-            active_powerups.append(('DMG x2', (255, 100, 100)))
+            remaining = (self.player.double_damage_until - now) / 1000
+            active_powerups.append(('DMG x2', (255, 100, 100), remaining))
         if now < self.player.rapid_fire_until:
-            active_powerups.append(('RAPID', (255, 150, 50)))
+            remaining = (self.player.rapid_fire_until - now) / 1000
+            active_powerups.append(('RAPID', (255, 150, 50), remaining))
         if now < self.player.overdrive_until:
-            active_powerups.append(('SPEED', (255, 255, 100)))
+            remaining = (self.player.overdrive_until - now) / 1000
+            active_powerups.append(('SPEED', (255, 255, 100), remaining))
         if now < self.player.shield_boost_until:
-            active_powerups.append(('SHIELD', (150, 200, 255)))
+            remaining = (self.player.shield_boost_until - now) / 1000
+            active_powerups.append(('SHIELD', (150, 200, 255), remaining))
         if now < self.player.magnet_until:
-            active_powerups.append(('MAGNET', (200, 200, 255)))
+            remaining = (self.player.magnet_until - now) / 1000
+            active_powerups.append(('MAGNET', (200, 200, 255), remaining))
 
-        # Active powerups - compact icons (glowing dots in a row)
-        powerup_x = x
-        for name, color in active_powerups:
-            pulse = 0.7 + 0.3 * math.sin(now * 0.006)
-            # Glow
-            glow_surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-            pygame.draw.circle(glow_surf, (*color, int(60 * pulse)), (8, 8), 8)
-            self.render_surface.blit(glow_surf, (powerup_x - 3, y - 3))
-            # Core
-            pygame.draw.circle(self.render_surface, color, (powerup_x + 5, y + 5), 5)
-            pygame.draw.circle(self.render_surface, (255, 255, 255), (powerup_x + 4, y + 4), 2)
-            powerup_x += 14
+        # Draw powerups as EVE-style module icons above HUD
+        if active_powerups:
+            powerup_y = SCREEN_HEIGHT - 175  # Above the capacitor gauge
+            icon_size = 24
+            spacing = 28
+            total_width = len(active_powerups) * spacing
+            powerup_x = (SCREEN_WIDTH - total_width) // 2 + spacing // 2
+            for name, color, remaining in active_powerups:
+                # EVE-style square module icon
+                icon_rect = pygame.Rect(powerup_x - icon_size//2, powerup_y - icon_size//2, icon_size, icon_size)
 
-        # Right side - score and wave info (compact)
+                # Pulsing glow
+                pulse = 0.5 + 0.5 * math.sin(now * 0.008)
+                glow_surf = pygame.Surface((icon_size + 8, icon_size + 8), pygame.SRCALPHA)
+                pygame.draw.rect(glow_surf, (*color, int(50 * pulse)), (0, 0, icon_size + 8, icon_size + 8), border_radius=4)
+                self.render_surface.blit(glow_surf, (icon_rect.x - 4, icon_rect.y - 4))
+
+                # Icon background
+                pygame.draw.rect(self.render_surface, (20, 25, 35), icon_rect, border_radius=3)
+                pygame.draw.rect(self.render_surface, color, icon_rect, 2, border_radius=3)
+
+                # Inner fill based on remaining time (like EVE module cycle)
+                fill_height = int(icon_size * min(remaining / 5, 1.0))  # 5 seconds max display
+                if fill_height > 0:
+                    fill_rect = pygame.Rect(icon_rect.x + 2, icon_rect.y + icon_size - fill_height - 2,
+                                           icon_size - 4, fill_height)
+                    pygame.draw.rect(self.render_surface, (*color, 180), fill_rect, border_radius=2)
+
+                # Small icon symbol in center
+                symbol = name[0]  # First letter
+                sym_text = self.font_small.render(symbol, True, color)
+                sym_rect = sym_text.get_rect(center=(powerup_x, powerup_y))
+                self.render_surface.blit(sym_text, sym_rect)
+
+                powerup_x += spacing
+
+        # Right side - score and wave info
         x = SCREEN_WIDTH - 130
         y = 10
 
@@ -3203,6 +4284,322 @@ class Game:
         # Berserk multiplier HUD (top right area)
         self.berserk.draw_hud(self.render_surface, SCREEN_WIDTH - 10, 80,
                               self.font_small, self.font_large)
+
+    def _draw_eve_status_panel(self, cx, cy):
+        """Draw EVE Online-style capacitor gauge with shield/armor/hull bars"""
+        now = pygame.time.get_ticks()
+
+        # Main capacitor ring dimensions (larger for center focus)
+        cap_radius = 55
+        cap_thickness = 12
+
+        # Panel surface for compositing
+        panel_size = cap_radius * 2 + 100
+        panel_surf = pygame.Surface((panel_size, panel_size), pygame.SRCALPHA)
+        panel_cx, panel_cy = panel_size // 2, panel_size // 2
+
+        # === CAPACITOR RING (Heat gauge - EVE style) ===
+        heat_pct = self.player.heat / self.player.max_heat
+        num_segments = 32  # More segments for smoother look
+
+        # Outer glow when capacitor is low (overheated)
+        if self.player.is_overheated:
+            pulse = 0.5 + 0.5 * math.sin(now * 0.015)
+            glow_radius = cap_radius + 8
+            for r in range(int(glow_radius), cap_radius, -1):
+                alpha = int(40 * pulse * (glow_radius - r) / 8)
+                pygame.draw.circle(panel_surf, (255, 60, 40, alpha), (panel_cx, panel_cy), r)
+
+        # Draw capacitor ring background
+        pygame.draw.circle(panel_surf, (20, 25, 35, 240), (panel_cx, panel_cy), cap_radius + 2)
+        pygame.draw.circle(panel_surf, (10, 12, 18), (panel_cx, panel_cy), cap_radius - cap_thickness - 2)
+
+        # Ring border glow
+        pygame.draw.circle(panel_surf, (45, 55, 75), (panel_cx, panel_cy), cap_radius + 2, 2)
+        pygame.draw.circle(panel_surf, (35, 40, 55), (panel_cx, panel_cy), cap_radius - cap_thickness - 2, 1)
+
+        # Draw capacitor segments (EVE-style: fills clockwise from top)
+        for i in range(num_segments):
+            # Start from top (-90 degrees), go clockwise
+            segment_angle = 360 / num_segments
+            angle_start = -90 + i * segment_angle
+            angle_end = angle_start + segment_angle - 2  # Small gap
+
+            # Determine if this segment should be filled (heat fills from 0)
+            segment_threshold = (i + 1) / num_segments
+            segment_filled = heat_pct >= segment_threshold
+
+            # Color based on fill state
+            if self.player.is_overheated:
+                # Pulsing red when overheated
+                pulse = 0.6 + 0.4 * math.sin(now * 0.012 + i * 0.2)
+                if segment_filled:
+                    color = (int(255 * pulse), 40, 40)
+                else:
+                    color = (60, 25, 25)
+            elif segment_filled:
+                # Heat gradient: more heat = more red/orange
+                t = i / num_segments
+                if t < 0.5:
+                    # Yellow-green to yellow
+                    r = int(180 + 75 * (t * 2))
+                    g = int(200 - 50 * (t * 2))
+                    b = 50
+                else:
+                    # Yellow to red-orange
+                    r = 255
+                    g = int(150 - 130 * ((t - 0.5) * 2))
+                    b = int(50 - 30 * ((t - 0.5) * 2))
+                color = (r, g, b)
+            else:
+                # Empty segment - dim
+                color = (35, 40, 50)
+
+            # Draw segment as arc
+            start_rad = math.radians(angle_start)
+            end_rad = math.radians(angle_end)
+
+            # Draw thick arc by drawing multiple thin arcs
+            for r_offset in range(cap_thickness):
+                r = cap_radius - r_offset
+                # Inner segments are slightly dimmer
+                dim = 1.0 - (r_offset / cap_thickness) * 0.3
+                seg_color = (int(color[0] * dim), int(color[1] * dim), int(color[2] * dim))
+                rect = pygame.Rect(panel_cx - r, panel_cy - r, r * 2, r * 2)
+                pygame.draw.arc(panel_surf, seg_color, rect, start_rad, end_rad, 2)
+
+        # Center display - heat percentage with icon
+        inner_radius = cap_radius - cap_thickness - 8
+
+        # Inner circle background - pulses orange at 75%+ heat warning
+        heat_warning = getattr(self.player, 'heat_warning', False)
+        if heat_warning and not self.player.is_overheated:
+            # Warning pulse at 75%+
+            warn_pulse = 0.3 + 0.7 * abs(math.sin(now * 0.01))
+            warn_color = (int(40 * warn_pulse), int(25 * warn_pulse), 12)
+            pygame.draw.circle(panel_surf, warn_color, (panel_cx, panel_cy), inner_radius)
+        else:
+            pygame.draw.circle(panel_surf, (12, 15, 22), (panel_cx, panel_cy), inner_radius)
+
+        pygame.draw.circle(panel_surf, (30, 35, 50), (panel_cx, panel_cy), inner_radius, 1)
+
+        # Heat percentage in center with warning states
+        if self.player.is_overheated:
+            heat_color = (255, 80, 80)
+            label = "OVERHEAT"
+        elif heat_warning:
+            # 75%+ warning - pulsing orange text
+            pulse = 0.7 + 0.3 * math.sin(now * 0.012)
+            heat_color = (int(255 * pulse), int(140 * pulse), 50)
+            label = "COOL DOWN"
+        else:
+            heat_color = (220, 200, 120) if heat_pct < 0.5 else (255, 180, 80)
+            label = f"{int(heat_pct * 100)}%"
+
+        heat_text = self.font.render(label, True, heat_color)
+        text_rect = heat_text.get_rect(center=(panel_cx, panel_cy - 5))
+        panel_surf.blit(heat_text, text_rect)
+
+        # Small "HEAT" label
+        label_color = (255, 150, 80) if heat_warning else (100, 110, 130)
+        cap_label = self.font_small.render("HEAT", True, label_color)
+        cap_rect = cap_label.get_rect(center=(panel_cx, panel_cy + 15))
+        panel_surf.blit(cap_label, cap_rect)
+
+        # === SHIELD / ARMOR / HULL BARS (Below capacitor) ===
+        bar_width = 90
+        bar_height = 6
+        bar_spacing = 10
+        bar_start_y = panel_cy + cap_radius + 15
+        bar_x = panel_cx - bar_width // 2
+
+        # Shield bar
+        shield_pct = self.player.shields / self.player.max_shields if self.player.max_shields > 0 else 0
+        self._draw_status_bar(panel_surf, bar_x, bar_start_y, bar_width, bar_height,
+                             shield_pct, COLOR_SHIELD, (30, 50, 80), "S")
+
+        # Armor bar
+        armor_pct = self.player.armor / self.player.max_armor if self.player.max_armor > 0 else 0
+        self._draw_status_bar(panel_surf, bar_x, bar_start_y + bar_spacing, bar_width, bar_height,
+                             armor_pct, COLOR_ARMOR, (60, 45, 25), "A")
+
+        # Hull bar
+        hull_pct = self.player.hull / self.player.max_hull if self.player.max_hull > 0 else 0
+        hull_color = (255, 80, 80) if hull_pct < 0.25 else COLOR_HULL
+        self._draw_status_bar(panel_surf, bar_x, bar_start_y + bar_spacing * 2, bar_width, bar_height,
+                             hull_pct, hull_color, (40, 40, 40), "H")
+
+        # Low hull warning flash
+        if hull_pct < 0.25 and hull_pct > 0:
+            if int(now / 300) % 2 == 0:
+                warn_surf = pygame.Surface((bar_width + 10, bar_height + 6), pygame.SRCALPHA)
+                pygame.draw.rect(warn_surf, (255, 50, 50, 60), (0, 0, bar_width + 10, bar_height + 6), border_radius=3)
+                panel_surf.blit(warn_surf, (bar_x - 5, bar_start_y + bar_spacing * 2 - 3))
+
+        # Blit to main surface
+        self.render_surface.blit(panel_surf, (cx - panel_cx, cy - panel_cy))
+
+    def _draw_status_bar(self, surface, x, y, width, height, fill_pct, fill_color, bg_color, label):
+        """Draw a single EVE-style status bar"""
+        # Background
+        pygame.draw.rect(surface, bg_color, (x, y, width, height), border_radius=2)
+        pygame.draw.rect(surface, (60, 70, 90), (x, y, width, height), 1, border_radius=2)
+
+        # Fill
+        if fill_pct > 0:
+            fill_width = int(width * fill_pct)
+            if fill_width > 0:
+                pygame.draw.rect(surface, fill_color, (x + 1, y + 1, fill_width - 2, height - 2), border_radius=1)
+                # Highlight on top edge
+                highlight = (min(fill_color[0] + 40, 255), min(fill_color[1] + 40, 255), min(fill_color[2] + 40, 255))
+                pygame.draw.line(surface, highlight, (x + 2, y + 1), (x + fill_width - 3, y + 1))
+
+        # Label on left
+        label_text = self.font_small.render(label, True, (140, 150, 170))
+        surface.blit(label_text, (x - 14, y - 2))
+
+        # Percentage on right
+        pct_text = self.font_small.render(f"{int(fill_pct * 100)}", True, fill_color if fill_pct > 0.3 else (180, 180, 180))
+        surface.blit(pct_text, (x + width + 4, y - 2))
+
+    def _draw_heat_warning_symbol(self, cx, cy, heat_pct):
+        """Draw heat warning flame symbol above HUD when overheating"""
+        now = pygame.time.get_ticks()
+
+        # Calculate color: orange at 75%, red at 100%
+        warning_intensity = (heat_pct - 0.75) / 0.25  # 0 to 1
+        warning_intensity = min(1.0, warning_intensity)
+
+        # Interpolate orange -> red
+        r = 255
+        g = int(180 * (1 - warning_intensity))
+        b = int(50 * (1 - warning_intensity))
+        symbol_color = (r, g, b)
+
+        # Pulsing effect - faster as heat increases
+        pulse_speed = 0.008 + 0.012 * warning_intensity
+        pulse = 0.7 + 0.3 * abs(math.sin(now * pulse_speed))
+
+        # Create the symbol surface
+        surf_w, surf_h = 60, 70
+        symbol_surf = pygame.Surface((surf_w, surf_h), pygame.SRCALPHA)
+        scx, scy = surf_w // 2, surf_h // 2 + 5
+
+        # Outer glow
+        glow_alpha = int(50 * pulse * warning_intensity)
+        for r_off in range(22, 8, -2):
+            alpha = int(glow_alpha * (22 - r_off) / 14)
+            pygame.draw.circle(symbol_surf, (*symbol_color, alpha), (scx, scy - 8), r_off)
+
+        # Draw flame shape
+        flame_h = int(28 * pulse)
+        flame_w = int(18 * pulse)
+
+        # Outer flame
+        points = [
+            (scx, scy - flame_h),
+            (scx + flame_w // 2, scy + 2),
+            (scx + flame_w // 3, scy + 8),
+            (scx, scy + 3),
+            (scx - flame_w // 3, scy + 8),
+            (scx - flame_w // 2, scy + 2),
+        ]
+        pygame.draw.polygon(symbol_surf, symbol_color, points)
+
+        # Inner flame (brighter)
+        inner_color = (255, min(255, g + 60), min(255, b + 40))
+        inner_h = int(18 * pulse)
+        inner_w = int(10 * pulse)
+        inner_pts = [
+            (scx, scy - inner_h),
+            (scx + inner_w // 2, scy - 2),
+            (scx, scy + 4),
+            (scx - inner_w // 2, scy - 2),
+        ]
+        pygame.draw.polygon(symbol_surf, inner_color, inner_pts)
+
+        # Core
+        pygame.draw.ellipse(symbol_surf, (255, 255, min(255, b + 120)),
+                           (scx - 3, scy - 6, 6, 10))
+
+        # Rising particles
+        for i in range(3):
+            py = scy - 12 - ((now // 35 + i * 12) % 20)
+            px = scx + int(4 * math.sin(now * 0.008 + i * 2))
+            pa = int(140 * (1 - ((scy - 12 - py) / 20)))
+            if pa > 0:
+                pygame.draw.circle(symbol_surf, (*symbol_color, pa), (px, py), 2)
+
+        # Blit flame
+        self.render_surface.blit(symbol_surf, (cx - scx, cy - scy))
+
+        # Warning text below
+        if self.player.is_overheated:
+            if int(now / 150) % 2 == 0:
+                txt = self.font.render("OVERHEAT", True, (255, 50, 50))
+                self.render_surface.blit(txt, txt.get_rect(center=(cx, cy + 35)))
+        else:
+            txt = self.font_small.render("HEAT", True, symbol_color)
+            self.render_surface.blit(txt, txt.get_rect(center=(cx, cy + 30)))
+
+    def _draw_thrust_gauge(self, x, cy):
+        """Draw EVE-style vertical thrust/afterburner gauge"""
+        now = pygame.time.get_ticks()
+        bar_height = 70
+        bar_width = 12
+        y = cy - bar_height // 2 - 10
+
+        # Calculate fill based on thrust cooldown
+        if hasattr(self.player, 'thrust_cooldown'):
+            max_cooldown = self.player.thrust_cooldown_time
+            cooldown_remaining = max(0, self.player.thrust_cooldown)
+            fill_pct = 1.0 - (cooldown_remaining / max_cooldown) if max_cooldown > 0 else 1.0
+        else:
+            fill_pct = 1.0
+
+        # Outer glow when ready
+        if fill_pct >= 1.0:
+            pulse = 0.5 + 0.5 * math.sin(now * 0.006)
+            glow_surf = pygame.Surface((bar_width + 12, bar_height + 12), pygame.SRCALPHA)
+            pygame.draw.rect(glow_surf, (255, 180, 80, int(40 * pulse)), (0, 0, bar_width + 12, bar_height + 12), border_radius=6)
+            self.render_surface.blit(glow_surf, (x - 6, y - 6))
+
+        # Background with border
+        pygame.draw.rect(self.render_surface, (20, 25, 35), (x, y, bar_width, bar_height), border_radius=4)
+        pygame.draw.rect(self.render_surface, (50, 60, 80), (x, y, bar_width, bar_height), 1, border_radius=4)
+
+        # Segmented fill (8 segments)
+        num_segments = 8
+        segment_height = (bar_height - 4) / num_segments
+        filled_segments = int(fill_pct * num_segments)
+
+        for i in range(num_segments):
+            seg_y = y + bar_height - 2 - (i + 1) * segment_height
+            if i < filled_segments:
+                # Gradient from blue (bottom) to orange (top)
+                t = i / num_segments
+                if fill_pct >= 1.0:
+                    # Ready - orange/gold
+                    r = int(200 + 55 * t)
+                    g = int(140 + 40 * t)
+                    b = 60
+                else:
+                    # Charging - blue
+                    r = int(60 + 40 * t)
+                    g = int(120 + 60 * t)
+                    b = int(200 + 55 * t)
+                pygame.draw.rect(self.render_surface, (r, g, b),
+                               (x + 2, seg_y, bar_width - 4, segment_height - 2), border_radius=2)
+            else:
+                # Empty segment
+                pygame.draw.rect(self.render_surface, (30, 35, 45),
+                               (x + 2, seg_y, bar_width - 4, segment_height - 2), border_radius=2)
+
+        # Label
+        label_color = (255, 200, 100) if fill_pct >= 1.0 else (100, 120, 160)
+        label = self.font_small.render("AB", True, label_color)
+        label_rect = label.get_rect(center=(x + bar_width // 2, y + bar_height + 12))
+        self.render_surface.blit(label, label_rect)
 
     def draw_boss_health_bar(self):
         """Draw enhanced boss health bar at top of screen when fighting a boss"""
@@ -3485,8 +4882,8 @@ class Game:
                         (cx - line_width + 50, 173), (cx + line_width - 50, 173), 1)
 
         # === MAIN MENU PANEL ===
-        panel_y = 220
-        panel_height = 280
+        panel_y = 200
+        panel_height = 370
         panel_width = 340
 
         # Panel background with border
@@ -3500,9 +4897,11 @@ class Game:
         # Menu items - matching self.menu_options for controller support
         menu_items = [
             ("PLAY GAME", "ENTER", 'start'),
+            ("HOW TO PLAY", "H", 'how_to_play'),
             ("SETTINGS", "O", 'settings'),
             ("LEADERBOARD", "L", 'leaderboard'),
             ("CREDITS", "C", 'credits'),
+            ("QUIT GAME", "Q", 'quit'),
         ]
 
         item_y = panel_y + 35
@@ -3586,29 +4985,29 @@ class Game:
 
         now = pygame.time.get_ticks()
 
-        # Roll gauge - Blue theme (spinning icon when active)
-        roll_x = x
-        roll_active = self.player.barrel_roll_active
-        roll_cd = self.player.barrel_roll_cooldown
-        roll_max_cd = self.player.barrel_roll_cooldown_time
+        # Thrust gauge - Orange theme (glowing when active)
+        thrust_x = x
+        thrust_active = self.player.thrust_active
+        thrust_cd = self.player.thrust_cooldown
+        thrust_max_cd = self.player.thrust_cooldown_time
 
-        if roll_active:
+        if thrust_active:
             fill_pct = 1.0
-            color = (100, 200, 255)
-            inner_color = (150, 230, 255)
+            color = (255, 180, 80)
+            inner_color = (255, 220, 150)
             glow = True
-        elif roll_cd > 0:
-            fill_pct = 1.0 - (roll_cd / roll_max_cd)
-            color = (50, 70, 90)
-            inner_color = (70, 90, 110)
+        elif thrust_cd > 0:
+            fill_pct = 1.0 - (thrust_cd / thrust_max_cd)
+            color = (80, 60, 40)
+            inner_color = (100, 80, 50)
             glow = False
         else:
             fill_pct = 1.0
-            color = (80, 160, 220)
-            inner_color = (120, 200, 255)
+            color = (255, 150, 50)
+            inner_color = (255, 200, 100)
             glow = True
 
-        self._draw_circular_gauge(roll_x, y, gauge_size, fill_pct, color, inner_color, glow, now, roll_active)
+        self._draw_circular_gauge(thrust_x, y, gauge_size, fill_pct, color, inner_color, glow, now, thrust_active)
 
         # Brake gauge - Orange theme
         brake_x = x + spacing
@@ -3681,19 +5080,20 @@ class Game:
             pygame.draw.line(self.render_surface, icon_color, (cx - 4, cy - 2), (cx + 4, cy - 2), 2)
             pygame.draw.line(self.render_surface, icon_color, (cx - 4, cy + 2), (cx + 4, cy + 2), 2)
         else:
-            # Roll icon - curved arrow
+            # Thrust icon - horizontal arrows
             if active:
-                # Spinning effect when active
-                spin = (now * 0.02) % (math.pi * 2)
-                for i in range(4):
-                    angle = spin + i * (math.pi / 2)
-                    px = cx + 4 * math.cos(angle)
-                    py = cy + 4 * math.sin(angle)
-                    pygame.draw.circle(self.render_surface, icon_color, (int(px), int(py)), 2)
+                # Pulsing effect when thrusting
+                pulse = math.sin(now * 0.02) * 2
+                pygame.draw.polygon(self.render_surface, icon_color,
+                                  [(cx - 4 - pulse, cy), (cx + 2, cy - 3), (cx + 2, cy + 3)])
+                pygame.draw.polygon(self.render_surface, icon_color,
+                                  [(cx + 4 + pulse, cy), (cx - 2, cy - 3), (cx - 2, cy + 3)])
             else:
-                # Static circular arrow hint
-                pygame.draw.arc(self.render_surface, icon_color,
-                              (cx - 5, cy - 5, 10, 10), 0, math.pi * 1.5, 2)
+                # Static double arrow hint
+                pygame.draw.polygon(self.render_surface, icon_color,
+                                  [(cx - 4, cy), (cx, cy - 3), (cx, cy + 3)])
+                pygame.draw.polygon(self.render_surface, icon_color,
+                                  [(cx + 4, cy), (cx, cy - 3), (cx, cy + 3)])
 
         # Thin outer ring
         ring_color = inner_color if glow else (45, 48, 55)
@@ -3797,15 +5197,17 @@ class Game:
             'wolf': {
                 'name': 'WOLF',
                 'class': 'T2 Assault Frigate',
-                'desc': 'Upgraded hull with enhanced armor and speed.',
-                'speed': 120, 'armor': 150, 'firepower': 130,
+                'desc': 'Autocannon barrage specialist. Fast armor regen + seeker missiles.',
+                'desc_locked': 'Complete campaign to unlock T2 ships.',
+                'speed': 110, 'armor': 160, 'firepower': 140,
                 'color': (200, 150, 100),
                 'icon_color': (200, 150, 80)
             },
             'jaguar': {
                 'name': 'JAGUAR',
                 'class': 'T2 Assault Frigate',
-                'desc': 'Lightning-fast interceptor variant.',
+                'desc': 'Speed demon. Frontal shield + seeking rocket streams.',
+                'desc_locked': 'Complete campaign to unlock T2 ships.',
                 'speed': 140, 'armor': 100, 'firepower': 100,
                 'color': (100, 180, 220),
                 'icon_color': (80, 160, 200)
@@ -3822,6 +5224,7 @@ class Game:
         for i, ship_key in enumerate(self.ship_options):
             ship = ship_data[ship_key]
             is_selected = i == self.ship_select_index
+            is_locked = ship_key in ['wolf', 'jaguar'] and not self.t2_ships_unlocked
             card_x = start_x + i * (card_width + spacing)
             card_y = 120
 
@@ -3829,7 +5232,11 @@ class Game:
             card_rect = pygame.Rect(card_x, card_y, card_width, card_height)
             card_surf = pygame.Surface((card_width, card_height), pygame.SRCALPHA)
 
-            if is_selected:
+            if is_locked:
+                # Locked card - dark, grayed out
+                card_surf.fill((15, 15, 20, 200))
+                pygame.draw.rect(card_surf, (50, 50, 60), (0, 0, card_width, card_height), 2, border_radius=8)
+            elif is_selected:
                 # Selected card - bright border, lifted effect
                 card_surf.fill((30, 30, 45, 230))
                 pygame.draw.rect(card_surf, ship['color'], (0, 0, card_width, card_height), 3, border_radius=8)
@@ -3845,7 +5252,10 @@ class Game:
             # Ship icon (simple geometric ship)
             icon_cx = card_x + card_width // 2
             icon_cy = card_y + 50
-            icon_color = ship['icon_color'] if is_selected else (80, 80, 90)
+            if is_locked:
+                icon_color = (40, 40, 50)  # Dark gray for locked
+            else:
+                icon_color = ship['icon_color'] if is_selected else (80, 80, 90)
             # Draw simple ship shape
             ship_points = [
                 (icon_cx, icon_cy - 25),
@@ -3854,17 +5264,32 @@ class Game:
                 (icon_cx - 20, icon_cy + 20)
             ]
             pygame.draw.polygon(self.render_surface, icon_color, ship_points)
-            pygame.draw.polygon(self.render_surface, (255, 255, 255, 100) if is_selected else (100, 100, 100), ship_points, 2)
+            pygame.draw.polygon(self.render_surface, (255, 255, 255, 100) if is_selected and not is_locked else (100, 100, 100), ship_points, 2)
+
+            # Lock icon for locked ships
+            if is_locked:
+                lock_y = icon_cy - 5
+                # Lock body
+                pygame.draw.rect(self.render_surface, (80, 60, 40), (icon_cx - 8, lock_y, 16, 12), border_radius=2)
+                # Lock shackle
+                pygame.draw.arc(self.render_surface, (80, 60, 40), (icon_cx - 6, lock_y - 8, 12, 12), 0, 3.14, 2)
 
             # Ship name
-            name_color = (255, 220, 180) if is_selected else (150, 150, 150)
+            if is_locked:
+                name_color = (80, 80, 90)
+            else:
+                name_color = (255, 220, 180) if is_selected else (150, 150, 150)
             name_text = self.font.render(ship['name'], True, name_color)
             name_rect = name_text.get_rect(center=(card_x + card_width // 2, card_y + 95))
             self.render_surface.blit(name_text, name_rect)
 
             # Ship class
-            class_color = (140, 140, 140) if is_selected else (100, 100, 100)
-            class_text = self.font_small.render(ship['class'], True, class_color)
+            if is_locked:
+                class_color = (60, 60, 70)
+                class_text = self.font_small.render("LOCKED", True, (120, 80, 60))
+            else:
+                class_color = (140, 140, 140) if is_selected else (100, 100, 100)
+                class_text = self.font_small.render(ship['class'], True, class_color)
             class_rect = class_text.get_rect(center=(card_x + card_width // 2, card_y + 115))
             self.render_surface.blit(class_text, class_rect)
 
@@ -3879,28 +5304,36 @@ class Game:
             ]
             for stat_name, stat_val, stat_color in stats:
                 # Label
-                label = self.font_small.render(stat_name, True, (100, 100, 100))
+                label_color = (50, 50, 60) if is_locked else (100, 100, 100)
+                label = self.font_small.render(stat_name, True, label_color)
                 self.render_surface.blit(label, (card_x + 10, bar_y - 2))
                 # Bar background
                 bar_rect = pygame.Rect(card_x + 45, bar_y, bar_width - 35, bar_height)
-                pygame.draw.rect(self.render_surface, (40, 40, 50), bar_rect, border_radius=2)
-                # Bar fill
-                fill_width = int((bar_width - 35) * stat_val / 150)
-                if fill_width > 0:
-                    fill_color = stat_color if is_selected else tuple(c // 2 for c in stat_color)
-                    pygame.draw.rect(self.render_surface, fill_color,
-                                   (card_x + 45, bar_y, fill_width, bar_height), border_radius=2)
+                pygame.draw.rect(self.render_surface, (30, 30, 40) if is_locked else (40, 40, 50), bar_rect, border_radius=2)
+                # Bar fill (hidden for locked ships)
+                if not is_locked:
+                    fill_width = int((bar_width - 35) * stat_val / 150)
+                    if fill_width > 0:
+                        fill_color = stat_color if is_selected else tuple(c // 2 for c in stat_color)
+                        pygame.draw.rect(self.render_surface, fill_color,
+                                       (card_x + 45, bar_y, fill_width, bar_height), border_radius=2)
                 bar_y += 16
 
         # Selected ship description panel
         selected_ship = ship_data[self.ship_options[self.ship_select_index]]
+        selected_key = self.ship_options[self.ship_select_index]
+        is_selected_locked = selected_key in ['wolf', 'jaguar'] and not self.t2_ships_unlocked
+
         desc_y = 340
         desc_panel = pygame.Surface((SCREEN_WIDTH - 80, 60), pygame.SRCALPHA)
         desc_panel.fill((20, 20, 30, 160))
         pygame.draw.rect(desc_panel, (60, 50, 45), (0, 0, SCREEN_WIDTH - 80, 60), 1, border_radius=4)
         self.render_surface.blit(desc_panel, (40, desc_y))
 
-        desc_text = self.font.render(selected_ship['desc'], True, (200, 200, 200))
+        if is_selected_locked:
+            desc_text = self.font.render(selected_ship.get('desc_locked', 'Complete campaign to unlock.'), True, (150, 100, 80))
+        else:
+            desc_text = self.font.render(selected_ship['desc'], True, (200, 200, 200))
         desc_rect = desc_text.get_rect(center=(cx, desc_y + 30))
         self.render_surface.blit(desc_text, desc_rect)
 
@@ -4635,6 +6068,187 @@ class Game:
                            (0, i), (SCREEN_WIDTH, i), 1)
             pygame.draw.line(self.render_surface, (5, 5, 15),
                            (0, SCREEN_HEIGHT - i), (SCREEN_WIDTH, SCREEN_HEIGHT - i), 1)
+
+    def draw_how_to_play(self):
+        """Draw how to play / game guide screen explaining progression and refugee rescue"""
+        # Dark background
+        self.render_surface.fill((8, 8, 18))
+
+        # Title
+        title_font = pygame.font.Font(None, 52)
+        title = title_font.render("HOW TO PLAY", True, (255, 180, 100))
+        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 50))
+        self.render_surface.blit(title, rect)
+
+        # Decorative line
+        cx = SCREEN_WIDTH // 2
+        pygame.draw.line(self.render_surface, (100, 60, 40),
+                        (cx - 200, 80), (cx + 200, 80), 2)
+
+        # Content sections - using columns for better layout
+        left_x = 80
+        right_x = SCREEN_WIDTH // 2 + 40
+        section_font = pygame.font.Font(None, 36)
+        header_font = pygame.font.Font(None, 32)
+        text_font = pygame.font.Font(None, 26)
+        small_font = pygame.font.Font(None, 22)
+
+        y = 120
+
+        # === LEFT COLUMN: CAMPAIGN PROGRESSION ===
+        # Section header
+        header = section_font.render("CAMPAIGN PROGRESSION", True, (255, 150, 80))
+        self.render_surface.blit(header, (left_x, y))
+        y += 40
+
+        stages_info = [
+            ("Stage 1: Asteroid Belt Escape", "5 waves", (180, 180, 180)),
+            ("Stage 2: Amarr Patrol Interdiction", "7 waves + Boss", (180, 180, 180)),
+            ("Stage 3: Slave Colony Liberation", "8 waves", (180, 180, 180)),
+            ("Stage 4: Gate Assault", "10 waves + Boss", (180, 180, 180)),
+            ("Stage 5: Final Push", "12 waves + Boss", (255, 200, 100)),
+        ]
+
+        for name, waves, color in stages_info:
+            text = text_font.render(name, True, color)
+            self.render_surface.blit(text, (left_x + 15, y))
+            waves_text = small_font.render(waves, True, (120, 150, 120))
+            self.render_surface.blit(waves_text, (left_x + 380, y + 2))
+            y += 28
+
+        y += 20
+
+        # Wave system explanation
+        header = header_font.render("WAVE SYSTEM", True, (150, 200, 150))
+        self.render_surface.blit(header, (left_x, y))
+        y += 30
+
+        wave_info = [
+            "Enemies spawn in waves - clear all to advance",
+            "Enemy count increases each wave & stage",
+            "Formations appear: V-shape, pincer, escort",
+            "Boss appears on final wave of boss stages",
+            "Shop opens between stages for upgrades",
+        ]
+
+        for line in wave_info:
+            text = small_font.render(line, True, (160, 160, 160))
+            self.render_surface.blit(text, (left_x + 15, y))
+            y += 22
+
+        y += 30
+
+        # === REFUGEE RESCUE SECTION ===
+        header = section_font.render("LIBERATING SOULS", True, (100, 255, 100))
+        self.render_surface.blit(header, (left_x, y))
+        y += 35
+
+        rescue_info = [
+            ("BESTOWER TRANSPORTS", (255, 180, 100)),
+            ("Golden industrial ships carrying enslaved Minmatar", (160, 160, 160)),
+            ("Destroy Bestowers to release refugee escape pods", (160, 160, 160)),
+            ("", (0, 0, 0)),
+            ("COLLECTING REFUGEES", (255, 180, 100)),
+            ("Fly over escape pods to rescue survivors", (160, 160, 160)),
+            ("Refugees become currency at Rebel Station", (160, 160, 160)),
+            ("", (0, 0, 0)),
+            ("SPAWN RATES BY STAGE:", (200, 200, 150)),
+            ("  Stage 1: 10% chance per spawn", (140, 140, 140)),
+            ("  Stage 2: 15% chance per spawn", (140, 140, 140)),
+            ("  Stage 3: 25% chance (Liberation!)", (140, 200, 140)),
+            ("  Stage 4: 15% chance per spawn", (140, 140, 140)),
+            ("  Stage 5: 20% chance per spawn", (140, 140, 140)),
+        ]
+
+        for line, color in rescue_info:
+            if line:
+                text = small_font.render(line, True, color)
+                self.render_surface.blit(text, (left_x + 15, y))
+            y += 20
+
+        # === RIGHT COLUMN: UPGRADES & COMBAT ===
+        y = 120
+
+        # Upgrades section
+        header = section_font.render("REBEL STATION UPGRADES", True, (255, 150, 80))
+        self.render_surface.blit(header, (right_x, y))
+        y += 40
+
+        upgrades = [
+            ("Gyrostabilizer", "10", "+30% Fire Rate"),
+            ("Armor Plate", "15", "+30 Max Armor"),
+            ("Tracking Enhancer", "20", "+1 Gun Spread"),
+            ("EMP Ammo", "25", "Strong vs Shields"),
+            ("Phased Plasma", "35", "Strong vs Armor"),
+            ("Fusion Ammo", "45", "High Damage"),
+            ("Barrage Ammo", "55", "Fast Fire Rate"),
+            ("Wolf Upgrade", "50", "T2 Ship Variant"),
+            ("Jaguar Upgrade", "50", "T2 Ship Variant"),
+        ]
+
+        for name, cost, desc in upgrades:
+            name_text = text_font.render(name, True, (180, 180, 180))
+            self.render_surface.blit(name_text, (right_x + 15, y))
+            cost_text = small_font.render(f"[{cost}]", True, (100, 255, 100))
+            self.render_surface.blit(cost_text, (right_x + 200, y + 2))
+            desc_text = small_font.render(desc, True, (140, 140, 140))
+            self.render_surface.blit(desc_text, (right_x + 250, y + 2))
+            y += 24
+
+        y += 25
+
+        # Powerups section
+        header = header_font.render("POWERUP DROPS", True, (150, 200, 150))
+        self.render_surface.blit(header, (right_x, y))
+        y += 30
+
+        powerup_info = [
+            ("Drop chance varies by difficulty:", (180, 180, 180)),
+            ("  Easy: 30%  |  Normal: 18%", (140, 200, 140)),
+            ("  Hard: 10%  |  Nightmare: 6%", (200, 140, 140)),
+            ("", (0, 0, 0)),
+            ("Weapon powerups (Damage/Rapid Fire):", (180, 180, 180)),
+            ("  Last until you OVERHEAT or die!", (255, 200, 100)),
+            ("  Manage heat to keep bonuses", (140, 140, 140)),
+        ]
+
+        for line, color in powerup_info:
+            if line:
+                text = small_font.render(line, True, color)
+                self.render_surface.blit(text, (right_x + 15, y))
+            y += 22
+
+        y += 25
+
+        # Difficulty tips
+        header = header_font.render("DIFFICULTY EFFECTS", True, (150, 200, 150))
+        self.render_surface.blit(header, (right_x, y))
+        y += 30
+
+        diff_info = [
+            ("Easy: 0.5x enemy HP, 1.5x your damage", (100, 200, 100)),
+            ("Normal: Balanced for new pilots", (180, 180, 180)),
+            ("Hard: 1.4x enemy HP, faster spawns", (200, 150, 100)),
+            ("Nightmare: 2.2x HP, relentless waves", (255, 100, 100)),
+        ]
+
+        for line, color in diff_info:
+            text = small_font.render(line, True, color)
+            self.render_surface.blit(text, (right_x + 15, y))
+            y += 22
+
+        # Footer
+        footer_y = SCREEN_HEIGHT - 50
+        if self.controller.connected:
+            footer = self.font_small.render("Press B to return", True, (100, 100, 100))
+        else:
+            footer = self.font_small.render("Press ESC to return", True, (100, 100, 100))
+        rect = footer.get_rect(center=(SCREEN_WIDTH // 2, footer_y))
+        self.render_surface.blit(footer, rect)
+
+        # Decorative border
+        pygame.draw.rect(self.render_surface, (60, 40, 30),
+                        (20, 20, SCREEN_WIDTH - 40, SCREEN_HEIGHT - 40), 2, border_radius=8)
 
     def run(self):
         """Main game loop"""

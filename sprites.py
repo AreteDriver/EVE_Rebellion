@@ -76,10 +76,16 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.is_wolf = False
-        self.width = 40
-        self.height = 50
-        self.image = self._create_ship_image()
+        self.is_jaguar = False
+        self.width = 46
+        self.height = 58
+        self.base_image = self._create_ship_image()  # Store base for animation
+        self.image = self.base_image.copy()
         self.rect = self.image.get_rect()
+
+        # Engine animation state
+        self.engine_timer = 0
+        self.engine_flicker = 1.0
         self.rect.centerx = SCREEN_WIDTH // 2
         self.rect.bottom = SCREEN_HEIGHT - 50
         
@@ -130,29 +136,48 @@ class Player(pygame.sprite.Sprite):
         self.bomb_cooldown = 0
         self.bomb_base_cooldown = 120  # 2 seconds
 
-        # Combat maneuvers (L3/R3 buttons)
-        self.barrel_roll_active = False
-        self.barrel_roll_timer = 0
-        self.barrel_roll_cooldown = 0
-        self.barrel_roll_duration = 20  # frames (~0.33 sec)
-        self.barrel_roll_cooldown_time = 180  # 3 seconds
-        self.barrel_roll_angle = 0  # Visual rotation
+        # Combat maneuvers (LB/RB bumpers for thrust)
+        self.thrust_active = False
+        self.thrust_timer = 0
+        self.thrust_cooldown = 0
+        self.thrust_duration = 12  # frames (~0.2 sec) - quick burst
+        self.thrust_cooldown_time = 90  # 1.5 seconds - faster recovery
+        self.thrust_direction = 0  # -1 left, 1 right
+        self.thrust_velocity = 0  # Current thrust speed
 
         self.emergency_brake_active = False
         self.emergency_brake_timer = 0
         self.emergency_brake_cooldown = 0
-        self.emergency_brake_duration = 15  # frames
-        self.emergency_brake_cooldown_time = 240  # 4 seconds
+        self.emergency_brake_duration = 8  # frames - fast snap to bottom
+        self.emergency_brake_cooldown_time = 180  # 3 seconds
         self.brake_start_y = 0
 
-        # Weapon heat system
+        # Frontal shield system (Jaguar only - defaults inactive)
+        # Provides 180-degree frontal immunity when active
+        self.frontal_shield_active = False
+        self.frontal_shield_timer = 0
+        self.frontal_shield_duration = 0  # 0 = disabled for non-Jaguar
+        self.frontal_shield_cooldown = 0
+        self.frontal_shield_cooldown_time = 999999  # Effectively disabled
+
+        # Rocket stream mode (Jaguar only)
+        self.rocket_stream_mode = False
+        self.rocket_stream_cooldown = 0
+        self.rocket_stream_rate = 4
+
+        # Armor regen (Wolf only - defaults inactive)
+        self.armor_regen_active = False
+        self.armor_regen_rate = 0
+        self.armor_regen_delay = 120
+        self.armor_regen_timer = 0
+
+        # Weapon heat system - balanced for continuous fire
         self.heat = 0
         self.max_heat = 100
-        self.heat_per_shot = 6  # Balanced heat per shot
-        self.heat_dissipation = 0.5  # Per frame
-        self.overheat_cooldown = 0
-        self.overheat_duration = 90  # 1.5 seconds at 60fps
+        self.heat_per_shot = 2.0  # Base heat per shot - balanced for sustained fire
+        self.heat_dissipation = 1.2  # Cooling rate per frame
         self.is_overheated = False
+        self.heat_warning = False  # True when heat >= 75%
 
         # Score/Progress
         self.refugees = 0
@@ -606,32 +631,75 @@ class Player(pygame.sprite.Sprite):
 
         return surf
     def upgrade_to_wolf(self):
-        """Upgrade to Wolf assault frigate"""
+        """Upgrade to Wolf assault frigate - autocannon barrage specialist with armor tank"""
         self.is_wolf = True
         self.ship_class = 'Wolf'
-        self.speed *= WOLF_SPEED_BONUS
-        self.max_armor += WOLF_ARMOR_BONUS
+        # Wolf is slightly slower but tankier
+        self.speed *= 0.95  # Slightly slower than Rifter
+        self.max_armor += WOLF_ARMOR_BONUS * 1.5  # Extra armor
         self.max_hull += WOLF_HULL_BONUS
-        self.armor = min(self.armor + WOLF_ARMOR_BONUS, self.max_armor)
+        self.armor = min(self.armor + WOLF_ARMOR_BONUS * 1.5, self.max_armor)
         self.hull = min(self.hull + WOLF_HULL_BONUS, self.max_hull)
-        self.spread_bonus += 1
-        self.image = self._create_ship_image()
+        self.spread_bonus += 2  # More autocannons = wider spread
+
+        # === WOLF AUTOCANNON BARRAGE ===
+        # Faster fire rate for endless barrage
+        self.fire_rate_mult *= 1.5  # 50% faster autocannon fire
+        self.damage_bonus *= 1.2  # 20% more damage per shot
+
+        # === WOLF ARMOR REGEN SYSTEM ===
+        # Fast passive armor repair nanites
+        self.armor_regen_active = True
+        self.armor_regen_rate = 0.3  # Armor points per frame (~18/sec at 60fps) - FAST
+        self.armor_regen_delay = 90  # 1.5 sec without damage before regen starts
+        self.armor_regen_timer = 0
+
+        # === WOLF SEEKER MISSILES (Secondary - LT) ===
+        self.wolf_seeking_rockets = True
+        self.max_rockets = 16
+        self.rockets = 16
+
+        # Heavier ship = slower thrust recovery
+        self.thrust_cooldown_time = 75  # 1.25 seconds
+
+        self.base_image = self._create_ship_image()
+        self.image = self.base_image.copy()
 
     def upgrade_to_jaguar(self):
-        """Upgrade to Jaguar assault frigate - fast, agile, rocket specialist"""
+        """Upgrade to Jaguar assault frigate - fast, agile, seeking rocket specialist"""
         from constants import JAGUAR_SPEED_BONUS, JAGUAR_SHIELD_BONUS
-        self.is_wolf = True  # T2 flag
+        self.is_jaguar = True  # T2 Jaguar flag
         self.ship_class = 'Jaguar'
         # Jaguar is the fastest assault frigate
         self.speed *= JAGUAR_SPEED_BONUS * 1.15  # Extra 15% on top of base bonus
         self.max_shields += JAGUAR_SHIELD_BONUS
         self.shields = min(self.shields + JAGUAR_SHIELD_BONUS, self.max_shields)
-        # Faster barrel roll cooldown (agile ship)
-        self.barrel_roll_cooldown_time = 120  # 2 seconds instead of 3
-        # Rocket specialist: increased rocket capacity (4 launchers)
-        self.max_rockets = 16  # More rockets
-        self.rockets = min(self.rockets + 6, self.max_rockets)  # Bonus rockets on upgrade
-        self.image = self._create_ship_image()
+
+        # === JAGUAR THRUST UPGRADES ===
+        # Double thrust duration (24 frames ~0.4 sec burst)
+        self.thrust_duration = 24
+        # Twice the thrust regen (half cooldown - 30 frames = 0.5 sec)
+        self.thrust_cooldown_time = 30
+
+        # === JAGUAR SHIELD BUBBLE (LT) ===
+        # 360-degree immunity shield bubble - blocks ALL damage
+        self.frontal_shield_active = False
+        self.frontal_shield_timer = 0
+        self.frontal_shield_duration = 420   # 7 seconds at 60fps (middle of 5-10 range)
+        self.frontal_shield_cooldown = 0
+        self.frontal_shield_cooldown_time = 1200  # 20 seconds cooldown
+        self.shield_bubble_mode = True  # True = 360 bubble, False = frontal only
+
+        # === JAGUAR ROCKET STREAMS (Main Weapon) ===
+        # Seeking rockets as main weapon - no autocannons
+        self.rocket_stream_mode = True  # Use rockets instead of bullets
+        self.rocket_stream_cooldown = 0
+        self.rocket_stream_rate = 4  # Frames between rockets (FAST)
+        self.max_rockets = 999  # Effectively unlimited - seeking rockets ARE the weapon
+        self.rockets = 999
+
+        self.base_image = self._create_ship_image()
+        self.image = self.base_image.copy()
 
     def can_use_ability(self):
         """Check if ship ability is ready"""
@@ -708,6 +776,48 @@ class Player(pygame.sprite.Sprite):
         if ship_class == 'Rifter' and self.is_ability_active():
             return 0.5  # 50% damage reduction
         return 1.0
+
+    # === JAGUAR FRONTAL SHIELD SYSTEM ===
+    def can_frontal_shield(self):
+        """Check if Jaguar can activate frontal shield"""
+        if getattr(self, 'ship_class', 'Rifter') != 'Jaguar':
+            return False
+        cooldown = getattr(self, 'frontal_shield_cooldown', 0)
+        return cooldown <= 0
+
+    def activate_frontal_shield(self):
+        """Activate Jaguar's frontal shield (LT) - 10 sec immunity, 15 sec regen"""
+        if not self.can_frontal_shield():
+            return False
+        self.frontal_shield_active = True
+        self.frontal_shield_timer = self.frontal_shield_duration
+        self.frontal_shield_cooldown = self.frontal_shield_cooldown_time
+        return True
+
+    def is_frontal_shield_active(self):
+        """Check if frontal shield is currently active"""
+        return getattr(self, 'frontal_shield_active', False)
+
+    def update_frontal_shield(self):
+        """Update frontal shield timers (call each frame)"""
+        if getattr(self, 'frontal_shield_cooldown', 0) > 0:
+            self.frontal_shield_cooldown -= 1
+
+        if getattr(self, 'frontal_shield_active', False):
+            self.frontal_shield_timer -= 1
+            if self.frontal_shield_timer <= 0:
+                self.frontal_shield_active = False
+
+    def is_hit_from_front(self, bullet_y):
+        """Check if a hit came from the front (above the player)"""
+        # Front 180 degrees = anything hitting from above player center
+        return bullet_y < self.rect.centery
+
+    def get_frontal_shield_percent(self):
+        """Get remaining shield time as percentage for HUD"""
+        if not self.is_frontal_shield_active() or self.frontal_shield_duration <= 0:
+            return 0
+        return self.frontal_shield_timer / self.frontal_shield_duration
 
     def get_damage_bonus(self):
         """Get current damage bonus multiplier"""
@@ -793,27 +903,42 @@ class Player(pygame.sprite.Sprite):
         if pygame.time.get_ticks() < self.overdrive_until:
             current_speed *= 1.5
 
+        # Track if moving for engine intensity
+        is_moving = False
+
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.rect.x -= current_speed
+            is_moving = True
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.rect.x += current_speed
+            is_moving = True
         if keys[pygame.K_UP] or keys[pygame.K_w]:
             self.rect.y -= current_speed
+            is_moving = True
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.rect.y += current_speed
+            is_moving = True
 
         # Keep on screen
         self.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
 
-        # Weapon heat management
+        # Animate engine glow
+        self._update_engine_animation(is_moving)
+
+        # Weapon heat management - heat always dissipates
+        # When overheated: 50% slower dissipation, ends when heat drops below 50%
         if self.is_overheated:
-            self.overheat_cooldown -= 1
-            if self.overheat_cooldown <= 0:
+            # Slower cooling when overheated
+            self.heat = max(0, self.heat - self.heat_dissipation * 0.5)
+            # Exit overheat when cooled to 50%
+            if self.heat <= self.max_heat * 0.5:
                 self.is_overheated = False
-                self.heat = 0
         else:
-            # Dissipate heat over time
+            # Normal heat dissipation
             self.heat = max(0, self.heat - self.heat_dissipation)
+
+        # Track heat warning state for HUD (75% threshold)
+        self.heat_warning = self.heat >= self.max_heat * 0.75
 
         # Assault frigate passive regen (every 60 frames = 1 second)
         ship_class = getattr(self, 'ship_class', 'Rifter')
@@ -836,109 +961,258 @@ class Player(pygame.sprite.Sprite):
                 if self.shields < self.max_shields:
                     self.shields = min(self.shields + 1, self.max_shields)
 
+    def _update_engine_animation(self, is_moving):
+        """Update engine glow animation"""
+        self.engine_timer += 1
+
+        # Engine flicker - more intense when moving
+        base_flicker = 0.7 + 0.3 * math.sin(self.engine_timer * 0.15)
+        if is_moving:
+            self.engine_flicker = 0.9 + 0.1 * math.sin(self.engine_timer * 0.25)
+        else:
+            self.engine_flicker = base_flicker * 0.8
+
+        # Recreate image with animated engine
+        self.image = self.base_image.copy()
+        w, h = self.image.get_size()
+        cx = w // 2
+
+        # Determine engine color based on ship class
+        ship_class = getattr(self, 'ship_class', 'Rifter')
+        if ship_class == 'Jaguar':
+            engine_base = (80, 180, 255)
+            engine_bright = (150, 220, 255)
+        else:
+            engine_base = (255, 120, 40)
+            engine_bright = (255, 200, 100)
+
+        # Calculate animated engine intensity
+        intensity = self.engine_flicker
+        glow_alpha = int(180 * intensity)
+
+        # Draw animated engine exhaust plume
+        exhaust_surf = pygame.Surface((w, 20), pygame.SRCALPHA)
+
+        # Outer glow
+        for i in range(3):
+            glow_size = 8 + i * 4
+            glow_y = 5 + i * 3
+            alpha = int(glow_alpha * (0.5 - i * 0.15))
+            if alpha > 0:
+                pygame.draw.ellipse(exhaust_surf, (*engine_base, alpha),
+                                  (cx - glow_size, glow_y, glow_size * 2, 8))
+
+        # Core bright exhaust
+        core_size = int(6 * intensity)
+        pygame.draw.ellipse(exhaust_surf, (*engine_bright, int(200 * intensity)),
+                          (cx - core_size, 3, core_size * 2, 6))
+
+        # Hot white center
+        if intensity > 0.8:
+            pygame.draw.ellipse(exhaust_surf, (255, 255, 255, int(150 * intensity)),
+                              (cx - 3, 4, 6, 4))
+
+        # Add exhaust particles when moving
+        if is_moving and random.random() < 0.4:
+            px = cx + random.randint(-5, 5)
+            py = random.randint(8, 15)
+            pygame.draw.circle(exhaust_surf, (*engine_bright, 150), (px, py), 2)
+
+        # Blit exhaust below ship (at bottom of image)
+        self.image.blit(exhaust_surf, (0, h - 12))
+
     def can_shoot(self):
         """Check if enough time has passed to fire"""
-        # Can't shoot if overheated
-        if self.is_overheated:
-            return False
-
+        # Heat system: overheating no longer blocks shooting, just penalizes
+        # Weapons can ALWAYS fire - heat only affects powerups
         now = pygame.time.get_ticks()
         ammo = AMMO_TYPES[self.current_ammo]
         fire_rate = ammo['fire_rate'] * self.fire_rate_mult * self.get_fire_rate_bonus()
+
+        # When overheated: 30% slower fire rate as a penalty
+        if self.is_overheated:
+            fire_rate *= 0.7
+
         cooldown = PLAYER_BASE_FIRE_RATE / fire_rate
         return now - self.last_shot > cooldown
     
     def shoot(self):
-        """Fire autocannons, returns list of bullets"""
+        """Fire autocannons, returns list of bullets
+
+        Fire patterns:
+        - 'focused': All bullets fire straight forward (or converging)
+        - 'spread': Bullets fan out for wider coverage
+        """
         if not self.can_shoot():
             return []
 
         self.last_shot = pygame.time.get_ticks()
         bullets = []
-        ammo = AMMO_TYPES[self.current_ammo]
         ship_class = getattr(self, 'ship_class', 'Rifter')
+        fire_pattern = getattr(self, 'fire_pattern', 'focused')
+
+        # Default bullet color (Minmatar orange/rust)
+        bullet_color = (255, 180, 100)
 
         # Apply damage bonus from abilities
         damage_bonus = self.get_damage_bonus()
         bullet_damage = int(BULLET_DAMAGE * damage_bonus)
 
-        # Wolf: 4 autocannons with wide spread pattern
+        # Wolf: Autocannon barrage specialist
         if ship_class == 'Wolf':
-            num_shots = 4
-            spread = 22  # Wider spread for 4 guns
-            # Slight angular spread for more coverage
-            angles = [-8, -3, 3, 8]  # degrees from vertical
-            for i, angle in enumerate(angles):
-                offset = (i - 1.5) * spread
-                # Convert angle to velocity components
+            if fire_pattern == 'spread':
+                # 240-degree arc spread: bullets every 20 degrees
+                # From -120 to +120 degrees = 13 bullets covering 240 degrees
+                angles = list(range(-120, 121, 20))  # [-120, -100, -80, ..., 100, 120]
+                for angle in angles:
+                    rad = math.radians(angle)
+                    vx = math.sin(rad) * BULLET_SPEED
+                    vy = -math.cos(rad) * BULLET_SPEED
+                    # Spawn from edge of ship based on angle
+                    spawn_offset_x = int(math.sin(rad) * 15)
+                    spawn_offset_y = int(-math.cos(rad) * 10)
+                    bullet = Bullet(
+                        self.rect.centerx + spawn_offset_x,
+                        self.rect.centery + spawn_offset_y,
+                        vx, vy,
+                        bullet_color,
+                        int(bullet_damage * 0.7)  # Slightly less damage per bullet due to volume
+                    )
+                    bullets.append(bullet)
+            else:
+                # Focused: 4 weapons forward in tight formation
+                num_shots = 4
+                offsets = [-18, -6, 6, 18]
+                for offset in offsets:
+                    bullet = Bullet(
+                        self.rect.centerx + offset,
+                        self.rect.top,
+                        0, -BULLET_SPEED,
+                        bullet_color,
+                        bullet_damage
+                    )
+                    bullets.append(bullet)
+
+        elif ship_class == 'Jaguar':
+            # Jaguar: SEEKING ROCKET STREAMS - no autocannons!
+            # Check rocket stream cooldown (fast fire rate)
+            rocket_stream_cooldown = getattr(self, 'rocket_stream_cooldown', 0)
+            if rocket_stream_cooldown > 0:
+                return []  # Still on cooldown
+
+            rockets = []
+
+            if fire_pattern == 'spread':
+                # 180-degree arc spread: seeking rockets every 20 degrees
+                # From -90 to +90 degrees = 10 rockets covering front hemisphere
+                angles = list(range(-90, 91, 20))  # [-90, -70, -50, ..., 70, 90]
+                for angle in angles:
+                    rad = math.radians(angle)
+                    # Spawn from edge of ship based on angle
+                    spawn_offset_x = int(math.sin(rad) * 12)
+                    spawn_offset_y = int(-math.cos(rad) * 8)
+                    rocket = Rocket(
+                        self.rect.centerx + spawn_offset_x,
+                        self.rect.centery + spawn_offset_y,
+                        seeking=True,
+                        initial_angle=angle  # Launch in this direction
+                    )
+                    rocket.damage = int(ROCKET_DAMAGE * 0.25 * self.get_damage_bonus())
+                    rocket.turn_rate = 0.22  # Agile seeking
+                    rockets.append(rocket)
+                # Longer cooldown for spread volley
+                self.rocket_stream_cooldown = 8
+            else:
+                # Focused: 4 seeking rockets forward (quad launchers)
+                offsets = [-12, -4, 4, 12]
+                for offset in offsets:
+                    rocket = Rocket(
+                        self.rect.centerx + offset,
+                        self.rect.top,
+                        seeking=True
+                    )
+                    rocket.damage = int(ROCKET_DAMAGE * 0.3 * self.get_damage_bonus())
+                    rocket.turn_rate = 0.28  # Very agile seeking
+                    rockets.append(rocket)
+                # Fast cooldown for focused fire
+                self.rocket_stream_cooldown = getattr(self, 'rocket_stream_rate', 4)
+
+            # Minimal heat for rocket streams
+            self.heat += 2
+            if self.heat >= self.max_heat:
+                self.is_overheated = True
+                self.overheat_cooldown = self.overheat_duration
+
+            return rockets  # Return rockets instead of bullets
+
+        else:
+            # Rifter: 2-4 autocannons based on upgrades
+            num_shots = 2 + self.spread_bonus
+
+            if fire_pattern == 'spread':
+                # 45-degree arc: front-focused fan
+                if num_shots == 2:
+                    angles = [-22, 22]
+                elif num_shots == 3:
+                    angles = [-22, 0, 22]
+                else:  # 4+
+                    angles = [-22, -8, 8, 22]
+            else:
+                # Focused: all weapons forward only
+                angles = [0] * num_shots
+
+            spread_offset = 12 + (self.spread_bonus * 4)
+            for i in range(num_shots):
+                offset = (i - (num_shots - 1) / 2) * spread_offset
+                angle = angles[i] if i < len(angles) else 0
                 rad = math.radians(angle)
-                vx = math.sin(rad) * BULLET_SPEED * 0.3
-                vy = -BULLET_SPEED
+                vx = math.sin(rad) * BULLET_SPEED
+                vy = -math.cos(rad) * BULLET_SPEED
                 bullet = Bullet(
                     self.rect.centerx + offset,
                     self.rect.top,
                     vx, vy,
-                    ammo['tracer'],
-                    bullet_damage,
-                    ammo['shield_mult'],
-                    ammo['armor_mult']
+                    bullet_color,
+                    bullet_damage
                 )
-                bullet.color = ammo['tracer']
-                bullets.append(bullet)
-        elif ship_class == 'Jaguar':
-            # Jaguar: 2 autocannons only (rocket specialist)
-            num_shots = 2
-            spread = 16
-            for i in range(num_shots):
-                offset = (i - 0.5) * spread
-                bullet = Bullet(
-                    self.rect.centerx + offset,
-                    self.rect.top,
-                    0, -BULLET_SPEED,
-                    ammo['tracer'],
-                    bullet_damage,
-                    ammo['shield_mult'],
-                    ammo['armor_mult']
-                )
-                bullet.color = ammo['tracer']
-                bullets.append(bullet)
-        else:
-            # Standard Rifter: base shots
-            num_shots = 2 + self.spread_bonus
-            spread = 15 + (self.spread_bonus * 5)
-
-            for i in range(num_shots):
-                offset = (i - (num_shots - 1) / 2) * spread
-                bullet = Bullet(
-                    self.rect.centerx + offset,
-                    self.rect.top,
-                    0, -BULLET_SPEED,
-                    ammo['tracer'],
-                    bullet_damage,
-                    ammo['shield_mult'],
-                    ammo['armor_mult']
-                )
-                bullet.color = ammo['tracer']
                 bullets.append(bullet)
 
-        # Add heat when firing
+        # Add heat when firing - balanced by ship class and ammo type
         now = pygame.time.get_ticks()
-        heat_to_add = self.heat_per_shot
+        ammo = AMMO_TYPES[self.current_ammo]
 
-        # Wolf: 4 guns = 40% more heat buildup (trade-off for firepower)
+        # Base heat from ammo type (higher damage = more heat)
+        ammo_heat_mult = {
+            0: 1.0,   # Standard - balanced
+            1: 1.3,   # EMP - electronic stress
+            2: 0.8,   # Phased Plasma - efficient
+            3: 1.5,   # Fusion - explosive heat
+            4: 1.2,   # Depleted Uranium - heavy rounds
+            5: 0.7,   # Titanium Sabot - cool ammo
+        }.get(self.current_ammo, 1.0)
+
+        heat_to_add = self.heat_per_shot * ammo_heat_mult
+
+        # Wolf: 4 guns = more heat per volley
         if ship_class == 'Wolf':
-            heat_to_add = int(self.heat_per_shot * 1.4)
+            heat_to_add *= 1.4
 
-        # Add 50% extra heat if any offensive powerup is active
-        if (now < self.double_damage_until or now < self.rapid_fire_until or
-            now < self.overdrive_until):
-            heat_to_add = int(heat_to_add * 1.5)
+        # Jaguar: Assault ship efficiency = less heat
+        if ship_class == 'Jaguar':
+            heat_to_add *= 0.85
+
+        # More heat when damage powerups active (pushing the guns harder)
+        if now < self.double_damage_until:
+            heat_to_add *= 1.2
+        if now < self.rapid_fire_until:
+            heat_to_add *= 1.15
+
         self.heat += heat_to_add
-        if self.heat >= self.max_heat:
+
+        # Check for overheat threshold
+        if self.heat >= self.max_heat and not self.is_overheated:
             self.is_overheated = True
-            self.overheat_cooldown = self.overheat_duration
-            # Expire all powerups when overheated
-            self.expire_all_powerups()
+            self.expire_all_powerups()  # Penalty for overheating
 
         return bullets
 
@@ -974,19 +1248,36 @@ class Player(pygame.sprite.Sprite):
         self.last_rocket = pygame.time.get_ticks()
         ship_class = getattr(self, 'ship_class', 'Rifter')
 
-        # Jaguar: Fire 2 rockets at once (from 4 launchers, alternating pairs)
+        # Jaguar: Fire 4 seeking rockets at once (from 4 launchers)
         if ship_class == 'Jaguar':
             rockets = []
-            for offset in [-12, 12]:
+            for offset in [-18, -6, 6, 18]:  # 4 rocket launchers spread wide
                 self.rockets -= 1
                 if self.rockets < 0:
                     self.rockets = 0
                     break
-                rocket = Rocket(self.rect.centerx + offset, self.rect.top)
-                rocket.damage = int(ROCKET_DAMAGE * self.get_damage_bonus())
+                # Jaguar rockets are seeking missiles
+                rocket = Rocket(self.rect.centerx + offset, self.rect.top, seeking=True)
+                rocket.damage = int(ROCKET_DAMAGE * self.get_damage_bonus() * 0.7)  # Slightly less per rocket
                 rockets.append(rocket)
             return rockets if rockets else None
+
+        # Wolf: Fire 2 seeking rockets (assault frigate with rocket bonus)
+        elif ship_class == 'Wolf':
+            rockets = []
+            for offset in [-10, 10]:  # Dual launchers
+                self.rockets -= 1
+                if self.rockets < 0:
+                    self.rockets = 0
+                    break
+                # Wolf rockets are also seeking
+                rocket = Rocket(self.rect.centerx + offset, self.rect.top, seeking=True)
+                rocket.damage = int(ROCKET_DAMAGE * self.get_damage_bonus() * 1.1)  # Slightly more damage
+                rockets.append(rocket)
+            return rockets if rockets else None
+
         else:
+            # Rifter: Standard single rocket
             self.rockets -= 1
             rocket = Rocket(self.rect.centerx, self.rect.top)
             # Apply damage bonus from abilities
@@ -1007,18 +1298,36 @@ class Player(pygame.sprite.Sprite):
             absorbed = min(self.shields, amount)
             self.shields -= absorbed
             amount -= absorbed
-        
+
         # Then armor
         if amount > 0 and self.armor > 0:
             absorbed = min(self.armor, amount)
             self.armor -= absorbed
             amount -= absorbed
-        
+
         # Finally hull
         if amount > 0:
             self.hull -= amount
-        
+
+        # Reset Wolf armor regen timer when taking damage
+        if hasattr(self, 'armor_regen_timer'):
+            self.armor_regen_timer = 0
+
         return self.hull <= 0  # Return True if dead
+
+    def update_armor_regen(self):
+        """Update Wolf's passive armor regeneration"""
+        if not getattr(self, 'armor_regen_active', False):
+            return
+
+        # Increment timer (counts frames without damage)
+        self.armor_regen_timer += 1
+
+        # Only regen after delay period
+        if self.armor_regen_timer >= self.armor_regen_delay:
+            # Regenerate armor up to max
+            if self.armor < self.max_armor:
+                self.armor = min(self.armor + self.armor_regen_rate, self.max_armor)
     
     def heal(self, amount):
         """Repair hull and armor"""
@@ -1045,8 +1354,8 @@ class Wingman(pygame.sprite.Sprite):
         super().__init__()
         self.player = player
         self.offset_x = offset_x  # Position relative to player
-        self.width = 30
-        self.height = 38
+        self.width = 35
+        self.height = 44
 
         # Create Minmatar frigate sprite
         self.image = self._create_wingman_sprite()
@@ -1063,46 +1372,81 @@ class Wingman(pygame.sprite.Sprite):
         self.damage = 8
 
     def _create_wingman_sprite(self):
-        """Create a small Minmatar frigate sprite"""
+        """Create exact scaled copy of player Rifter sprite (76% scale)"""
         surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         w, h = self.width, self.height
         cx = w // 2
 
-        # Minmatar colors
-        hull = (139, 90, 43)
-        hull_dark = (100, 65, 30)
-        accent = (180, 100, 50)
-        engine = (255, 120, 40)
+        # Scale factor from player (46x58) to wingman (35x44)
+        s = 0.76
 
-        # Main hull (angular)
-        points = [
-            (cx, 2),           # Nose
-            (w - 4, h // 3),   # Right front
-            (w - 2, h - 8),    # Right rear
-            (cx, h - 4),       # Tail
-            (2, h - 8),        # Left rear
-            (4, h // 3),       # Left front
-        ]
-        pygame.draw.polygon(surf, hull, points)
-        pygame.draw.polygon(surf, hull_dark, points, 1)
+        # Exact same Rifter colors as player
+        base = (70, 40, 30)
+        mid = (110, 60, 40)
+        light = (150, 85, 55)
+        highlight = (190, 120, 80)
+        accent = (200, 160, 80)
+        engine_color = (255, 120, 40)
+        engine_glow = (255, 180, 100)
 
-        # Wing struts
-        pygame.draw.line(surf, accent, (cx, h // 3), (2, h - 10), 2)
-        pygame.draw.line(surf, accent, (cx, h // 3), (w - 2, h - 10), 2)
+        # === RIFTER HULL (exact copy, scaled) ===
+        # Shadow layer (3D depth)
+        hull_shadow = [(cx, int(5*s)), (cx+int(18*s), int(25*s)), (cx+int(15*s), int(50*s)),
+                       (cx, int(55*s)), (cx-int(15*s), int(50*s)), (cx-int(18*s), int(25*s))]
+        pygame.draw.polygon(surf, base, hull_shadow)
 
-        # Engine glow
-        pygame.draw.circle(surf, engine, (cx - 4, h - 5), 3)
-        pygame.draw.circle(surf, engine, (cx + 4, h - 5), 3)
-        pygame.draw.circle(surf, (255, 200, 100), (cx - 4, h - 5), 1)
-        pygame.draw.circle(surf, (255, 200, 100), (cx + 4, h - 5), 1)
+        # Main hull body
+        hull_main = [(cx, int(8*s)), (cx+int(15*s), int(25*s)), (cx+int(12*s), int(48*s)),
+                     (cx, int(52*s)), (cx-int(12*s), int(48*s)), (cx-int(15*s), int(25*s))]
+        pygame.draw.polygon(surf, mid, hull_main)
 
-        # Cockpit
-        pygame.draw.ellipse(surf, (60, 80, 100), (cx - 3, 6, 6, 8))
+        # Hull highlight (top-right lighting)
+        hull_highlight = [(cx, int(10*s)), (cx+int(12*s), int(25*s)), (cx+int(10*s), int(40*s)), (cx+int(2*s), int(45*s))]
+        pygame.draw.polygon(surf, light, hull_highlight)
+
+        # Nose section (pointed)
+        pygame.draw.polygon(surf, light, [(cx, int(3*s)), (cx+int(8*s), int(18*s)), (cx, int(22*s)), (cx-int(8*s), int(18*s))])
+        pygame.draw.polygon(surf, highlight, [(cx, int(5*s)), (cx+int(5*s), int(16*s)), (cx, int(18*s))])
+
+        # === WING STRUTS (Minmatar asymmetric style) ===
+        pygame.draw.polygon(surf, base, [(cx-int(12*s), int(28*s)), (int(5*s), int(38*s)), (int(3*s), int(45*s)), (int(8*s), int(48*s)), (cx-int(10*s), int(42*s))])
+        pygame.draw.polygon(surf, mid, [(cx-int(11*s), int(30*s)), (int(7*s), int(39*s)), (int(6*s), int(44*s)), (cx-int(9*s), int(40*s))])
+        pygame.draw.polygon(surf, base, [(cx+int(12*s), int(28*s)), (w-int(5*s), int(38*s)), (w-int(3*s), int(45*s)), (w-int(8*s), int(48*s)), (cx+int(10*s), int(42*s))])
+        pygame.draw.polygon(surf, light, [(cx+int(11*s), int(30*s)), (w-int(7*s), int(39*s)), (w-int(6*s), int(44*s)), (cx+int(9*s), int(40*s))])
+
+        # Wing tips
+        pygame.draw.circle(surf, accent, (int(4*s), int(44*s)), max(2, int(3*s)))
+        pygame.draw.circle(surf, accent, (w-int(4*s), int(44*s)), max(2, int(3*s)))
+
+        # === COCKPIT ===
+        pygame.draw.ellipse(surf, (40, 60, 80), (cx-int(4*s), int(14*s), int(8*s), int(12*s)))
+        pygame.draw.ellipse(surf, (70, 100, 140), (cx-int(3*s), int(15*s), int(6*s), int(8*s)))
+        pygame.draw.ellipse(surf, (120, 160, 200), (cx-int(2*s), int(16*s), max(2, int(3*s)), max(3, int(4*s))))
+
+        # === ENGINE SECTION ===
+        pygame.draw.polygon(surf, base, [(cx-int(10*s), int(45*s)), (cx+int(10*s), int(45*s)), (cx+int(8*s), int(56*s)), (cx-int(8*s), int(56*s))])
+        pygame.draw.ellipse(surf, engine_color, (cx-int(6*s), int(52*s), int(12*s), int(6*s)))
+        pygame.draw.ellipse(surf, engine_glow, (cx-int(4*s), int(53*s), int(8*s), int(4*s)))
+        pygame.draw.ellipse(surf, (255, 255, 200), (cx-int(2*s), int(54*s), max(3, int(4*s)), max(2, int(2*s))))
+
+        # Side thrusters
+        pygame.draw.ellipse(surf, engine_color, (cx-int(12*s), int(50*s), int(5*s), int(4*s)))
+        pygame.draw.ellipse(surf, engine_color, (cx+int(7*s), int(50*s), int(5*s), int(4*s)))
+
+        # Panel lines
+        pygame.draw.line(surf, base, (cx, int(22*s)), (cx, int(45*s)), 1)
+        pygame.draw.line(surf, accent, (cx-int(5*s), int(30*s)), (cx-int(5*s), int(44*s)), 1)
+        pygame.draw.line(surf, accent, (cx+int(5*s), int(30*s)), (cx+int(5*s), int(44*s)), 1)
+
+        # Antennae
+        pygame.draw.line(surf, accent, (cx-int(3*s), int(6*s)), (cx-int(8*s), int(2*s)), 2)
+        pygame.draw.circle(surf, highlight, (cx-int(8*s), int(2*s)), max(1, int(2*s)))
+        pygame.draw.line(surf, accent, (cx+int(3*s), int(6*s)), (cx+int(6*s), int(3*s)), 1)
 
         return surf
 
     def update(self):
-        """Follow player with offset"""
+        """Follow player with offset and animate engine"""
         if self.player:
             target_x = self.player.rect.centerx + self.offset_x
             target_y = self.player.rect.centery + 40  # Slightly behind
@@ -1118,6 +1462,69 @@ class Wingman(pygame.sprite.Sprite):
 
             # Keep on screen
             self.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
+
+        # Animate engine glow
+        self._update_engine_animation()
+
+    def _update_engine_animation(self):
+        """Redraw sprite with animated engine flicker and visual polish"""
+        # Recreate base sprite
+        self.image = self._create_wingman_sprite()
+
+        # Add engine flicker effect
+        w, h = self.width, self.height
+        cx = w // 2
+        s = 0.76
+        now = pygame.time.get_ticks()
+
+        # Flickering engine glow - more dynamic
+        flicker = 0.7 + 0.3 * math.sin(now * 0.025)
+        fast_flicker = 0.8 + 0.2 * math.sin(now * 0.08)
+        glow_alpha = int(140 * flicker)
+
+        # Engine exhaust plume (layered glow)
+        glow_surf = pygame.Surface((w, h + 15), pygame.SRCALPHA)
+
+        # Outer glow haze
+        pygame.draw.ellipse(glow_surf, (255, 100, 30, int(50 * flicker)),
+                          (cx - int(12*s), int(52*s), int(24*s), int(18*s)))
+
+        # Main engine exhaust
+        pygame.draw.ellipse(glow_surf, (255, 150, 50, glow_alpha),
+                          (cx - int(8*s), int(54*s), int(16*s), int(12*s)))
+
+        # Inner bright core
+        pygame.draw.ellipse(glow_surf, (255, 200, 100, int(180 * fast_flicker)),
+                          (cx - int(5*s), int(55*s), int(10*s), int(8*s)))
+
+        # Hot white center
+        pygame.draw.ellipse(glow_surf, (255, 255, 220, int(200 * fast_flicker)),
+                          (cx - int(3*s), int(56*s), int(6*s), int(4*s)))
+
+        # Exhaust particles (random sparkles)
+        if random.random() < 0.5:
+            px = cx + random.randint(-6, 6)
+            py = int(58*s) + random.randint(0, 8)
+            pygame.draw.circle(glow_surf, (255, 180, 80, 150), (px, py), random.randint(1, 3))
+
+        self.image.blit(glow_surf, (0, 0))
+
+        # Add damage visualization if damaged
+        health_pct = self.health / self.max_health
+        if health_pct < 0.7:
+            # Smoke effect when damaged
+            smoke_alpha = int(80 * (1 - health_pct))
+            smoke_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            for _ in range(int((1 - health_pct) * 5)):
+                sx = random.randint(5, w - 5)
+                sy = random.randint(5, h - 10)
+                pygame.draw.circle(smoke_surf, (60, 60, 60, smoke_alpha), (sx, sy), random.randint(2, 5))
+            self.image.blit(smoke_surf, (0, 0))
+
+        # Edge highlight glow for visibility
+        edge_surf = pygame.Surface((w + 4, h + 4), pygame.SRCALPHA)
+        pygame.draw.rect(edge_surf, (255, 180, 100, 30), (0, 0, w + 4, h + 4), 2, border_radius=3)
+        # self.image.blit(edge_surf, (-2, -2))  # Subtle edge - commented for cleaner look
 
     def can_shoot(self):
         """Check if wingman can fire"""
@@ -1147,30 +1554,35 @@ class Wingman(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    """Projectile sprite with tracer glow effect"""
+    """Autocannon projectile - chunky Minmatar tracer rounds with motion blur"""
 
     def __init__(self, x, y, dx, dy, color, damage, shield_mult=1.0, armor_mult=1.0):
         super().__init__()
-        # Larger surface for glow effect
-        self.image = pygame.Surface((16, 24), pygame.SRCALPHA)
+        # Larger surface for glow and trail
+        self.image = pygame.Surface((20, 32), pygame.SRCALPHA)
+        cx, cy = 10, 12
 
-        # Outer glow
-        glow_color = (*color[:3], 60)
-        pygame.draw.ellipse(self.image, glow_color, (2, 4, 12, 18))
+        # Motion blur trail (long fade behind projectile)
+        for i in range(8):
+            trail_alpha = int(50 - i * 6)
+            trail_y = cy + 4 + i * 2
+            trail_width = max(2, 6 - i)
+            pygame.draw.ellipse(self.image, (*color[:3], trail_alpha),
+                              (cx - trail_width//2, trail_y, trail_width, 4))
 
-        # Middle glow
-        mid_color = (*color[:3], 120)
-        pygame.draw.ellipse(self.image, mid_color, (4, 6, 8, 14))
+        # Outer glow halo
+        for r in range(8, 2, -2):
+            glow_alpha = int(40 * (8 - r) / 6)
+            pygame.draw.circle(self.image, (*color[:3], glow_alpha), (cx, cy), r)
 
-        # Core tracer
-        pygame.draw.rect(self.image, color, (6, 6, 4, 14))
+        # Hot core (white center fading to color)
+        pygame.draw.ellipse(self.image, color, (cx - 3, cy - 5, 6, 12))
+        pygame.draw.ellipse(self.image, (255, 230, 180), (cx - 2, cy - 4, 4, 8))
+        pygame.draw.ellipse(self.image, (255, 255, 255), (cx - 1, cy - 3, 2, 5))
 
-        # Bright tip
-        pygame.draw.ellipse(self.image, (255, 255, 255), (5, 4, 6, 6))
-
-        # Trail fade
-        trail_color = (*color[:3], 40)
-        pygame.draw.rect(self.image, trail_color, (6, 16, 4, 6))
+        # Bright tip (impact point)
+        pygame.draw.circle(self.image, (255, 255, 255), (cx, cy - 4), 3)
+        pygame.draw.circle(self.image, (255, 255, 220), (cx, cy - 5), 2)
 
         self.rect = self.image.get_rect(center=(x, y))
         self.dx = dx
@@ -1178,7 +1590,7 @@ class Bullet(pygame.sprite.Sprite):
         self.damage = damage
         self.shield_mult = shield_mult
         self.armor_mult = armor_mult
-    
+
     def update(self):
         self.rect.x += self.dx
         self.rect.y += self.dy
@@ -1188,48 +1600,424 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Rocket(pygame.sprite.Sprite):
-    """Rocket projectile"""
-    
-    def __init__(self, x, y):
+    """Rocket projectile - can be seeking (homing) for Jaguar. Polished visuals with trails."""
+
+    def __init__(self, x, y, seeking=False, initial_angle=0):
         super().__init__()
-        self.image = pygame.Surface((8, 20), pygame.SRCALPHA)
-        # Rocket body
-        pygame.draw.rect(self.image, (150, 150, 150), (2, 5, 4, 15))
-        # Nose cone
-        pygame.draw.polygon(self.image, (200, 50, 50), [(4, 0), (0, 8), (8, 8)])
-        # Exhaust
-        pygame.draw.polygon(self.image, (255, 200, 50), [(2, 18), (4, 22), (6, 18)])
+        self.seeking = seeking
+        self.target = None
+        # Initial velocity based on launch angle (0 = up, positive = right)
+        rad = math.radians(initial_angle)
+        self.vx = math.sin(rad) * ROCKET_SPEED
+        self.vy = -math.cos(rad) * ROCKET_SPEED
+        self.turn_rate = 0.15 if seeking else 0  # How fast it can turn
+        self.angle = initial_angle  # Track current angle for rotation
+
+        # Trail system for polished visuals
+        self.trail_positions = []
+        self.trail_max_length = 12 if seeking else 8
+        self.trail_timer = 0
+
+        # Create polished base image
+        self.base_image = pygame.Surface((12, 24), pygame.SRCALPHA)
+        w, h = 12, 24
+        cx = w // 2
+
+        if seeking:
+            # Seeking rockets - sleek blue missiles with glow
+            # Body gradient
+            pygame.draw.polygon(self.base_image, (70, 120, 180), [(cx, 2), (cx-3, 8), (cx-3, 18), (cx+3, 18), (cx+3, 8)])
+            pygame.draw.polygon(self.base_image, (100, 160, 220), [(cx, 3), (cx-2, 8), (cx-2, 16), (cx+2, 16), (cx+2, 8)])
+            # Nose cone
+            pygame.draw.polygon(self.base_image, (150, 200, 255), [(cx, 0), (cx-3, 7), (cx+3, 7)])
+            pygame.draw.polygon(self.base_image, (200, 230, 255), [(cx, 1), (cx-1, 5), (cx+1, 5)])
+            # Fins
+            pygame.draw.polygon(self.base_image, (60, 100, 160), [(cx-3, 16), (cx-5, 20), (cx-3, 20)])
+            pygame.draw.polygon(self.base_image, (60, 100, 160), [(cx+3, 16), (cx+5, 20), (cx+3, 20)])
+            # Engine glow
+            pygame.draw.ellipse(self.base_image, (100, 200, 255), (cx-2, 18, 4, 4))
+            pygame.draw.ellipse(self.base_image, (200, 240, 255), (cx-1, 19, 2, 2))
+            self.trail_color = (80, 160, 255)
+            self.glow_color = (100, 180, 255)
+        else:
+            # Standard rockets - orange/red with fire trail
+            pygame.draw.polygon(self.base_image, (120, 100, 90), [(cx, 2), (cx-3, 8), (cx-3, 18), (cx+3, 18), (cx+3, 8)])
+            pygame.draw.polygon(self.base_image, (160, 130, 100), [(cx, 3), (cx-2, 8), (cx-2, 16), (cx+2, 16), (cx+2, 8)])
+            # Warhead
+            pygame.draw.polygon(self.base_image, (200, 60, 40), [(cx, 0), (cx-3, 7), (cx+3, 7)])
+            pygame.draw.polygon(self.base_image, (255, 100, 60), [(cx, 1), (cx-1, 5), (cx+1, 5)])
+            # Fins
+            pygame.draw.polygon(self.base_image, (100, 80, 70), [(cx-3, 16), (cx-5, 20), (cx-3, 20)])
+            pygame.draw.polygon(self.base_image, (100, 80, 70), [(cx+3, 16), (cx+5, 20), (cx+3, 20)])
+            # Engine fire
+            pygame.draw.polygon(self.base_image, (255, 200, 50), [(cx-2, 18), (cx, 23), (cx+2, 18)])
+            pygame.draw.polygon(self.base_image, (255, 255, 150), [(cx-1, 19), (cx, 22), (cx+1, 19)])
+            self.trail_color = (255, 150, 50)
+            self.glow_color = (255, 200, 100)
+
+        # Apply initial rotation if launching at an angle
+        if initial_angle != 0:
+            self.image = pygame.transform.rotate(self.base_image, -initial_angle)
+        else:
+            self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         self.damage = ROCKET_DAMAGE
         self.shield_mult = 1.2
         self.armor_mult = 1.2
-    
+
+    def set_targets(self, targets_group):
+        """Set the sprite group to seek targets from"""
+        self.targets_group = targets_group
+
     def update(self):
-        self.rect.y -= ROCKET_SPEED
-        if self.rect.bottom < 0:
+        # Update trail - store position every other frame
+        self.trail_timer += 1
+        if self.trail_timer >= 2:
+            self.trail_timer = 0
+            self.trail_positions.append((self.rect.centerx, self.rect.centery))
+            if len(self.trail_positions) > self.trail_max_length:
+                self.trail_positions.pop(0)
+
+        if self.seeking and hasattr(self, 'targets_group') and self.targets_group:
+            # Find closest target
+            closest_dist = float('inf')
+            closest_target = None
+            for target in self.targets_group:
+                dx = target.rect.centerx - self.rect.centerx
+                dy = target.rect.centery - self.rect.centery
+                dist = math.sqrt(dx * dx + dy * dy)
+                if dist < closest_dist:
+                    closest_dist = dist
+                    closest_target = target
+
+            # Turn toward target
+            if closest_target and closest_dist < 400:  # Only seek within range
+                dx = closest_target.rect.centerx - self.rect.centerx
+                dy = closest_target.rect.centery - self.rect.centery
+                dist = math.sqrt(dx * dx + dy * dy)
+                if dist > 0:
+                    # Calculate desired velocity
+                    target_vx = (dx / dist) * ROCKET_SPEED
+                    target_vy = (dy / dist) * ROCKET_SPEED
+                    # Smoothly turn toward target
+                    self.vx += (target_vx - self.vx) * self.turn_rate
+                    self.vy += (target_vy - self.vy) * self.turn_rate
+
+            # Normalize velocity to maintain speed
+            speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
+            if speed > 0:
+                self.vx = (self.vx / speed) * ROCKET_SPEED
+                self.vy = (self.vy / speed) * ROCKET_SPEED
+
+        # Rotate sprite to match velocity direction
+        angle = math.degrees(math.atan2(-self.vx, -self.vy))
+        self.image = pygame.transform.rotate(self.base_image, angle)
+        old_center = self.rect.center
+        self.rect = self.image.get_rect(center=old_center)
+
+        # Move
+        self.rect.x += self.vx
+        self.rect.y += self.vy
+
+        # Kill if off screen
+        if (self.rect.bottom < -50 or self.rect.top > SCREEN_HEIGHT + 50 or
+            self.rect.right < -50 or self.rect.left > SCREEN_WIDTH + 50):
             self.kill()
+
+    def draw_trail(self, surface):
+        """Draw rocket exhaust trail"""
+        if len(self.trail_positions) < 2:
+            return
+
+        # Draw fading trail segments
+        for i, (x, y) in enumerate(self.trail_positions):
+            # Fade based on position in trail
+            alpha = int(180 * (i + 1) / len(self.trail_positions))
+            size = max(1, int(4 * (i + 1) / len(self.trail_positions)))
+
+            # Create trail particle
+            r, g, b = self.trail_color
+            trail_surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+            pygame.draw.circle(trail_surf, (r, g, b, alpha), (size, size), size)
+            surface.blit(trail_surf, (x - size, y - size))
 
 
 class EnemyBullet(pygame.sprite.Sprite):
-    """Enemy laser projectile"""
-    
-    def __init__(self, x, y, dx, dy, damage=10):
+    """Enemy laser projectile with visual variants for different ship classes"""
+
+    # Bullet style types
+    STYLE_NORMAL = 0       # Standard frigate laser
+    STYLE_CRUISER = 1      # Heavy cruiser beam - thick, intense
+    STYLE_BATTLECRUISER = 2  # Massive BC laser - huge, glowing
+    STYLE_BEAM = 3         # Continuous beam effect
+    STYLE_PLASMA = 4       # Plasma ball for bombers
+
+    def __init__(self, x, y, dx, dy, damage=10, style=0):
         super().__init__()
-        self.image = pygame.Surface((4, 16), pygame.SRCALPHA)
-        # Yellow/gold Amarr laser
-        pygame.draw.rect(self.image, (255, 220, 100), (0, 0, 4, 16))
-        pygame.draw.rect(self.image, (255, 255, 200), (1, 0, 2, 16))
-        self.rect = self.image.get_rect(center=(x, y))
         self.dx = dx
         self.dy = dy
         self.damage = damage
-    
+        self.style = style
+        self.age = 0  # For animated effects
+
+        # Create visual based on style
+        if style == self.STYLE_CRUISER:
+            # Heavy cruiser beam - thick golden laser with corona
+            self.image = pygame.Surface((8, 28), pygame.SRCALPHA)
+            # Outer glow
+            pygame.draw.rect(self.image, (255, 180, 50, 80), (0, 0, 8, 28), border_radius=2)
+            # Core beam
+            pygame.draw.rect(self.image, (255, 220, 100), (1, 0, 6, 28), border_radius=1)
+            pygame.draw.rect(self.image, (255, 255, 200), (2, 0, 4, 28))
+            # Bright center
+            pygame.draw.rect(self.image, (255, 255, 255), (3, 0, 2, 28))
+
+        elif style == self.STYLE_BATTLECRUISER:
+            # Massive battlecruiser laser - huge, intimidating
+            self.image = pygame.Surface((14, 40), pygame.SRCALPHA)
+            # Outer intense glow
+            pygame.draw.ellipse(self.image, (255, 150, 50, 60), (0, 0, 14, 40))
+            # Secondary glow layer
+            pygame.draw.ellipse(self.image, (255, 200, 100, 100), (2, 2, 10, 36))
+            # Core beam
+            pygame.draw.ellipse(self.image, (255, 240, 150), (4, 4, 6, 32))
+            # White hot center
+            pygame.draw.ellipse(self.image, (255, 255, 255), (5, 6, 4, 28))
+            # Pulsing effect particles
+            for _ in range(3):
+                px = random.randint(3, 10)
+                py = random.randint(5, 35)
+                pygame.draw.circle(self.image, (255, 255, 200, 150), (px, py), 2)
+
+        elif style == self.STYLE_BEAM:
+            # Continuous beam segment - for sweeping attacks
+            self.image = pygame.Surface((6, 50), pygame.SRCALPHA)
+            pygame.draw.rect(self.image, (255, 200, 100, 120), (0, 0, 6, 50))
+            pygame.draw.rect(self.image, (255, 255, 200), (1, 0, 4, 50))
+            pygame.draw.rect(self.image, (255, 255, 255), (2, 0, 2, 50))
+
+        elif style == self.STYLE_PLASMA:
+            # Plasma ball for bombers
+            self.image = pygame.Surface((16, 16), pygame.SRCALPHA)
+            pygame.draw.circle(self.image, (255, 100, 50, 80), (8, 8), 8)
+            pygame.draw.circle(self.image, (255, 180, 80), (8, 8), 6)
+            pygame.draw.circle(self.image, (255, 255, 150), (8, 8), 3)
+
+        else:
+            # Standard frigate laser
+            self.image = pygame.Surface((4, 16), pygame.SRCALPHA)
+            pygame.draw.rect(self.image, (255, 220, 100), (0, 0, 4, 16))
+            pygame.draw.rect(self.image, (255, 255, 200), (1, 0, 2, 16))
+
+        self.base_image = self.image.copy()
+        self.rect = self.image.get_rect(center=(x, y))
+
     def update(self):
         self.rect.x += self.dx
         self.rect.y += self.dy
+        self.age += 1
+
+        # Pulsing effect for heavy projectiles
+        if self.style in [self.STYLE_CRUISER, self.STYLE_BATTLECRUISER]:
+            if self.age % 3 == 0:
+                # Recreate with slight variation for shimmer effect
+                pulse = 0.9 + 0.2 * math.sin(self.age * 0.5)
+                self.image = self.base_image.copy()
+                if pulse > 1.0:
+                    # Brighten
+                    bright_surf = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
+                    bright_surf.fill((255, 255, 255, int(30 * (pulse - 1.0) * 5)))
+                    self.image.blit(bright_surf, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
         if (self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or
             self.rect.right < 0 or self.rect.left > SCREEN_WIDTH):
             self.kill()
+
+
+class Hardpoint(pygame.sprite.Sprite):
+    """
+    Destructible weapon hardpoint for cruisers and battlecruisers.
+
+    Hardpoints must be destroyed before the main hull takes full damage.
+    Each hardpoint can fire independently and has its own health pool.
+    """
+
+    def __init__(self, parent, offset_x, offset_y, hardpoint_type='laser', health=50):
+        super().__init__()
+        self.parent = parent  # The cruiser/BC this is attached to
+        self.offset_x = offset_x  # Position relative to parent center
+        self.offset_y = offset_y
+        self.hardpoint_type = hardpoint_type
+        self.health = health
+        self.max_health = health
+        self.destroyed = False
+        self.fire_rate = 1200  # ms between shots
+        self.last_shot = pygame.time.get_ticks() + random.randint(0, 800)
+        self.damage_flash = 0
+
+        # Create hardpoint visual based on type
+        if hardpoint_type == 'heavy_laser':
+            # Battlecruiser main turret - large
+            self.image = pygame.Surface((24, 32), pygame.SRCALPHA)
+            # Turret base
+            pygame.draw.ellipse(self.image, (120, 90, 40), (2, 16, 20, 12))
+            pygame.draw.ellipse(self.image, (160, 130, 60), (4, 18, 16, 8))
+            # Gun barrels
+            pygame.draw.rect(self.image, (100, 80, 35), (4, 0, 6, 20))
+            pygame.draw.rect(self.image, (100, 80, 35), (14, 0, 6, 20))
+            pygame.draw.rect(self.image, (150, 120, 60), (5, 0, 4, 18))
+            pygame.draw.rect(self.image, (150, 120, 60), (15, 0, 4, 18))
+            # Muzzle glow
+            pygame.draw.circle(self.image, (255, 200, 100), (7, 2), 3)
+            pygame.draw.circle(self.image, (255, 200, 100), (17, 2), 3)
+            self.fire_rate = 1500
+            self.damage_per_shot = 18
+
+        elif hardpoint_type == 'dual_laser':
+            # Cruiser dual turret
+            self.image = pygame.Surface((18, 24), pygame.SRCALPHA)
+            pygame.draw.ellipse(self.image, (120, 90, 40), (1, 12, 16, 10))
+            pygame.draw.ellipse(self.image, (160, 130, 60), (3, 14, 12, 6))
+            pygame.draw.rect(self.image, (100, 80, 35), (3, 0, 4, 14))
+            pygame.draw.rect(self.image, (100, 80, 35), (11, 0, 4, 14))
+            pygame.draw.rect(self.image, (150, 120, 60), (4, 0, 2, 12))
+            pygame.draw.rect(self.image, (150, 120, 60), (12, 0, 2, 12))
+            pygame.draw.circle(self.image, (255, 200, 100), (5, 2), 2)
+            pygame.draw.circle(self.image, (255, 200, 100), (13, 2), 2)
+            self.fire_rate = 1000
+            self.damage_per_shot = 14
+
+        else:  # 'laser' - single turret
+            self.image = pygame.Surface((12, 18), pygame.SRCALPHA)
+            pygame.draw.ellipse(self.image, (120, 90, 40), (1, 10, 10, 6))
+            pygame.draw.rect(self.image, (100, 80, 35), (4, 0, 4, 12))
+            pygame.draw.rect(self.image, (150, 120, 60), (5, 0, 2, 10))
+            pygame.draw.circle(self.image, (255, 200, 100), (6, 2), 2)
+            self.fire_rate = 800
+            self.damage_per_shot = 10
+
+        self.base_image = self.image.copy()
+        self.rect = self.image.get_rect()
+        self._update_position()
+
+    def _update_position(self):
+        """Update position based on parent"""
+        if self.parent and hasattr(self.parent, 'rect'):
+            self.rect.centerx = self.parent.rect.centerx + self.offset_x
+            self.rect.centery = self.parent.rect.centery + self.offset_y
+
+    def update(self):
+        """Update hardpoint state"""
+        if self.destroyed:
+            return
+
+        self._update_position()
+
+        # Damage flash effect
+        if self.damage_flash > 0:
+            self.damage_flash -= 1
+            flash_surf = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
+            flash_surf.fill((255, 255, 255, 100))
+            self.image = self.base_image.copy()
+            self.image.blit(flash_surf, (0, 0))
+        else:
+            self.image = self.base_image.copy()
+
+        # Show damage state
+        if self.health < self.max_health * 0.5:
+            # Smoking
+            smoke_surf = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
+            for _ in range(2):
+                sx = random.randint(2, self.image.get_width() - 2)
+                sy = random.randint(0, self.image.get_height() // 2)
+                pygame.draw.circle(smoke_surf, (80, 80, 80, 60), (sx, sy), random.randint(2, 4))
+            self.image.blit(smoke_surf, (0, 0))
+
+        if self.health < self.max_health * 0.25:
+            # On fire
+            fire_surf = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
+            for _ in range(2):
+                fx = random.randint(2, self.image.get_width() - 2)
+                fy = random.randint(0, self.image.get_height() // 2)
+                pygame.draw.circle(fire_surf, (255, 100, 30, 100), (fx, fy), random.randint(2, 3))
+            self.image.blit(fire_surf, (0, 0))
+
+    def can_shoot(self):
+        """Check if hardpoint can fire"""
+        if self.destroyed:
+            return False
+        now = pygame.time.get_ticks()
+        return now - self.last_shot >= self.fire_rate
+
+    def shoot(self, player_rect):
+        """Fire at player, returns list of bullets"""
+        if not self.can_shoot():
+            return []
+
+        self.last_shot = pygame.time.get_ticks()
+
+        # Calculate direction to player
+        dx = player_rect.centerx - self.rect.centerx
+        dy = player_rect.centery - self.rect.centery
+        dist = math.sqrt(dx*dx + dy*dy)
+        if dist > 0:
+            dx = dx / dist * 5
+            dy = dy / dist * 5
+        else:
+            dy = 5
+
+        bullets = []
+
+        if self.hardpoint_type == 'heavy_laser':
+            # Dual heavy beams
+            for offset in [-5, 5]:
+                bullets.append(EnemyBullet(
+                    self.rect.centerx + offset, self.rect.top,
+                    dx + random.uniform(-0.2, 0.2), dy,
+                    self.damage_per_shot, style=EnemyBullet.STYLE_BATTLECRUISER
+                ))
+        elif self.hardpoint_type == 'dual_laser':
+            # Dual medium beams
+            for offset in [-4, 4]:
+                bullets.append(EnemyBullet(
+                    self.rect.centerx + offset, self.rect.top,
+                    dx + random.uniform(-0.15, 0.15), dy,
+                    self.damage_per_shot, style=EnemyBullet.STYLE_CRUISER
+                ))
+        else:
+            # Single laser
+            bullets.append(EnemyBullet(
+                self.rect.centerx, self.rect.top,
+                dx + random.uniform(-0.1, 0.1), dy,
+                self.damage_per_shot, style=EnemyBullet.STYLE_CRUISER
+            ))
+
+        return bullets
+
+    def take_damage(self, damage):
+        """Take damage, return True if destroyed"""
+        if self.destroyed:
+            return False
+
+        self.health -= damage
+        self.damage_flash = 6
+
+        if self.health <= 0:
+            self.destroyed = True
+            self.health = 0
+            # Create destroyed visual
+            self.image = pygame.Surface(self.base_image.get_size(), pygame.SRCALPHA)
+            # Wreckage
+            w, h = self.image.get_size()
+            pygame.draw.ellipse(self.image, (40, 30, 20), (0, h//3, w, h//2))
+            # Smoke
+            for _ in range(3):
+                sx = random.randint(0, w)
+                sy = random.randint(0, h)
+                pygame.draw.circle(self.image, (60, 60, 60, 80), (sx, sy), random.randint(2, 5))
+            return True
+
+        return False
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -1243,6 +2031,9 @@ class Enemy(pygame.sprite.Sprite):
     PATTERN_SWOOP = 4      # Dive toward player then retreat
     PATTERN_FLANK = 5      # Move to screen edge then track player
     PATTERN_SWARM = 6      # Drone swarm behavior - surround and track player
+    PATTERN_FLYBY = 7      # Fly across screen, exit, return from other side
+    PATTERN_ATTACK_RUN = 8 # Dive at player, pull up, exit top of screen
+    PATTERN_DIAGONAL = 9   # Cross screen diagonally, respawn from top
     
     def __init__(self, enemy_type, x, y, difficulty=None):
         super().__init__()
@@ -1263,8 +2054,9 @@ class Enemy(pygame.sprite.Sprite):
         self.max_armor = self.armor
         self.max_hull = self.hull
         
-        # Behavior
-        self.speed = self.stats['speed']
+        # Behavior - apply speed multiplier for nightmare difficulty
+        speed_mult = self.difficulty.get('enemy_speed_mult', 1.0)
+        self.speed = self.stats['speed'] * speed_mult
         fire_rate_mult = self.difficulty.get('enemy_fire_rate_mult', 1.0)
         self.fire_rate = int(self.stats['fire_rate'] * fire_rate_mult)
         self.last_shot = pygame.time.get_ticks() + random.randint(0, 1000)
@@ -1273,8 +2065,15 @@ class Enemy(pygame.sprite.Sprite):
         self.is_boss = self.stats.get('boss', False)
         
         # Create image after all attributes are set
-        self.image = self._create_image()
+        self.base_image = self._create_image()  # Store pristine image
+        self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
+
+        # Damage visualization state
+        self.damage_flash_timer = 0
+        self.smoke_particles = []  # List of (x_offset, y_offset, alpha, drift_x)
+        self.spark_timer = 0
+        self.last_damage_pct = 1.0  # Track damage for visual updates
         
         # Movement pattern selection based on enemy type
         self._select_movement_pattern()
@@ -1287,7 +2086,24 @@ class Enemy(pygame.sprite.Sprite):
         self.flank_side = random.choice([-1, 1])  # For flank pattern
         self.circle_center_x = x
         self.circle_radius = random.randint(50, 100)
-        
+
+        # Flyby pattern state
+        self.flyby_direction = random.choice([-1, 1])  # -1 = left, 1 = right
+        self.flyby_state = 'approach'  # approach, flyby, exited, returning
+        self.flyby_target_y = random.randint(100, 300)
+        self.flyby_start_x = x  # Remember spawn position for return
+
+        # Attack run pattern state
+        self.attack_run_state = 'approach'  # approach, dive, pull_up, exit, returning
+        self.attack_run_target = None  # Player position when attack starts
+        self.attack_run_timer = 0
+
+        # Drift pattern improvements
+        self.drift_velocity_x = random.uniform(-0.5, 0.5)
+        self.drift_velocity_y = 0
+        self.drift_target_x = random.randint(80, SCREEN_WIDTH - 80)
+        self.drift_direction_timer = random.randint(60, 180)
+
         # Boss-specific behavior
         if self.is_boss:
             self.boss_phase = 0
@@ -1305,7 +2121,40 @@ class Enemy(pygame.sprite.Sprite):
             # Drone stream attack
             self.drone_stream_cooldown = 0
             self.drones_to_spawn = []  # Queue of drones to spawn
-    
+
+        # === HARDPOINT SYSTEM for Cruisers/Battlecruisers ===
+        # These massive ships have destructible weapon turrets
+        self.has_hardpoints = self.stats.get('has_hardpoints', False)
+        self.hardpoints = []  # List of Hardpoint sprites
+
+        if self.has_hardpoints:
+            hardpoint_defs = self.stats.get('hardpoints', [])
+            for hp_def in hardpoint_defs:
+                offset_x, offset_y, hp_type, hp_health = hp_def
+                # Scale health with difficulty
+                hp_health = int(hp_health * health_mult)
+                hardpoint = Hardpoint(self, offset_x, offset_y, hp_type, hp_health)
+                self.hardpoints.append(hardpoint)
+
+            # Track all-hardpoints-destroyed state
+            self.all_hardpoints_destroyed = False
+
+    def get_hardpoints(self):
+        """Return list of hardpoint sprites for rendering/collision"""
+        return self.hardpoints
+
+    def get_active_hardpoints(self):
+        """Return only non-destroyed hardpoints"""
+        return [hp for hp in self.hardpoints if not hp.destroyed]
+
+    def check_hardpoints_destroyed(self):
+        """Check if all hardpoints are destroyed"""
+        if not self.has_hardpoints:
+            return True
+        active = self.get_active_hardpoints()
+        self.all_hardpoints_destroyed = len(active) == 0
+        return self.all_hardpoints_destroyed
+
     def _select_movement_pattern(self):
         """Select movement pattern based on enemy type"""
         behavior = self.stats.get('behavior', None)
@@ -1341,23 +2190,44 @@ class Enemy(pygame.sprite.Sprite):
             self.drones_spawned = 0
             self.max_drones = self.stats.get('drones', 2)
         elif self.enemy_type == 'executioner':
+            # Executioners are fast and aggressive - flyby and attack runs
             self.pattern = random.choice([
                 self.PATTERN_SINE, self.PATTERN_ZIGZAG,
-                self.PATTERN_SWOOP, self.PATTERN_FLANK
+                self.PATTERN_SWOOP, self.PATTERN_FLYBY,
+                self.PATTERN_ATTACK_RUN
             ])
         elif self.enemy_type == 'punisher':
+            # Punishers are tanky - prefer staying on screen
             self.pattern = random.choice([
-                self.PATTERN_DRIFT, self.PATTERN_SINE, self.PATTERN_CIRCLE
+                self.PATTERN_DRIFT, self.PATTERN_SINE, self.PATTERN_CIRCLE,
+                self.PATTERN_FLANK
             ])
         elif self.enemy_type in ['omen', 'maller']:
+            # Cruisers - wide strafing patterns
             self.pattern = random.choice([
-                self.PATTERN_CIRCLE, self.PATTERN_FLANK, self.PATTERN_DRIFT
+                self.PATTERN_CIRCLE, self.PATTERN_FLANK, self.PATTERN_DRIFT,
+                self.PATTERN_FLYBY
+            ])
+        elif self.enemy_type == 'interceptor':
+            # Fast interceptors - attack runs
+            self.pattern = random.choice([
+                self.PATTERN_ATTACK_RUN, self.PATTERN_FLYBY,
+                self.PATTERN_SWOOP
+            ])
+        elif self.enemy_type == 'coercer':
+            # Destroyers - flyby strafing
+            self.pattern = random.choice([
+                self.PATTERN_FLYBY, self.PATTERN_CIRCLE,
+                self.PATTERN_ZIGZAG
             ])
         elif self.enemy_type == 'bestower':
             self.pattern = self.PATTERN_DRIFT
             self.speed *= 0.8
         else:
-            self.pattern = self.PATTERN_DRIFT
+            self.pattern = random.choice([
+                self.PATTERN_DRIFT, self.PATTERN_SINE,
+                self.PATTERN_FLYBY
+            ])
     
     def _get_target_y(self):
         """Get target Y position based on enemy type"""
@@ -1380,7 +2250,10 @@ class Enemy(pygame.sprite.Sprite):
                 return self._add_enemy_engine_effects(sprite)
 
         # Fall back to procedural generation
-        return self._create_polished_amarr_ship()
+        proc_sprite = self._create_polished_amarr_ship()
+        # Flip procedural sprites so they face player (nose down, engines at top)
+        proc_sprite = pygame.transform.flip(proc_sprite, False, True)
+        return self._add_enemy_engine_effects(proc_sprite)
 
     def _add_enemy_engine_effects(self, sprite):
         """Add engine glow effects to enemy sprites"""
@@ -1743,7 +2616,34 @@ class Enemy(pygame.sprite.Sprite):
     def update(self, player_rect=None):
         """Update enemy position and behavior with advanced patterns"""
         self.pattern_timer += 0.05
-        
+
+        # Update damage flash
+        if self.damage_flash_timer > 0:
+            self.damage_flash_timer -= 1
+            # Flash white overlay
+            if self.damage_flash_timer % 2 == 0:
+                flash_surf = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
+                flash_surf.fill((255, 255, 255, 100))
+                self.image.blit(flash_surf, (0, 0))
+
+        # Update smoke particles
+        for particle in self.smoke_particles[:]:
+            particle['alpha'] -= 3
+            particle['y'] -= 0.5  # Smoke rises
+            particle['x'] += particle['drift_x']
+            if particle['alpha'] <= 0:
+                self.smoke_particles.remove(particle)
+
+        # Draw smoke on image
+        if self.smoke_particles:
+            w, h = self.image.get_size()
+            for p in self.smoke_particles:
+                sx = w // 2 + int(p['x'])
+                sy = h // 2 + int(p['y'])
+                if 0 <= sx < w and 0 <= sy < h:
+                    smoke_color = (60, 60, 60, int(p['alpha']))
+                    pygame.draw.circle(self.image, smoke_color, (sx, sy), p['size'])
+
         # Enter phase - move to target Y first
         if not self.entered:
             if self.rect.centery < self.target_y:
@@ -1767,162 +2667,273 @@ class Enemy(pygame.sprite.Sprite):
             self._move_flank(player_rect)
         elif self.pattern == self.PATTERN_SWARM:
             self._move_swarm(player_rect)
-        
+        elif self.pattern == self.PATTERN_FLYBY:
+            self._move_flyby(player_rect)
+        elif self.pattern == self.PATTERN_ATTACK_RUN:
+            self._move_attack_run(player_rect)
+        elif self.pattern == self.PATTERN_DIAGONAL:
+            self._move_diagonal()
+
         # Boss phase changes
         if self.is_boss:
             self._update_boss_behavior()
-        
-        # Keep on screen horizontally
-        if self.rect.left < 10:
-            self.rect.left = 10
-        elif self.rect.right > SCREEN_WIDTH - 10:
-            self.rect.right = SCREEN_WIDTH - 10
+
+        # === RESPAWN FROM TOP WHEN LEAVING SCREEN ===
+        # Non-boss enemies cycle back from top (except diagonal/flyby which handle their own)
+        if not self.is_boss and self.pattern not in [self.PATTERN_DIAGONAL, self.PATTERN_FLYBY, self.PATTERN_ATTACK_RUN]:
+            respawn = False
+
+            # Exited bottom of screen
+            if self.rect.top > SCREEN_HEIGHT + 50:
+                respawn = True
+            # Exited left side
+            elif self.rect.right < -80:
+                respawn = True
+            # Exited right side
+            elif self.rect.left > SCREEN_WIDTH + 80:
+                respawn = True
+
+            if respawn:
+                # Respawn from top at random x position
+                self.rect.bottom = -random.randint(30, 100)
+                self.rect.centerx = random.randint(60, SCREEN_WIDTH - 60)
+                # Reset movement state for clean re-entry
+                self.drift_target_x = random.randint(80, SCREEN_WIDTH - 80)
+                self.target_y = random.randint(80, 350)
+
+        # Gentle horizontal bounds for non-diagonal patterns (push back, don't clamp hard)
+        if self.pattern not in [self.PATTERN_FLYBY, self.PATTERN_ATTACK_RUN, self.PATTERN_DIAGONAL]:
+            if self.rect.left < -50:
+                self.rect.x += self.speed * 2  # Push back toward center
+            elif self.rect.right > SCREEN_WIDTH + 50:
+                self.rect.x -= self.speed * 2
     
     def _move_drift(self):
-        """Basic side-to-side drift"""
-        self.rect.x += math.sin(self.pattern_timer) * self.speed
-        # Slow vertical drift
-        if self.rect.centery < self.target_y:
-            self.rect.y += self.speed * 0.3
+        """Dynamic drift - smooth acceleration toward target points with constant downward flow"""
+        # Decrement direction timer
+        self.drift_direction_timer -= 1
+
+        # Pick new target when timer expires or near target
+        if self.drift_direction_timer <= 0 or abs(self.rect.centerx - self.drift_target_x) < 20:
+            self.drift_target_x = random.randint(100, SCREEN_WIDTH - 100)  # Avoid corners
+            self.drift_direction_timer = random.randint(60, 150)
+
+        # Smoothly accelerate toward target (not instant direction change)
+        dx = self.drift_target_x - self.rect.centerx
+        target_vel = max(-self.speed * 1.5, min(self.speed * 1.5, dx * 0.03))
+        self.drift_velocity_x += (target_vel - self.drift_velocity_x) * 0.08
+        self.rect.x += self.drift_velocity_x
+
+        # CONSTANT DOWNWARD FLOW - enemies always drift down through screen
+        self.rect.y += self.speed * 0.6  # Always moving down
     
     def _move_sine(self):
-        """Smooth sine wave movement"""
+        """Smooth sine wave movement with constant downward flow"""
         amplitude = 80 + 40 * math.sin(self.pattern_timer * 0.3)
         self.rect.centerx = SCREEN_WIDTH // 2 + math.sin(self.pattern_timer * 1.5) * amplitude
-        # Gentle vertical oscillation
-        self.rect.centery = self.target_y + math.sin(self.pattern_timer * 0.8) * 30
-    
+        # CONSTANT DOWNWARD FLOW
+        self.rect.y += self.speed * 0.5
+
     def _move_zigzag(self):
-        """Sharp zigzag pattern"""
+        """Sharp zigzag pattern with constant downward flow"""
         # Change direction every ~60 frames
         direction = 1 if int(self.pattern_timer * 2) % 2 == 0 else -1
         self.rect.x += direction * self.speed * 2
-        # Slight downward movement on direction change
-        if abs(math.sin(self.pattern_timer * 2)) < 0.1:
-            self.rect.y += self.speed
-    
+        # CONSTANT DOWNWARD FLOW
+        self.rect.y += self.speed * 0.7
+
     def _move_circle(self):
-        """Circular strafing pattern"""
+        """Circular strafing pattern with downward drift"""
         self.rect.centerx = self.circle_center_x + math.cos(self.pattern_timer) * self.circle_radius
-        self.rect.centery = self.target_y + math.sin(self.pattern_timer) * (self.circle_radius * 0.5)
-        # Slowly drift the center
+        # Circle while drifting down
+        self.rect.y += self.speed * 0.4
+        # Slowly drift the center down and sideways
         self.circle_center_x += math.sin(self.pattern_timer * 0.2) * 0.5
         self.circle_center_x = max(100, min(SCREEN_WIDTH - 100, self.circle_center_x))
     
     def _move_swoop(self, player_rect):
-        """Dive toward player then retreat"""
+        """Dive toward player then continue through - no retreat, constant flow"""
+        # Always moving down, just faster during dive
         if self.swoop_state == 'enter':
-            if self.rect.centery >= self.target_y:
-                self.swoop_state = 'aim'
-        elif self.swoop_state == 'aim':
-            # Wait and aim at player
-            if self.pattern_timer % (math.pi * 2) < 0.1:
+            self.rect.y += self.speed * 0.8
+            if self.rect.centery >= 150:
                 self.swoop_state = 'dive'
                 if player_rect:
                     self.swoop_target_x = player_rect.centerx
                 else:
                     self.swoop_target_x = SCREEN_WIDTH // 2
         elif self.swoop_state == 'dive':
-            # Dive toward player position
-            self.rect.y += self.speed * 3
+            # Dive toward player position - fast descent
+            self.rect.y += self.speed * 2.5
             dx = self.swoop_target_x - self.rect.centerx
             self.rect.x += max(-self.speed * 2, min(self.speed * 2, dx * 0.1))
-            if self.rect.centery > SCREEN_HEIGHT * 0.6:
-                self.swoop_state = 'retreat'
-        elif self.swoop_state == 'retreat':
-            # Retreat back up
-            self.rect.y -= self.speed * 2
-            if self.rect.centery < self.target_y:
-                self.swoop_state = 'aim'
-        
-        # Horizontal drift while aiming
-        if self.swoop_state == 'aim':
-            self.rect.x += math.sin(self.pattern_timer * 2) * self.speed
-    
+
+        # Horizontal weave
+        self.rect.x += math.sin(self.pattern_timer * 2) * self.speed * 0.5
+
     def _move_flank(self, player_rect):
-        """Move to screen edge then track player"""
-        target_x = 80 if self.flank_side < 0 else SCREEN_WIDTH - 80
-        
-        # Move to flanking position
-        dx = target_x - self.rect.centerx
-        if abs(dx) > 5:
-            self.rect.x += max(-self.speed, min(self.speed, dx * 0.05))
-        
-        # Track player Y position loosely
+        """Flanking run - sweep across screen diagonally, not hover at edges"""
+        # Move diagonally across screen
+        self.rect.x += self.flank_side * self.speed * 1.2
+        # CONSTANT DOWNWARD FLOW
+        self.rect.y += self.speed * 0.6
+
+        # Slight tracking toward player x
         if player_rect:
-            target_y = min(player_rect.centery - 200, 250)
-            target_y = max(80, target_y)
-            dy = target_y - self.rect.centery
-            self.rect.y += max(-self.speed * 0.5, min(self.speed * 0.5, dy * 0.02))
-        
-        # Occasionally switch sides
-        if random.random() < 0.002:
-            self.flank_side *= -1
+            dx = player_rect.centerx - self.rect.centerx
+            self.rect.x += max(-self.speed * 0.3, min(self.speed * 0.3, dx * 0.01))
 
     def _move_swarm(self, player_rect):
-        """Drone swarm behavior - orbit around player position then attack"""
+        """Drone swarm behavior - swirl down while attacking, no hovering"""
         if not player_rect:
             # No player, just drift down
-            self.rect.y += self.speed * 0.5
+            self.rect.y += self.speed * 0.8
             return
 
         # Update swarm approach timer
         self.swarm_approach_timer += 1
 
-        # Calculate swarm center (ahead of player)
-        swarm_center_x = player_rect.centerx
-        swarm_center_y = player_rect.centery - 150  # Orbit above player
+        # ALWAYS drift down - drones flow through screen
+        self.rect.y += self.speed * 0.3
+
+        # Swirling movement while descending
+        self.swarm_angle += self.swarm_speed
+        swirl_x = math.cos(self.swarm_angle) * 40
+        self.rect.x += swirl_x * 0.1
 
         if self.swarm_state == 'orbit':
-            # Orbit around the swarm center
-            self.swarm_angle += self.swarm_speed
-            target_x = swarm_center_x + math.cos(self.swarm_angle) * self.swarm_radius
-            target_y = swarm_center_y + math.sin(self.swarm_angle) * (self.swarm_radius * 0.6)
+            # Track toward player x while descending
+            dx = player_rect.centerx - self.rect.centerx
+            self.rect.x += max(-self.speed, min(self.speed, dx * 0.03))
 
-            # Smooth movement toward orbit position
-            dx = target_x - self.rect.centerx
-            dy = target_y - self.rect.centery
-            self.rect.x += dx * 0.08
-            self.rect.y += dy * 0.08
-
-            # Randomly decide to attack
-            if self.swarm_approach_timer > 120 and random.random() < 0.01:
+            # Switch to attack occasionally
+            if self.swarm_approach_timer > 60 and random.random() < 0.02:
                 self.swarm_state = 'attack'
                 self.swarm_approach_timer = 0
 
         elif self.swarm_state == 'attack':
-            # Dive toward player
+            # Dive toward player - faster descent
             dx = player_rect.centerx - self.rect.centerx
             dy = player_rect.centery - self.rect.centery
             dist = math.sqrt(dx * dx + dy * dy)
             if dist > 0:
-                self.rect.x += (dx / dist) * self.speed * 2.5
-                self.rect.y += (dy / dist) * self.speed * 2.5
+                self.rect.x += (dx / dist) * self.speed * 2
+                self.rect.y += (dy / dist) * self.speed * 1.5
 
-            # Close enough or timer expired, retreat
-            if dist < 50 or self.swarm_approach_timer > 60:
-                self.swarm_state = 'retreat'
-                self.swarm_approach_timer = 0
-
-        elif self.swarm_state == 'retreat':
-            # Retreat back to orbit
-            target_x = swarm_center_x + math.cos(self.swarm_angle) * self.swarm_radius
-            target_y = swarm_center_y + math.sin(self.swarm_angle) * (self.swarm_radius * 0.6)
-
-            dx = target_x - self.rect.centerx
-            dy = target_y - self.rect.centery
-            self.rect.x += dx * 0.05
-            self.rect.y += dy * 0.05
-
-            # Back in orbit
-            dist = math.sqrt(dx * dx + dy * dy)
-            if dist < 30 or self.swarm_approach_timer > 90:
+            # After diving, go back to orbiting descent
+            if self.swarm_approach_timer > 40:
                 self.swarm_state = 'orbit'
                 self.swarm_approach_timer = 0
 
-        # Jitter for organic feel
-        self.rect.x += random.uniform(-0.5, 0.5)
-        self.rect.y += random.uniform(-0.5, 0.5)
+        elif self.swarm_state == 'retreat':
+            # Just continue descending - no upward retreat
+            self.swarm_state = 'orbit'
+            self.swarm_approach_timer = 0
+
+    def _move_flyby(self, player_rect):
+        """
+        Fly diagonally across screen with constant downward flow.
+        No lingering - always moving through.
+        """
+        # ALWAYS move down - no hovering or returning upward
+        self.rect.y += self.speed * 0.5
+
+        if self.flyby_state == 'approach':
+            # Quick approach phase - just get on screen
+            self.rect.y += self.speed * 0.5
+            if self.rect.centery > 60:
+                self.flyby_state = 'flyby'
+
+        elif self.flyby_state == 'flyby':
+            # Fly diagonally across screen
+            self.rect.x += self.flyby_direction * self.speed * 2.5
+
+            # Check if exited sides - respawn from top
+            if self.flyby_direction > 0 and self.rect.left > SCREEN_WIDTH + 50:
+                self.rect.bottom = -random.randint(30, 80)
+                self.rect.right = -30
+                self.flyby_direction = 1
+            elif self.flyby_direction < 0 and self.rect.right < -50:
+                self.rect.bottom = -random.randint(30, 80)
+                self.rect.left = SCREEN_WIDTH + 30
+                self.flyby_direction = -1
+
+        elif self.flyby_state in ['exited', 'returning']:
+            # Skip these states - just keep flying
+            self.flyby_state = 'flyby'
+
+    def _move_attack_run(self, player_rect):
+        """
+        Dive at player and continue through - no pull up, just flow through screen.
+        Respawns from top after exiting bottom.
+        """
+        self.attack_run_timer += 1
+
+        if self.attack_run_state == 'approach':
+            # Quick approach - always moving down
+            self.rect.y += self.speed * 1.2
+
+            # Track player horizontally
+            if player_rect:
+                dx = player_rect.centerx - self.rect.centerx
+                self.rect.x += max(-self.speed, min(self.speed, dx * 0.05))
+
+            # Start dive quickly
+            if self.rect.centery > 100 or self.attack_run_timer > 40:
+                self.attack_run_state = 'dive'
+                if player_rect:
+                    self.attack_run_target = (player_rect.centerx, player_rect.centery)
+                else:
+                    self.attack_run_target = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+                self.attack_run_timer = 0
+
+        elif self.attack_run_state == 'dive':
+            # Dive toward player's position at high speed
+            if self.attack_run_target:
+                dx = self.attack_run_target[0] - self.rect.centerx
+                self.rect.x += max(-self.speed * 2, min(self.speed * 2, dx * 0.08))
+            self.rect.y += self.speed * 3.5  # Fast dive through
+
+        # Handle all other states by returning to approach
+        elif self.attack_run_state in ['pull_up', 'exit', 'returning']:
+            self.attack_run_state = 'approach'
+            self.attack_run_timer = 0
+
+    def _move_diagonal(self):
+        """
+        Move diagonally across screen using patrol_vx/patrol_vy.
+        When exiting screen (bottom or sides), respawn from top.
+        Creates endless waves crossing the screen.
+        """
+        # Use patrol velocities set at spawn
+        vx = getattr(self, 'patrol_vx', 2.0)
+        vy = getattr(self, 'patrol_vy', 2.5)
+
+        self.rect.x += vx
+        self.rect.y += vy
+
+        # Check if exited screen - respawn from top
+        exited = False
+
+        # Exited bottom
+        if self.rect.top > SCREEN_HEIGHT + 50:
+            exited = True
+        # Exited left side (moving left)
+        elif vx < 0 and self.rect.right < -50:
+            exited = True
+        # Exited right side (moving right)
+        elif vx > 0 and self.rect.left > SCREEN_WIDTH + 50:
+            exited = True
+
+        if exited:
+            # Respawn from top, opposite side
+            self.rect.bottom = -30 - random.randint(0, 100)
+            if vx > 0:
+                # Was moving right, spawn on left
+                self.rect.right = -30 - random.randint(0, 50)
+            else:
+                # Was moving left, spawn on right
+                self.rect.left = SCREEN_WIDTH + 30 + random.randint(0, 50)
 
     def _update_boss_behavior(self):
         """Update boss-specific behavior with phases and special attacks"""
@@ -2138,44 +3149,175 @@ class Enemy(pygame.sprite.Sprite):
             dy = 5
 
         if self.is_boss:
-            # Boss fires spread
+            # Boss fires spread with heavy bullets
             for angle in [-20, -10, 0, 10, 20]:
                 rad = math.radians(angle)
                 bdx = dx * math.cos(rad) - dy * math.sin(rad)
                 bdy = dx * math.sin(rad) + dy * math.cos(rad)
-                bullets.append(EnemyBullet(self.rect.centerx, self.rect.bottom, bdx, bdy, 15))
+                bullets.append(EnemyBullet(self.rect.centerx, self.rect.bottom, bdx, bdy, 15,
+                                          style=EnemyBullet.STYLE_BATTLECRUISER))
+
+        # === BATTLECRUISER - MASSIVE LASER BARRAGE ===
+        elif self.enemy_type == 'harbinger':
+            # Harbinger fires overwhelming salvos - 7 heavy beams in sweeping pattern
+            base_angle = math.sin(pygame.time.get_ticks() * 0.003) * 15  # Sweep back and forth
+            for i, angle in enumerate([-30, -20, -10, 0, 10, 20, 30]):
+                rad = math.radians(angle + base_angle)
+                bdx = dx * math.cos(rad) - dy * math.sin(rad)
+                bdy = dx * math.sin(rad) + dy * math.cos(rad)
+                # Stagger spawn positions across the hull
+                spawn_x = self.rect.centerx + (i - 3) * 25
+                bullets.append(EnemyBullet(spawn_x, self.rect.bottom, bdx * 1.2, bdy * 1.2, 18,
+                                          style=EnemyBullet.STYLE_BATTLECRUISER))
+
+        # === CRUISER - OMEN - FAST LASER SALVOS ===
+        elif self.enemy_type == 'omen':
+            # Omen fires rapid triple beams - alternating sides
+            side = 1 if (pygame.time.get_ticks() // 200) % 2 == 0 else -1
+            for i in range(3):
+                angle = side * (5 + i * 8)
+                rad = math.radians(angle)
+                bdx = dx * math.cos(rad) - dy * math.sin(rad)
+                bdy = dx * math.sin(rad) + dy * math.cos(rad)
+                spawn_x = self.rect.centerx + side * (20 + i * 15)
+                bullets.append(EnemyBullet(spawn_x, self.rect.bottom - i * 5, bdx, bdy * 1.1, 14,
+                                          style=EnemyBullet.STYLE_CRUISER))
+
+        # === CRUISER - MALLER - HEAVY ARMOR-PIERCING SALVOS ===
+        elif self.enemy_type == 'maller':
+            # Maller fires slower but devastating dual beams with tracking
+            for offset in [-35, 35]:
+                # Track player more accurately
+                track_dx = player_rect.centerx - (self.rect.centerx + offset)
+                track_dy = player_rect.centery - self.rect.bottom
+                track_dist = math.sqrt(track_dx*track_dx + track_dy*track_dy)
+                if track_dist > 0:
+                    track_dx = track_dx / track_dist * 4.5
+                    track_dy = track_dy / track_dist * 4.5
+                bullets.append(EnemyBullet(self.rect.centerx + offset, self.rect.bottom,
+                                          track_dx, track_dy, 20,
+                                          style=EnemyBullet.STYLE_CRUISER))
+            # Occasional center mega-beam
+            if random.random() < 0.3:
+                bullets.append(EnemyBullet(self.rect.centerx, self.rect.bottom,
+                                          dx * 0.8, dy * 1.0, 25,
+                                          style=EnemyBullet.STYLE_BATTLECRUISER))
+
+        # === BOMBER - PLASMA TORPEDOES ===
+        elif self.enemy_type == 'bomber':
+            # Slow but powerful plasma ball
+            bullets.append(EnemyBullet(self.rect.centerx, self.rect.bottom,
+                                      dx * 0.4, dy * 0.6, 30,
+                                      style=EnemyBullet.STYLE_PLASMA))
+
         elif self.pattern == self.PATTERN_SWARM and hasattr(self, 'swarm_state') and self.swarm_state == 'attack':
             # Attacking drones fire faster, more accurate shots
-            speed = 7  # Faster bullets
             bullets.append(EnemyBullet(self.rect.centerx, self.rect.bottom, dx * 0.8, dy * 1.4, 8))
+
         else:
             # Add slight inaccuracy for regular enemies
             spread = random.uniform(-0.3, 0.3)
             bullets.append(EnemyBullet(self.rect.centerx, self.rect.bottom, dx * 0.3 + spread, dy, 10))
 
+        # === HARDPOINT FIRING ===
+        # Cruisers/BCs with hardpoints fire from each active turret
+        if self.has_hardpoints:
+            for hardpoint in self.get_active_hardpoints():
+                hp_bullets = hardpoint.shoot(player_rect)
+                bullets.extend(hp_bullets)
+
         return bullets
     
     def take_damage(self, bullet):
-        """Take damage from bullet, return True if destroyed"""
+        """Take damage from bullet, return True if destroyed
+
+        For ships with hardpoints (cruisers/BCs):
+        - Hardpoints must be destroyed first
+        - Main hull takes 90% reduced damage while hardpoints active
+        - Once hardpoints gone, full damage to structure
+        """
         damage = bullet.damage
-        
+
+        # === HARDPOINT DAMAGE REDUCTION ===
+        # If ship has active hardpoints, main hull is heavily protected
+        if self.has_hardpoints and not self.check_hardpoints_destroyed():
+            # Hull takes only 10% damage while hardpoints active
+            # This encourages targeting hardpoints first
+            damage = damage * 0.1
+
         # Apply multipliers
         if self.shields > 0:
             damage *= bullet.shield_mult
             absorbed = min(self.shields, damage)
             self.shields -= absorbed
             damage = (damage - absorbed) / bullet.shield_mult
-        
+
         if damage > 0 and self.armor > 0:
             damage *= bullet.armor_mult
             absorbed = min(self.armor, damage)
             self.armor -= absorbed
             damage = (damage - absorbed) / bullet.armor_mult
-        
+
         if damage > 0:
             self.hull -= damage
-        
+
+        # Trigger damage flash
+        self.damage_flash_timer = 8
+
+        # Spawn smoke particles when hull is damaged
+        total_health = self.max_shields + self.max_armor + self.max_hull
+        current_health = max(0, self.shields) + max(0, self.armor) + max(0, self.hull)
+        damage_pct = current_health / total_health if total_health > 0 else 0
+
+        # Add smoke/sparks based on damage level
+        if damage_pct < 0.7 and len(self.smoke_particles) < 8:
+            # Spawn smoke at random position on ship
+            w, h = self.image.get_size()
+            self.smoke_particles.append({
+                'x': random.randint(-w//3, w//3),
+                'y': random.randint(-h//3, h//3),
+                'alpha': 180,
+                'drift_x': random.uniform(-0.3, 0.3),
+                'size': random.randint(4, 10)
+            })
+
+        # Update damage visuals
+        self._update_damage_visuals(damage_pct)
+
         return self.hull <= 0
+
+    def _update_damage_visuals(self, damage_pct):
+        """Update ship image based on damage level"""
+        # Start with base image
+        self.image = self.base_image.copy()
+        w, h = self.image.get_size()
+
+        # Add hull cracks/damage when below 70% health
+        if damage_pct < 0.7:
+            # Dark damage marks
+            num_marks = int((1 - damage_pct) * 8)
+            for _ in range(num_marks):
+                mx = random.randint(w//4, 3*w//4)
+                my = random.randint(h//4, 3*h//4)
+                mark_color = (30, 25, 20, 120)
+                pygame.draw.circle(self.image, mark_color, (mx, my), random.randint(2, 5))
+
+        # Add fire glow when below 40% health
+        if damage_pct < 0.4:
+            fire_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            num_fires = int((0.4 - damage_pct) * 10)
+            for _ in range(num_fires):
+                fx = random.randint(w//4, 3*w//4)
+                fy = random.randint(h//4, 3*h//4)
+                fire_colors = [(255, 100, 30, 80), (255, 180, 50, 60), (255, 60, 20, 100)]
+                pygame.draw.circle(fire_surf, random.choice(fire_colors), (fx, fy), random.randint(3, 8))
+            self.image.blit(fire_surf, (0, 0))
+
+        # Critical damage - red tint overlay when below 20%
+        if damage_pct < 0.2:
+            crit_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            crit_surf.fill((255, 50, 30, 40))
+            self.image.blit(crit_surf, (0, 0))
 
 
 class RefugeePod(pygame.sprite.Sprite):
@@ -2300,6 +3442,17 @@ class Powerup(pygame.sprite.Sprite):
         # Initialize image (will be animated in update)
         self.image = pygame.Surface((self.size + 20, self.size + 20), pygame.SRCALPHA)
         self.image.blit(self.base_surface, (2, 2))
+
+        # Orbital particles for enhanced visuals
+        self.orbitals = []
+        num_orbitals = 4
+        for i in range(num_orbitals):
+            self.orbitals.append({
+                'angle': i * (2 * math.pi / num_orbitals),
+                'radius': 16,
+                'speed': 0.08 + random.uniform(-0.01, 0.01),
+                'size': random.randint(2, 4)
+            })
 
     def _create_base_image(self):
         """Create the base powerup image with icon"""
@@ -2443,13 +3596,26 @@ class Powerup(pygame.sprite.Sprite):
         pulse = 0.7 + 0.3 * math.sin(self.pulse_timer)
         glow_size = int(8 + 4 * math.sin(self.pulse_timer))
 
-        size = self.size + 20
+        size = self.size + 24  # Extra space for orbitals
         self.image = pygame.Surface((size, size), pygame.SRCALPHA)
         cx, cy = size // 2, size // 2
 
-        # Outer glow pulse
+        # Outer glow pulse with rays
         glow_color = (*self.color, int(60 * pulse))
         pygame.draw.circle(self.image, glow_color, (cx, cy), self.size//2 + glow_size)
+
+        # Draw orbital particles
+        for orb in self.orbitals:
+            orb['angle'] += orb['speed']
+            ox = cx + math.cos(orb['angle']) * orb['radius']
+            oy = cy + math.sin(orb['angle']) * orb['radius']
+            # Orbital glow
+            pygame.draw.circle(self.image, (*self.color, 100), (int(ox), int(oy)), orb['size'] + 2)
+            pygame.draw.circle(self.image, (255, 255, 255), (int(ox), int(oy)), orb['size'])
+
+        # Orbital trail ring
+        ring_alpha = int(40 + 20 * pulse)
+        pygame.draw.circle(self.image, (*self.color, ring_alpha), (cx, cy), 16, 1)
 
         # Middle glow
         glow_color2 = (*self.color, int(100 * pulse))
@@ -2464,17 +3630,25 @@ class Powerup(pygame.sprite.Sprite):
         self.image.blit(self.base_surface, icon_rect)
 
         # Sparkle effect
-        if random.random() < 0.1:
-            sx = cx + random.randint(-10, 10)
-            sy = cy + random.randint(-10, 10)
-            pygame.draw.circle(self.image, (255, 255, 255), (sx, sy), 2)
+        if random.random() < 0.15:
+            sx = cx + random.randint(-12, 12)
+            sy = cy + random.randint(-12, 12)
+            pygame.draw.circle(self.image, (255, 255, 255, 200), (sx, sy), random.randint(1, 3))
+
+        # Light rays emanating from center
+        if random.random() < 0.2:
+            ray_angle = random.uniform(0, math.pi * 2)
+            ray_len = random.randint(12, 20)
+            rx = cx + math.cos(ray_angle) * ray_len
+            ry = cy + math.sin(ray_angle) * ray_len
+            pygame.draw.line(self.image, (*self.color, 80), (cx, cy), (int(rx), int(ry)), 1)
 
         self.rect = self.image.get_rect(center=(self.rect.centerx, self.rect.centery + self.bob_offset))
 
 
 class Explosion(pygame.sprite.Sprite):
-    """Visual explosion effect"""
-    
+    """Polished explosion with shockwave, debris, and layered fire"""
+
     def __init__(self, x, y, size=30, color=COLOR_AMARR_ACCENT):
         super().__init__()
         self.x = x
@@ -2483,20 +3657,104 @@ class Explosion(pygame.sprite.Sprite):
         self.max_size = size
         self.color = color
         self.frame = 0
-        self.max_frames = 20
+        self.max_frames = 25
+
+        # Generate random debris particles
+        self.debris = []
+        num_debris = min(12, size // 4 + 3)
+        for _ in range(num_debris):
+            angle = random.uniform(0, math.pi * 2)
+            speed = random.uniform(2, 5) * (size / 30)
+            self.debris.append({
+                'x': 0, 'y': 0,
+                'vx': math.cos(angle) * speed,
+                'vy': math.sin(angle) * speed,
+                'size': random.randint(2, max(3, size // 8)),
+                'life': random.randint(15, 25)
+            })
+
         self._update_image()
-    
+
     def _update_image(self):
         progress = self.frame / self.max_frames
-        current_size = int(self.size * (1 + progress))
-        alpha = int(255 * (1 - progress))
-        
-        self.image = pygame.Surface((current_size * 2, current_size * 2), pygame.SRCALPHA)
-        color_with_alpha = (*self.color[:3], alpha)
-        pygame.draw.circle(self.image, color_with_alpha, 
-                          (current_size, current_size), current_size)
+
+        # Canvas size expands with explosion
+        canvas_size = int(self.size * 3 * (1 + progress * 0.5))
+        self.image = pygame.Surface((canvas_size, canvas_size), pygame.SRCALPHA)
+        cx, cy = canvas_size // 2, canvas_size // 2
+
+        # === SHOCKWAVE RING ===
+        if progress < 0.6:
+            ring_progress = progress / 0.6
+            ring_radius = int(self.size * 0.5 + self.size * 1.5 * ring_progress)
+            ring_alpha = int(120 * (1 - ring_progress))
+            ring_width = max(2, int(4 * (1 - ring_progress)))
+            pygame.draw.circle(self.image, (255, 255, 255, ring_alpha),
+                             (cx, cy), ring_radius, ring_width)
+
+        # === OUTER FIRE (orange/red) ===
+        if progress < 0.8:
+            fire_progress = min(1.0, progress / 0.5)
+            outer_size = int(self.size * (0.8 + fire_progress * 0.8))
+            outer_alpha = int(180 * (1 - progress / 0.8))
+
+            # Flickering outer fire
+            for i in range(3):
+                offset_x = random.randint(-3, 3)
+                offset_y = random.randint(-3, 3)
+                fire_size = outer_size + random.randint(-4, 4)
+                pygame.draw.circle(self.image, (255, 100, 30, outer_alpha // 2),
+                                 (cx + offset_x, cy + offset_y), fire_size)
+
+            pygame.draw.circle(self.image, (255, 150, 50, outer_alpha),
+                             (cx, cy), int(outer_size * 0.85))
+
+        # === INNER CORE (bright yellow/white) ===
+        if progress < 0.5:
+            core_progress = progress / 0.5
+            core_size = int(self.size * 0.6 * (1 - core_progress * 0.5))
+            core_alpha = int(255 * (1 - core_progress))
+
+            pygame.draw.circle(self.image, (255, 220, 100, core_alpha),
+                             (cx, cy), core_size)
+            pygame.draw.circle(self.image, (255, 255, 200, core_alpha),
+                             (cx, cy), int(core_size * 0.6))
+            pygame.draw.circle(self.image, (255, 255, 255, core_alpha),
+                             (cx, cy), int(core_size * 0.3))
+
+        # === DEBRIS PARTICLES ===
+        for d in self.debris:
+            if d['life'] > 0:
+                d['x'] += d['vx']
+                d['y'] += d['vy']
+                d['vy'] += 0.15  # Gravity
+                d['life'] -= 1
+
+                debris_alpha = int(200 * (d['life'] / 25))
+                debris_x = int(cx + d['x'])
+                debris_y = int(cy + d['y'])
+
+                if 0 <= debris_x < canvas_size and 0 <= debris_y < canvas_size:
+                    # Hot debris with glow
+                    pygame.draw.circle(self.image, (255, 200, 100, debris_alpha // 2),
+                                     (debris_x, debris_y), d['size'] + 2)
+                    pygame.draw.circle(self.image, (255, 150, 50, debris_alpha),
+                                     (debris_x, debris_y), d['size'])
+
+        # === SMOKE (late stage) ===
+        if progress > 0.4:
+            smoke_progress = (progress - 0.4) / 0.6
+            smoke_alpha = int(60 * (1 - smoke_progress))
+            smoke_size = int(self.size * (1 + smoke_progress))
+
+            for i in range(2):
+                smoke_x = cx + random.randint(-8, 8)
+                smoke_y = cy + random.randint(-8, 8) - int(smoke_progress * 10)
+                pygame.draw.circle(self.image, (80, 60, 50, smoke_alpha),
+                                 (smoke_x, smoke_y), smoke_size)
+
         self.rect = self.image.get_rect(center=(self.x, self.y))
-    
+
     def update(self):
         self.frame += 1
         if self.frame >= self.max_frames:

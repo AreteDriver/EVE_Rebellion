@@ -127,43 +127,57 @@ class SoundGenerator:
         return samples * envelope
     
     def _make_autocannon(self):
-        """Punchy projectile weapon sound"""
-        duration = 0.08
+        """Chunky Minmatar autocannon - heavy, industrial, satisfying"""
+        duration = 0.12
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
-        # Low frequency thump + noise burst
-        freq = 150
-        wave = np.sin(2 * np.pi * freq * t) * 0.5
-        wave += np.sin(2 * np.pi * freq * 2 * t) * 0.3
-        
-        # Add noise for texture
-        noise = np.random.uniform(-0.3, 0.3, len(t))
-        wave += noise * np.exp(-t * 40)
-        
-        # Sharp attack, quick decay
-        envelope = np.exp(-t * 50)
-        wave *= envelope * 0.4
-        
+
+        # Deep thump base (industrial Minmatar feel)
+        freq = 100
+        wave = np.sin(2 * np.pi * freq * t) * 0.6
+        wave += np.sin(2 * np.pi * freq * 1.5 * t) * 0.4
+
+        # Mid punch for presence
+        wave += np.sin(2 * np.pi * 250 * t) * np.exp(-t * 60) * 0.5
+
+        # High frequency crack (shell casing)
+        crack = np.sin(2 * np.pi * 800 * t) * np.exp(-t * 100) * 0.3
+
+        # Heavy mechanical noise burst
+        noise = np.random.uniform(-0.5, 0.5, len(t))
+        noise_filtered = np.convolve(noise, np.ones(20)/20, mode='same')
+        wave += noise_filtered * np.exp(-t * 35) * 0.4
+        wave += crack
+
+        # Punchy envelope - hard attack, quick decay
+        envelope = np.exp(-t * 40) * (1 - np.exp(-t * 300))
+        wave *= envelope * 0.55
+
         return self._numpy_to_sound(wave)
     
     def _make_rocket(self):
-        """Whooshing rocket launch"""
-        duration = 0.25
+        """Aggressive rocket launch - ignition burst + whoosh"""
+        duration = 0.3
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
-        # Rising frequency sweep
-        freq = 100 + t * 800
-        wave = np.sin(2 * np.pi * freq * t) * 0.3
-        
-        # Add white noise for thrust
-        noise = np.random.uniform(-0.5, 0.5, len(t))
-        noise_env = np.exp(-t * 8)
-        wave += noise * noise_env * 0.5
-        
-        # Envelope
-        envelope = np.exp(-t * 6) * (1 - np.exp(-t * 50))
-        wave *= envelope * 0.5
-        
+
+        # Ignition burst (initial pop)
+        ignition = np.sin(2 * np.pi * 200 * t) * np.exp(-t * 80) * 0.5
+        ignition += np.random.uniform(-0.4, 0.4, len(t)) * np.exp(-t * 60) * 0.4
+
+        # Rising frequency whoosh (rocket accelerating away)
+        freq = 150 + t * 1000
+        whoosh = np.sin(2 * np.pi * freq * t) * 0.35
+
+        # Thrust noise (white noise filtered)
+        noise = np.random.uniform(-0.6, 0.6, len(t))
+        noise_filtered = np.convolve(noise, np.ones(30)/30, mode='same')
+        thrust = noise_filtered * np.exp(-t * 5) * 0.45
+
+        wave = ignition + whoosh + thrust
+
+        # Envelope - sharp attack, gradual fade
+        envelope = (1 - np.exp(-t * 100)) * np.exp(-t * 5)
+        wave *= envelope * 0.55
+
         return self._numpy_to_sound(wave)
     
     def _make_ammo_switch(self):
@@ -181,18 +195,29 @@ class SoundGenerator:
         return self._numpy_to_sound(wave)
     
     def _make_laser(self):
-        """Amarr laser beam sound"""
-        duration = 0.15
+        """Amarr golden laser - crystalline, pure, holy-sounding"""
+        duration = 0.18
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
-        # High frequency with slight wobble
-        freq = 600 + np.sin(2 * np.pi * 30 * t) * 100
-        wave = np.sin(2 * np.pi * freq * t) * 0.3
-        wave += np.sin(2 * np.pi * freq * 1.5 * t) * 0.15
-        
-        envelope = np.exp(-t * 20)
-        wave *= envelope * 0.25
-        
+
+        # Pure crystalline tone (golden beam)
+        freq = 800
+        wave = np.sin(2 * np.pi * freq * t) * 0.35
+        wave += np.sin(2 * np.pi * freq * 1.5 * t) * 0.2  # Perfect fifth
+        wave += np.sin(2 * np.pi * freq * 2 * t) * 0.15   # Octave
+
+        # Slight shimmer/pulse
+        shimmer = 1 + 0.15 * np.sin(2 * np.pi * 50 * t)
+        wave *= shimmer
+
+        # Energy buildup at start
+        buildup = np.sin(2 * np.pi * 1600 * t) * np.exp(-t * 40) * 0.2
+
+        wave += buildup
+
+        # Clean envelope
+        envelope = (1 - np.exp(-t * 100)) * np.exp(-t * 15)
+        wave *= envelope * 0.3
+
         return self._numpy_to_sound(wave)
     
     def _make_explosion(self, duration, base_freq):

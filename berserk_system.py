@@ -302,41 +302,104 @@ class BerserkSystem:
             label_rect = label_surf.get_rect(topright=(x, y + 30))
             surface.blit(label_surf, label_rect)
 
-        # Combo indicator (show if combo > 2)
-        if self.combo_count >= 3:
+        # === PROMINENT COMBO DISPLAY ===
+        # Show combo counter even at low counts for feedback
+        if self.combo_count >= 2:
             combo_y = y + 55
             combo_bonus = self.get_combo_bonus()
 
-            # Combo count with color based on level
-            if self.combo_count >= 50:
-                combo_color = (255, 50, 255)  # Purple for mega combo
+            # Combo count with color and title based on level
+            if self.combo_count >= 100:
+                combo_color = (255, 50, 255)  # Purple
+                combo_title = "GODLIKE!"
+                font_scale = 1.5
+            elif self.combo_count >= 50:
+                combo_color = (255, 50, 200)  # Magenta
+                combo_title = "UNSTOPPABLE!"
+                font_scale = 1.4
+            elif self.combo_count >= 30:
+                combo_color = (255, 80, 80)  # Red
+                combo_title = "RAMPAGE!"
+                font_scale = 1.3
             elif self.combo_count >= 20:
-                combo_color = (255, 100, 100)  # Red for big combo
+                combo_color = (255, 120, 50)  # Orange-red
+                combo_title = "DOMINATING!"
+                font_scale = 1.2
             elif self.combo_count >= 10:
-                combo_color = (255, 200, 50)  # Orange for medium combo
+                combo_color = (255, 200, 50)  # Orange
+                combo_title = "KILLING SPREE!"
+                font_scale = 1.1
+            elif self.combo_count >= 5:
+                combo_color = (200, 255, 100)  # Yellow-green
+                combo_title = "COMBO!"
+                font_scale = 1.0
             else:
-                combo_color = (100, 255, 100)  # Green for starting combo
+                combo_color = (100, 255, 100)  # Green
+                combo_title = ""
+                font_scale = 1.0
 
-            combo_text = f"{self.combo_count} COMBO"
-            combo_surf = font_small.render(combo_text, True, combo_color)
-            combo_rect = combo_surf.get_rect(topright=(x, combo_y))
-            surface.blit(combo_surf, combo_rect)
+            # Draw combo title (milestone names)
+            if combo_title:
+                title_font = pygame.font.Font(None, int(28 * font_scale))
+                title_surf = title_font.render(combo_title, True, combo_color)
+                title_rect = title_surf.get_rect(topright=(x, combo_y - 5))
 
-            # Show bonus if active
+                # Glow effect for high combos
+                if self.combo_count >= 10:
+                    glow_surf = pygame.Surface((title_surf.get_width() + 10, title_surf.get_height() + 10), pygame.SRCALPHA)
+                    glow_color = (*combo_color[:3], 60)
+                    pygame.draw.rect(glow_surf, glow_color, glow_surf.get_rect(), border_radius=5)
+                    surface.blit(glow_surf, (title_rect.x - 5, title_rect.y - 5))
+
+                surface.blit(title_surf, title_rect)
+                combo_y += 22
+
+            # Large combo count number
+            count_font = pygame.font.Font(None, int(36 * font_scale))
+            combo_text = f"{self.combo_count}x"
+
+            # Pulsing effect for high combos
+            if self.combo_count >= 10:
+                pulse = 1.0 + 0.1 * math.sin(pygame.time.get_ticks() * 0.01)
+                temp_surf = count_font.render(combo_text, True, combo_color)
+                w, h = temp_surf.get_size()
+                scaled = pygame.transform.scale(temp_surf, (int(w * pulse), int(h * pulse)))
+                combo_rect = scaled.get_rect(topright=(x, combo_y))
+                surface.blit(scaled, combo_rect)
+            else:
+                combo_surf = count_font.render(combo_text, True, combo_color)
+                combo_rect = combo_surf.get_rect(topright=(x, combo_y))
+                surface.blit(combo_surf, combo_rect)
+
+            # Show bonus percentage
             if combo_bonus > 1.0:
-                bonus_text = f"+{int((combo_bonus - 1) * 100)}%"
+                bonus_text = f"+{int((combo_bonus - 1) * 100)}% SCORE"
                 bonus_surf = font_small.render(bonus_text, True, combo_color)
-                bonus_rect = bonus_surf.get_rect(topright=(x, combo_y + 18))
+                bonus_rect = bonus_surf.get_rect(topright=(x, combo_y + 30))
                 surface.blit(bonus_surf, bonus_rect)
 
-            # Combo timer bar
+            # Combo timer bar (shows time remaining to keep combo)
             timer_pct = self.combo_timer / self.combo_timeout
-            bar_width = 60
-            bar_height = 4
+            bar_width = 80
+            bar_height = 6
             bar_x = x - bar_width
-            bar_y = combo_y + 38
-            pygame.draw.rect(surface, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height))
-            pygame.draw.rect(surface, combo_color, (bar_x, bar_y, int(bar_width * timer_pct), bar_height))
+            bar_y = combo_y + 50
+
+            # Background
+            pygame.draw.rect(surface, (30, 30, 40), (bar_x - 1, bar_y - 1, bar_width + 2, bar_height + 2), border_radius=3)
+            pygame.draw.rect(surface, (50, 50, 60), (bar_x, bar_y, bar_width, bar_height), border_radius=2)
+
+            # Fill with urgency coloring
+            if timer_pct < 0.3:
+                fill_color = (255, 80, 80)  # Red when low
+            elif timer_pct < 0.6:
+                fill_color = (255, 200, 80)  # Orange when medium
+            else:
+                fill_color = combo_color
+
+            fill_width = int(bar_width * timer_pct)
+            if fill_width > 0:
+                pygame.draw.rect(surface, fill_color, (bar_x, bar_y, fill_width, bar_height), border_radius=2)
 
     def draw_danger_zones(self, surface: pygame.Surface, player_pos: Tuple[int, int],
                          alpha: int = 60):
