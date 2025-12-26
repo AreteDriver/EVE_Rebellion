@@ -2,30 +2,48 @@
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 
 # Virtual environment
 .venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Credentials/tokens (never commit)
+*Token*.txt
+*token*.txt
+*.key
+*.pem
+
+# Save data (user-specific)
+achievements.json
+highscores.json
+settings.json
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
 
 # BFG Cleanup artifacts
 ..bfg-report/
 bfg.jar
-keep_these_ships.txt
-
-# Migration scripts and documentation (temporary)
-migrate_ships_to_eve_ships.sh
-cleanup_eve_rebellion.sh
-storage_crisis_fix.sh
-verify_svgs.sh
-build_with_assets.sh
-EVE_Ships_README.md
-EXECUTION_GUIDE.md
-GITHUB_AUTH_FIX.md
-PACKAGE_SUMMARY.md
-STORAGE_CRISIS_SOLUTION.md
-gitignore_updated
 
 # Backup directories
-assets/minmatar_rebellion/svg/top_BACKUP/
-# Save data
-achievements.json
-highscores.json
+*_BACKUP/
