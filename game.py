@@ -11,6 +11,9 @@ from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, Wingman,
 from sounds import get_sound_manager, get_music_manager, play_sound
 from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground, AmarrArchon
+from parallax_background import ParallaxBackground as StageParallaxBackground
+from visual_effects import (ShipDamageEffects, EnhancedExplosion,
+                            get_ship_damage_effects, clear_ship_damage_effects)
 from expansion.capital_ship_enemy import CapitalShipEnemy
 from berserk_system import BerserkSystem
 from cinematic_system import CinematicManager, TribeType
@@ -393,6 +396,10 @@ class Game:
 
         self.space_background = SpaceBackground(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.archon_carrier = AmarrArchon(SCREEN_WIDTH, SCREEN_HEIGHT)
+
+        # Stage-based parallax background system
+        self.stage_background = StageParallaxBackground(SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.player_dx = 0  # Track player horizontal movement for parallax
         pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
 
         pygame.display.set_caption("Minmatar Rebellion")
@@ -580,6 +587,15 @@ class Game:
         self.player = Player()
         self.all_sprites.add(self.player)
 
+        # Player damage visual effects
+        self.player_damage_effects = ShipDamageEffects()
+
+        # Enhanced explosions list (for big ships with secondary explosions)
+        self.enhanced_explosions = []
+
+        # Clear any lingering ship damage effects
+        clear_ship_damage_effects()
+
         # Apply selected ship bonuses
         self.apply_ship_selection()
 
@@ -603,6 +619,10 @@ class Game:
         # Initialize environmental hazards for first stage
         self.hazards.clear()
         self.hazards.set_stage_hazards(self.current_stage)
+
+        # Set background environment for current stage (1-indexed for display)
+        if hasattr(self, 'stage_background'):
+            self.stage_background.set_stage(self.current_stage + 1)
 
         # Messages
         self.message = ""
@@ -2562,6 +2582,9 @@ class Game:
                 # Set up hazards for new stage
                 self.hazards.clear()
                 self.hazards.set_stage_hazards(self.current_stage)
+                # Transition background to new stage environment
+                if hasattr(self, 'stage_background'):
+                    self.stage_background.transition_to_stage(self.current_stage + 1)
                 self.state = 'playing'
                 # Reset wave progression trackers for new stage
                 self._bc_spawned_this_stage = False
@@ -2584,6 +2607,12 @@ class Game:
             self.space_background.update(2.0)
         if hasattr(self, "archon_carrier"):
             self.archon_carrier.update()
+
+        # Update stage-based parallax background with player movement
+        if hasattr(self, 'stage_background'):
+            player_dx = getattr(self, 'player_dx', 0)
+            self.stage_background.update(scroll_speed=1.5, player_dx=player_dx)
+            self.player_dx = 0  # Reset for next frame
 
         """Update game state"""
         # Handle splash screen
@@ -2611,9 +2640,15 @@ class Game:
         # Track overheat state for powerup expiration feedback
         was_overheated = getattr(self, '_was_overheated', False)
 
+        # Track player position for parallax effect
+        player_x_before = self.player.rect.x
+
         # Update player
         self.player.update(keys)
         self.player.update_ability_cooldown()
+
+        # Calculate horizontal movement for background parallax
+        self.player_dx = self.player.rect.x - player_x_before
 
         # Update Jaguar shield deflector timers
         if hasattr(self.player, 'update_frontal_shield'):
@@ -2641,6 +2676,17 @@ class Game:
             exhaust_x = self.player.rect.centerx + random.randint(-5, 5)
             exhaust_y = self.player.rect.bottom - 5
             self.particle_emitter.emit_engine_exhaust(exhaust_x, exhaust_y, COLOR_MINMATAR_ACCENT)
+
+        # Update player ship damage visual effects (smoke, sparks, fire)
+        if hasattr(self, 'player_damage_effects'):
+            shield_pct = self.player.shields / max(self.player.max_shields, 1)
+            armor_pct = self.player.armor / max(self.player.max_armor, 1)
+            hull_pct = self.player.hull / max(self.player.max_hull, 1)
+            self.player_damage_effects.update(
+                self.player.rect.centerx, self.player.rect.centery,
+                self.player.rect.width, self.player.rect.height,
+                shield_pct, armor_pct, hull_pct
+            )
 
         # Track movement for tutorial
         if self.tutorial.active:
@@ -2777,6 +2823,18 @@ class Game:
                 for hardpoint in enemy.get_hardpoints():
                     hardpoint.update()
 
+            # Update enemy damage visual effects
+            enemy_id = id(enemy)
+            enemy_effects = get_ship_damage_effects(enemy_id)
+            shield_pct = getattr(enemy, 'shields', 0) / max(getattr(enemy, 'max_shields', 1), 1)
+            armor_pct = getattr(enemy, 'armor', 0) / max(getattr(enemy, 'max_armor', 1), 1)
+            hull_pct = getattr(enemy, 'hull', 100) / max(getattr(enemy, 'max_hull', 100), 1)
+            enemy_effects.update(
+                enemy.rect.centerx, enemy.rect.centery,
+                enemy.rect.width, enemy.rect.height,
+                shield_pct, armor_pct, hull_pct
+            )
+
         # Update wingmen and have them shoot
         for wingman in self.wingmen:
             wingman.update()
@@ -2808,6 +2866,10 @@ class Game:
         self.particles.update()
         self.damage_numbers.update()
         self.screen_effects.update()
+
+        # Update enhanced explosions
+        if hasattr(self, 'enhanced_explosions'):
+            self.enhanced_explosions = [e for e in self.enhanced_explosions if e.update()]
 
         # Update visual effects
         self.warp_transition.update()
@@ -3042,12 +3104,27 @@ class Game:
                         self.shake.add(SHAKE_SMALL)
                         self.play_sound('explosion_small', 0.6)
                     
-                    # Create explosion
+                    # Create explosion - enhanced for bosses and large ships
                     exp_size = 30 if not enemy.is_boss else 80
-                    explosion = Explosion(enemy.rect.centerx, enemy.rect.centery,
-                                        exp_size, COLOR_AMARR_ACCENT)
-                    self.effects.add(explosion)
-                    self.all_sprites.add(explosion)
+                    is_large_ship = enemy.is_boss or enemy.enemy_type in ['omen', 'maller', 'harbinger', 'apocalypse', 'abaddon']
+
+                    if is_large_ship and hasattr(self, 'enhanced_explosions'):
+                        # Use enhanced explosion with secondary explosions for big ships
+                        enhanced_exp = EnhancedExplosion(
+                            enemy.rect.centerx, enemy.rect.centery,
+                            exp_size, COLOR_AMARR_ACCENT,
+                            has_secondaries=enemy.is_boss
+                        )
+                        self.enhanced_explosions.append(enhanced_exp)
+                    else:
+                        # Normal explosion for small ships
+                        explosion = Explosion(enemy.rect.centerx, enemy.rect.centery,
+                                            exp_size, COLOR_AMARR_ACCENT)
+                        self.effects.add(explosion)
+                        self.all_sprites.add(explosion)
+
+                    # Clear enemy damage effects
+                    clear_ship_damage_effects(id(enemy))
 
                     # Emit particle death explosion
                     if enemy.is_boss:
@@ -3835,9 +3912,14 @@ class Game:
         self.render_surface.blit(hint_text, hint_rect)
 
     def draw_game(self):
-        # Draw space background
-        if hasattr(self, "space_background"):
-            self.space_background.draw(self.render_surface)
+        # Draw stage-based parallax background (nebulae, stars, stage environment, traffic)
+        if hasattr(self, 'stage_background'):
+            self.stage_background.draw(self.render_surface, pygame.time.get_ticks())
+        else:
+            # Fallback to old background
+            if hasattr(self, "space_background"):
+                self.space_background.draw(self.render_surface)
+
         # Draw Archon carrier in background (only during gameplay)
         if hasattr(self, "archon_carrier") and self.state == 'playing':
             self.archon_carrier.draw(self.render_surface)
@@ -3863,6 +3945,18 @@ class Game:
                 for hardpoint in enemy.get_active_hardpoints():
                     if not hardpoint.destroyed:
                         self.render_surface.blit(hardpoint.image, hardpoint.rect)
+
+        # Draw enemy damage effects (smoke, sparks, fire)
+        for enemy in self.enemies:
+            enemy_id = id(enemy)
+            from visual_effects import _ship_damage_effects
+            if enemy_id in _ship_damage_effects:
+                _ship_damage_effects[enemy_id].draw(self.render_surface)
+
+        # Draw enhanced explosions
+        if hasattr(self, 'enhanced_explosions'):
+            for exp in self.enhanced_explosions:
+                exp.draw(self.render_surface)
 
         # Draw player powerup glow effects
         self._draw_player_powerup_glow()
@@ -3950,6 +4044,10 @@ class Game:
             self.render_surface.blit(self.player.image, self.player.rect)
         else:
             self.render_surface.blit(self.player.image, self.player.rect)
+
+        # Draw player damage effects (smoke, sparks, fire when damaged)
+        if hasattr(self, 'player_damage_effects'):
+            self.player_damage_effects.draw(self.render_surface)
 
         # Draw particle effects
         self.particles.draw(self.render_surface)
@@ -4172,7 +4270,7 @@ class Game:
         # Heat warning symbol (熱) above HUD when at 75%+ heat
         heat_pct = self.player.heat / self.player.max_heat
         if heat_pct >= 0.75:
-            self._draw_heat_warning_symbol(cx, cy - 85, heat_pct)
+            self._draw_heat_warning_symbol(cx, cy - 55, heat_pct)
 
         # Minimal HUD mode: only show status panel and score
         if self.hud_mode == 1:
@@ -4347,65 +4445,76 @@ class Game:
                               self.font_small, self.font_large)
 
     def _draw_eve_status_panel(self, cx, cy):
-        """Draw EVE Online-style capacitor wheel with concentric health rings"""
+        """Draw polished EVE Online-style capacitor wheel with concentric health rings"""
         now = pygame.time.get_ticks()
 
-        # Ring dimensions (EVE style - concentric rings)
+        # Ring dimensions (EVE style - concentric rings) - compact 50% size
         # Outer to inner: Shield -> Armor -> Hull -> Heat/Capacitor
-        shield_radius = 75
-        armor_radius = 62
-        hull_radius = 49
-        heat_radius = 36
-        ring_thickness = 10
+        shield_radius = 39
+        armor_radius = 32
+        hull_radius = 25
+        heat_radius = 17
+        ring_thickness = 6
 
-        # Panel surface for compositing
-        panel_size = shield_radius * 2 + 40
+        # Panel surface for compositing (larger for glow)
+        panel_size = shield_radius * 2 + 60
         panel_surf = pygame.Surface((panel_size, panel_size), pygame.SRCALPHA)
         panel_cx, panel_cy = panel_size // 2, panel_size // 2
 
-        # Calculate percentages
+        # Calculate percentages with smooth interpolation
         shield_pct = self.player.shields / max(self.player.max_shields, 1)
         armor_pct = self.player.armor / max(self.player.max_armor, 1)
         hull_pct = self.player.hull / max(self.player.max_hull, 1)
         heat_pct = self.player.heat / self.player.max_heat
 
-        # === OUTER RING: SHIELDS (Blue) ===
+        # === OUTER GLOW (subtle EVE-style ambient glow) ===
+        self._draw_wheel_glow(panel_surf, panel_cx, panel_cy, shield_radius + 8,
+                             shield_pct, armor_pct, hull_pct)
+
+        # === OUTER RING: SHIELDS (Blue - EVE shield color) ===
         self._draw_health_ring(panel_surf, panel_cx, panel_cy, shield_radius, ring_thickness,
-                              shield_pct, (70, 140, 220), (25, 45, 70), "shield", now)
+                              shield_pct, (64, 156, 255), (20, 35, 55), "S", now)
 
-        # === MIDDLE RING: ARMOR (Orange/Gold) ===
+        # === MIDDLE RING: ARMOR (Gold/Orange - EVE armor color) ===
         self._draw_health_ring(panel_surf, panel_cx, panel_cy, armor_radius, ring_thickness,
-                              armor_pct, (220, 160, 60), (55, 40, 20), "armor", now)
+                              armor_pct, (255, 176, 48), (50, 35, 15), "A", now)
 
-        # === INNER RING: HULL (Red/Gray) ===
-        hull_color = (200, 60, 60) if hull_pct < 0.25 else (180, 180, 180)
+        # === INNER RING: HULL (Steel gray, red when critical) ===
+        if hull_pct < 0.25:
+            hull_color = (220, 60, 60)
+        else:
+            hull_color = (160, 165, 175)
         self._draw_health_ring(panel_surf, panel_cx, panel_cy, hull_radius, ring_thickness,
-                              hull_pct, hull_color, (40, 35, 35), "hull", now)
+                              hull_pct, hull_color, (35, 35, 40), "H", now)
 
         # === CENTER: HEAT/CAPACITOR GAUGE ===
         self._draw_heat_center(panel_surf, panel_cx, panel_cy, heat_radius, heat_pct, now)
 
-        # === THRUST COOLDOWN INDICATOR (small arc at bottom) ===
+        # === THRUST COOLDOWN INDICATOR (outer arc) ===
         thrust_cd = getattr(self.player, 'thrust_cooldown', 0)
         thrust_max = getattr(self.player, 'thrust_cooldown_time', 90)
         if thrust_cd > 0:
             thrust_pct = 1.0 - (thrust_cd / thrust_max)
-            self._draw_thrust_indicator(panel_surf, panel_cx, panel_cy, shield_radius + 8, thrust_pct, now)
+            self._draw_thrust_indicator(panel_surf, panel_cx, panel_cy, shield_radius + 12, thrust_pct, now)
+
+        # === PERCENTAGE LABELS ===
+        self._draw_wheel_labels(panel_surf, panel_cx, panel_cy, shield_radius,
+                               shield_pct, armor_pct, hull_pct)
 
         # Blit to main surface
         self.render_surface.blit(panel_surf, (cx - panel_cx, cy - panel_cy))
 
-    def _draw_health_ring(self, surface, cx, cy, radius, thickness, fill_pct, fill_color, bg_color, ring_type, now):
-        """Draw a single health ring (shield/armor/hull) EVE style"""
-        num_segments = 24
-        segment_gap = 3  # degrees
+    def _draw_health_ring(self, surface, cx, cy, radius, thickness, fill_pct, fill_color, bg_color, label, now):
+        """Draw a polished health ring with smooth anti-aliased segments"""
+        num_segments = 32  # More segments for smoother look
+        segment_gap = 2.5  # degrees - smaller gap for cleaner look
+        segment_arc = (360 / num_segments) - segment_gap
 
-        # Draw background ring
+        # Draw background segments (empty state)
         for i in range(num_segments):
             angle_start = -90 + i * (360 / num_segments)
-            angle_end = angle_start + (360 / num_segments) - segment_gap
-            self._draw_ring_segment(surface, cx, cy, radius, thickness,
-                                   angle_start, angle_end, bg_color)
+            self._draw_smooth_segment(surface, cx, cy, radius, thickness,
+                                     angle_start, segment_arc, bg_color, 0.6)
 
         # Draw filled segments
         filled_segments = int(fill_pct * num_segments)
@@ -4413,145 +4522,243 @@ class Game:
 
         for i in range(filled_segments):
             angle_start = -90 + i * (360 / num_segments)
-            angle_end = angle_start + (360 / num_segments) - segment_gap
+            # Brighter inner edge for EVE-style gradient
+            self._draw_smooth_segment(surface, cx, cy, radius, thickness,
+                                     angle_start, segment_arc, fill_color, 1.0, glow=True)
 
-            # Add slight glow to filled segments
-            glow_color = (min(fill_color[0] + 30, 255),
-                         min(fill_color[1] + 30, 255),
-                         min(fill_color[2] + 30, 255))
-            self._draw_ring_segment(surface, cx, cy, radius, thickness,
-                                   angle_start, angle_end, fill_color, glow_color)
-
-        # Partial segment
-        if partial_fill > 0 and filled_segments < num_segments:
+        # Partial segment (dimmer)
+        if partial_fill > 0.1 and filled_segments < num_segments:
             angle_start = -90 + filled_segments * (360 / num_segments)
-            angle_span = ((360 / num_segments) - segment_gap) * partial_fill
-            angle_end = angle_start + angle_span
-            dim_color = (int(fill_color[0] * 0.6), int(fill_color[1] * 0.6), int(fill_color[2] * 0.6))
-            self._draw_ring_segment(surface, cx, cy, radius, thickness,
-                                   angle_start, angle_end, dim_color)
+            partial_arc = segment_arc * partial_fill
+            dim_color = (int(fill_color[0] * 0.5), int(fill_color[1] * 0.5), int(fill_color[2] * 0.5))
+            self._draw_smooth_segment(surface, cx, cy, radius, thickness,
+                                     angle_start, partial_arc, dim_color, 0.8)
 
-        # Critical warning flash for hull
-        if ring_type == "hull" and fill_pct < 0.25 and fill_pct > 0:
-            if int(now / 250) % 2 == 0:
-                for i in range(filled_segments + 1):
+        # Critical hull warning flash
+        if label == "H" and fill_pct < 0.25 and fill_pct > 0:
+            pulse = 0.5 + 0.5 * math.sin(now * 0.012)
+            if pulse > 0.7:
+                flash_color = (255, 80, 80)
+                for i in range(min(filled_segments + 1, num_segments)):
                     angle_start = -90 + i * (360 / num_segments)
-                    angle_end = angle_start + (360 / num_segments) - segment_gap
-                    self._draw_ring_segment(surface, cx, cy, radius, thickness,
-                                           angle_start, angle_end, (255, 100, 100))
+                    self._draw_smooth_segment(surface, cx, cy, radius, thickness,
+                                             angle_start, segment_arc, flash_color, pulse)
 
-    def _draw_ring_segment(self, surface, cx, cy, radius, thickness, angle_start, angle_end, color, highlight=None):
-        """Draw a single segment of a ring"""
-        start_rad = math.radians(angle_start)
-        end_rad = math.radians(angle_end)
+    def _draw_smooth_segment(self, surface, cx, cy, radius, thickness, angle_start, arc_span, color, alpha=1.0, glow=False):
+        """Draw a smooth anti-aliased ring segment using polygon"""
+        if arc_span <= 0:
+            return
 
-        # Draw thick arc
-        for r_offset in range(thickness):
-            r = radius - r_offset
-            # Gradient from outer to inner
-            t = r_offset / thickness
-            if highlight:
-                seg_color = (int(highlight[0] * (1 - t) + color[0] * t),
-                            int(highlight[1] * (1 - t) + color[1] * t),
-                            int(highlight[2] * (1 - t) + color[2] * t))
-            else:
-                dim = 1.0 - t * 0.3
-                seg_color = (int(color[0] * dim), int(color[1] * dim), int(color[2] * dim))
+        # Build polygon points for the segment
+        outer_r = radius
+        inner_r = radius - thickness
+        steps = max(3, int(arc_span / 3))  # More steps for smoother curve
 
-            rect = pygame.Rect(cx - r, cy - r, r * 2, r * 2)
-            if end_rad > start_rad:
-                pygame.draw.arc(surface, seg_color, rect, -end_rad, -start_rad, 2)
-            else:
-                pygame.draw.arc(surface, seg_color, rect, -start_rad, -end_rad, 2)
+        points = []
+
+        # Outer arc (clockwise)
+        for i in range(steps + 1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            x = cx + outer_r * math.cos(angle)
+            y = cy + outer_r * math.sin(angle)
+            points.append((x, y))
+
+        # Inner arc (counter-clockwise)
+        for i in range(steps, -1, -1):
+            angle = math.radians(angle_start + (arc_span * i / steps))
+            x = cx + inner_r * math.cos(angle)
+            y = cy + inner_r * math.sin(angle)
+            points.append((x, y))
+
+        if len(points) >= 3:
+            # Draw the segment with alpha
+            seg_color = (int(color[0] * alpha), int(color[1] * alpha), int(color[2] * alpha))
+            pygame.draw.polygon(surface, seg_color, points)
+
+            # Add bright edge highlight for EVE-style depth
+            if glow and alpha > 0.8:
+                highlight = (min(color[0] + 60, 255), min(color[1] + 60, 255), min(color[2] + 60, 255))
+                # Inner edge highlight
+                for i in range(steps):
+                    angle1 = math.radians(angle_start + (arc_span * i / steps))
+                    angle2 = math.radians(angle_start + (arc_span * (i + 1) / steps))
+                    x1 = cx + inner_r * math.cos(angle1)
+                    y1 = cy + inner_r * math.sin(angle1)
+                    x2 = cx + inner_r * math.cos(angle2)
+                    y2 = cy + inner_r * math.sin(angle2)
+                    pygame.draw.line(surface, highlight, (x1, y1), (x2, y2), 1)
+
+    def _draw_wheel_glow(self, surface, cx, cy, radius, shield_pct, armor_pct, hull_pct):
+        """Draw subtle ambient glow around the capacitor wheel"""
+        # Determine dominant status color for glow
+        if hull_pct < 0.25:
+            glow_color = (180, 40, 40)  # Red danger glow
+            intensity = 0.4
+        elif armor_pct < 0.5 and shield_pct <= 0:
+            glow_color = (180, 120, 30)  # Orange warning
+            intensity = 0.25
+        elif shield_pct > 0.5:
+            glow_color = (40, 100, 180)  # Blue healthy
+            intensity = 0.15
+        else:
+            glow_color = (60, 80, 100)  # Neutral
+            intensity = 0.1
+
+        # Draw soft radial glow (scaled to wheel size)
+        glow_depth = max(8, int(radius * 0.25))
+        for r in range(int(radius), int(radius - glow_depth), -2):
+            alpha = int(intensity * 255 * (radius - r) / glow_depth)
+            glow_surf = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+            pygame.draw.circle(glow_surf, (*glow_color, alpha), (r, r), r)
+            surface.blit(glow_surf, (cx - r, cy - r))
+
+    def _draw_wheel_labels(self, surface, cx, cy, radius, shield_pct, armor_pct, hull_pct):
+        """Draw percentage labels around the wheel"""
+        # Position labels at cardinal points outside the wheel (scaled to wheel size)
+        label_r = radius + 14
+
+        # Shield percentage (top)
+        shield_text = f"{int(shield_pct * 100)}%"
+        shield_color = (64, 156, 255) if shield_pct > 0.25 else (100, 100, 120)
+        text = self.font_small.render(shield_text, True, shield_color)
+        text_rect = text.get_rect(center=(cx, cy - label_r))
+        surface.blit(text, text_rect)
+
+        # Armor percentage (right)
+        armor_text = f"{int(armor_pct * 100)}%"
+        armor_color = (255, 176, 48) if armor_pct > 0.25 else (100, 100, 120)
+        text = self.font_small.render(armor_text, True, armor_color)
+        text_rect = text.get_rect(center=(cx + label_r, cy))
+        surface.blit(text, text_rect)
+
+        # Hull percentage (left)
+        hull_text = f"{int(hull_pct * 100)}%"
+        if hull_pct < 0.25:
+            hull_color = (255, 80, 80)
+        elif hull_pct > 0.5:
+            hull_color = (160, 165, 175)
+        else:
+            hull_color = (180, 120, 80)
+        text = self.font_small.render(hull_text, True, hull_color)
+        text_rect = text.get_rect(center=(cx - label_r, cy))
+        surface.blit(text, text_rect)
 
     def _draw_heat_center(self, surface, cx, cy, radius, heat_pct, now):
-        """Draw the central heat/capacitor gauge"""
+        """Draw the polished central heat/capacitor gauge"""
         heat_warning = getattr(self.player, 'heat_warning', False)
+        is_overheated = getattr(self.player, 'is_overheated', False)
 
-        # Background circle
-        if self.player.is_overheated:
-            pulse = 0.5 + 0.5 * math.sin(now * 0.015)
-            bg_color = (int(60 * pulse), 15, 15)
+        # Outer ring (border)
+        border_color = (50, 60, 80)
+        if is_overheated:
+            pulse = 0.5 + 0.5 * math.sin(now * 0.02)
+            border_color = (int(200 * pulse), int(50 * pulse), int(50 * pulse))
         elif heat_warning:
-            pulse = 0.3 + 0.7 * abs(math.sin(now * 0.01))
-            bg_color = (int(50 * pulse), int(30 * pulse), 10)
-        else:
-            bg_color = (15, 18, 25)
+            pulse = 0.5 + 0.5 * math.sin(now * 0.015)
+            border_color = (int(180 * pulse), int(100 * pulse), 30)
 
-        pygame.draw.circle(surface, bg_color, (cx, cy), radius)
-        pygame.draw.circle(surface, (40, 50, 70), (cx, cy), radius, 2)
+        pygame.draw.circle(surface, border_color, (cx, cy), radius, 2)
 
-        # Heat fill (rises from bottom like a thermometer)
-        if heat_pct > 0:
-            fill_height = int(radius * 2 * heat_pct)
-            fill_top = cy + radius - fill_height
+        # Background circle with subtle gradient
+        for r in range(radius - 2, 0, -1):
+            t = r / (radius - 2)
+            if is_overheated:
+                pulse = 0.5 + 0.5 * math.sin(now * 0.02)
+                bg = (int(40 * pulse + 15), 10, 10)
+            else:
+                bg = (int(12 + 8 * t), int(15 + 10 * t), int(22 + 12 * t))
+            pygame.draw.circle(surface, bg, (cx, cy), r)
 
-            # Create clipping mask
+        # Heat fill (rises from bottom like capacitor)
+        if heat_pct > 0.01:
+            fill_height = int((radius - 3) * 2 * heat_pct)
+
+            # Create clipping surface
             heat_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
 
-            # Color gradient based on heat level
-            if heat_pct < 0.5:
-                heat_color = (180, 200, 80)  # Green-yellow
-            elif heat_pct < 0.75:
-                heat_color = (255, 180, 50)  # Orange
+            # Color gradient based on heat level (EVE style)
+            if heat_pct < 0.4:
+                heat_color = (80, 180, 120)   # Green - safe
+            elif heat_pct < 0.65:
+                heat_color = (200, 200, 60)   # Yellow - caution
+            elif heat_pct < 0.85:
+                heat_color = (255, 140, 40)   # Orange - warning
             else:
-                heat_color = (255, 80, 50)   # Red
+                heat_color = (255, 60, 40)    # Red - critical
 
-            # Draw heat fill
-            pygame.draw.rect(heat_surf, (*heat_color, 180),
-                           (0, radius * 2 - fill_height, radius * 2, fill_height))
+            # Draw gradient heat fill
+            for y in range(fill_height):
+                progress = y / max(fill_height, 1)
+                row_y = radius * 2 - fill_height + y
+                # Gradient from darker at bottom to brighter at top
+                row_color = (int(heat_color[0] * (0.6 + 0.4 * progress)),
+                            int(heat_color[1] * (0.6 + 0.4 * progress)),
+                            int(heat_color[2] * (0.6 + 0.4 * progress)),
+                            200)
+                pygame.draw.line(heat_surf, row_color, (0, row_y), (radius * 2, row_y))
 
             # Mask to circle
             mask = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-            pygame.draw.circle(mask, (255, 255, 255), (radius, radius), radius - 3)
+            pygame.draw.circle(mask, (255, 255, 255, 255), (radius, radius), radius - 3)
             heat_surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
             surface.blit(heat_surf, (cx - radius, cy - radius))
 
+            # Heat level line indicator
+            line_y = cy + (radius - 3) - fill_height
+            line_color = (min(heat_color[0] + 50, 255), min(heat_color[1] + 50, 255), min(heat_color[2] + 50, 255))
+            half_width = int(math.sqrt(max(0, (radius - 3)**2 - (fill_height - (radius - 3))**2)))
+            if half_width > 2:
+                pygame.draw.line(surface, line_color, (cx - half_width, line_y), (cx + half_width, line_y), 2)
+
         # Center text
-        if self.player.is_overheated:
-            text_color = (255, 100, 100)
+        if is_overheated:
+            pulse = 0.7 + 0.3 * math.sin(now * 0.02)
+            text_color = (255, int(80 * pulse), int(80 * pulse))
             label = "HOT"
         elif heat_warning:
-            pulse = 0.7 + 0.3 * math.sin(now * 0.012)
+            pulse = 0.8 + 0.2 * math.sin(now * 0.015)
             text_color = (int(255 * pulse), int(180 * pulse), 50)
             label = f"{int(heat_pct * 100)}"
         else:
-            text_color = (200, 210, 230)
+            text_color = (180, 190, 210)
             label = f"{int(heat_pct * 100)}"
 
-        text = self.font.render(label, True, text_color)
+        text = self.font_small.render(label, True, text_color)
         text_rect = text.get_rect(center=(cx, cy))
         surface.blit(text, text_rect)
 
     def _draw_thrust_indicator(self, surface, cx, cy, radius, fill_pct, now):
-        """Draw thrust cooldown arc at bottom of wheel"""
-        # Small arc at bottom showing thrust recharge
-        arc_span = 60  # degrees
+        """Draw polished thrust cooldown arc at bottom of wheel"""
+        arc_span = 50  # degrees
+        thickness = 3
         start_angle = 90 - arc_span / 2
         end_angle = 90 + arc_span / 2
 
-        # Background
-        for angle in range(int(start_angle), int(end_angle), 2):
-            rad = math.radians(angle)
-            x = cx + int(math.cos(rad) * radius)
-            y = cy + int(math.sin(rad) * radius)
-            pygame.draw.circle(surface, (30, 35, 45), (x, y), 3)
+        # Background arc
+        bg_color = (25, 30, 40)
+        self._draw_smooth_segment(surface, cx, cy, radius, thickness,
+                                 start_angle, arc_span, bg_color, 0.8)
 
-        # Fill based on cooldown
-        filled_span = arc_span * fill_pct
-        for angle in range(int(start_angle), int(start_angle + filled_span), 2):
-            rad = math.radians(angle)
-            x = cx + int(math.cos(rad) * radius)
-            y = cy + int(math.sin(rad) * radius)
-            # Cyan color for thrust
-            pygame.draw.circle(surface, (80, 200, 255), (x, y), 3)
+        # Fill arc based on cooldown
+        if fill_pct > 0.05:
+            filled_span = arc_span * fill_pct
+            # Cyan/blue color for thrust - pulses when nearly ready
+            if fill_pct > 0.9:
+                pulse = 0.8 + 0.2 * math.sin(now * 0.02)
+                thrust_color = (int(100 * pulse), int(220 * pulse), 255)
+            else:
+                thrust_color = (60, 180, 240)
 
-        # "THRUST" label when ready
-        if fill_pct >= 1.0:
-            label = self.font_small.render("THRUST", True, (80, 200, 255))
-            label_rect = label.get_rect(center=(cx, cy + radius + 12))
-            surface.blit(label, label_rect)
+            self._draw_smooth_segment(surface, cx, cy, radius, thickness,
+                                     start_angle, filled_span, thrust_color, 1.0, glow=True)
+
+        # "THRUST" label below (only when recharging)
+        if fill_pct < 0.99:
+            label_color = (50, 120, 180) if fill_pct < 0.5 else (80, 180, 240)
+            text = self.font_small.render("THRUST", True, label_color)
+            text_rect = text.get_rect(center=(cx, cy + radius + 14))
+            surface.blit(text, text_rect)
 
     def _draw_status_bar(self, surface, x, y, width, height, fill_pct, fill_color, bg_color, label):
         """Draw a single EVE-style status bar"""
