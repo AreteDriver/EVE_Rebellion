@@ -95,13 +95,13 @@ def get_ship_asset_manager():
         _ship_asset_manager = ShipAssetManager()
     return _ship_asset_manager
 
-def load_ship_sprite(ship_name, target_size=None, use_eve_assets=True):
-    """Load a rendered ship sprite, preferring EVE API assets.
+def load_ship_sprite(ship_name, target_size=None, use_eve_assets=False):
+    """Load a rendered ship sprite from the ship_sprites directory.
 
     Args:
         ship_name: Name of the ship (e.g., 'rifter', 'executioner')
         target_size: Optional (width, height) tuple to scale the sprite to
-        use_eve_assets: If True, try EVE API assets first
+        use_eve_assets: If True, try EVE API assets (disabled by default - icons look boxy)
 
     Returns:
         pygame.Surface with the ship sprite, or None if not found
@@ -113,10 +113,17 @@ def load_ship_sprite(ship_name, target_size=None, use_eve_assets=True):
     sprite = None
     ship_name_lower = ship_name.lower()
 
-    # Try EVE API processed assets first
-    if use_eve_assets and ship_name_lower in EVE_TYPE_IDS:
+    # Use game-designed ship sprites (not EVE API icons which look boxy)
+    sprite_path = os.path.join(_SPRITE_DIR, f"{ship_name}.png")
+    if os.path.exists(sprite_path):
+        try:
+            sprite = pygame.image.load(sprite_path).convert_alpha()
+        except pygame.error:
+            pass
+
+    # Only try EVE assets if explicitly requested and sprite not found
+    if sprite is None and use_eve_assets and ship_name_lower in EVE_TYPE_IDS:
         type_id = EVE_TYPE_IDS[ship_name_lower]
-        # Check for processed EVE asset
         eve_sprite_path = os.path.join(
             _EVE_SPRITE_DIR,
             f"{ship_name_lower}_{type_id}.png"
@@ -127,31 +134,8 @@ def load_ship_sprite(ship_name, target_size=None, use_eve_assets=True):
             except pygame.error:
                 pass
 
-    # Fall back to old ship_sprites directory
-    if sprite is None:
-        sprite_path = os.path.join(_SPRITE_DIR, f"{ship_name}.png")
-        if os.path.exists(sprite_path):
-            try:
-                sprite = pygame.image.load(sprite_path).convert_alpha()
-            except pygame.error:
-                pass
-
     if sprite is None:
         return None
-
-    # Apply scaling based on ship class if no explicit size given
-    if target_size is None and ship_name_lower in SHIP_CLASSES:
-        ship_class = SHIP_CLASSES[ship_name_lower]
-        scale_ratio = SHIP_SCALE_RATIOS.get(ship_class, 1.0)
-        base_size = 48  # Base frigate size
-        new_size = int(base_size * scale_ratio)
-        # Maintain aspect ratio
-        orig_w, orig_h = sprite.get_size()
-        aspect = orig_w / orig_h
-        if aspect > 1:
-            target_size = (new_size, int(new_size / aspect))
-        else:
-            target_size = (int(new_size * aspect), new_size)
 
     if target_size:
         sprite = pygame.transform.smoothscale(sprite, target_size)
