@@ -424,12 +424,15 @@ ENEMY_SPRITE_MAP = {
 
 
 class Player(pygame.sprite.Sprite):
-    """Player ship - Rifter/Wolf"""
+    """Player ship - Rifter/Wolf (Minmatar) or Executioner/Crusader (Amarr)"""
 
     def __init__(self):
         super().__init__()
-        self.is_wolf = False
-        self.is_jaguar = False
+        # T2 ship flags
+        self.is_wolf = False  # Minmatar T2 assault frigate
+        self.is_jaguar = False  # Minmatar T2 assault frigate
+        self.is_crusader = False  # Amarr T2 interceptor
+        self.is_malediction = False  # Amarr T2 interceptor
         self.width = 46
         self.height = 58
 
@@ -549,16 +552,24 @@ class Player(pygame.sprite.Sprite):
         self.score = 0
     
     def _create_ship_image(self):
-        """Create EVE-accurate Minmatar ship sprite with proper loadouts"""
+        """Create EVE-accurate ship sprite with proper loadouts"""
         ship_class = getattr(self, 'ship_class', 'Rifter')
 
         # Determine which ship to load based on ship class
+        # Support both Minmatar and Amarr ships
+        ship_name = ship_class.lower()
+
+        # Handle T2 ship flags
         if self.is_wolf:
             ship_name = 'wolf'
         elif self.is_jaguar:
             ship_name = 'jaguar'
-        else:
-            ship_name = 'rifter'
+        elif self.is_crusader:
+            ship_name = 'crusader'
+        elif self.is_malediction:
+            ship_name = 'malediction'
+        elif ship_class.lower() == 'executioner':
+            ship_name = 'executioner'
 
         self._current_ship_name = ship_name
 
@@ -671,6 +682,77 @@ class Player(pygame.sprite.Sprite):
                 sx = cx + (i * 2 - 1) * 6
                 pygame.draw.circle(sprite, (100, 180, 255), (sx, h - 8), 2)
 
+        elif ship_class in ['Executioner', 'Crusader', 'Malediction']:
+            # === AMARR SHIPS: PULSE LASERS, GOLDEN ACCENTS, BLUE ENGINES ===
+            # Amarr use lasers (blue/white beams) and have blue engine trails
+
+            # Amarr colors - golden ornate with blue energy
+            laser_base = (200, 180, 100)  # Golden turret
+            laser_crystal = (100, 180, 255)  # Blue focusing crystal
+            laser_glow = (150, 200, 255)  # Laser charging glow
+            engine_color = (100, 150, 255)  # Blue engines
+            engine_glow = (150, 180, 255)
+
+            if ship_class == 'Crusader':
+                # Crusader: Fast interceptor with 4 pulse lasers
+                # Apply golden accent tint
+                tint_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+                tint_surf.fill((200, 180, 100, 30))
+                sprite.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+                # 4 Pulse laser turrets
+                turret_positions = [
+                    (cx - 10, h//4 + 3),
+                    (cx + 10, h//4 + 3),
+                    (cx - 8, h//3 + 5),
+                    (cx + 8, h//3 + 5),
+                ]
+                for tx, ty in turret_positions:
+                    pygame.draw.circle(sprite, laser_base, (tx, ty), 3)
+                    pygame.draw.circle(sprite, laser_crystal, (tx, ty), 2)
+                    # Laser charging glow
+                    pygame.draw.circle(sprite, laser_glow, (tx, ty - 3), 2)
+
+            elif ship_class == 'Malediction':
+                # Malediction: Fast tackle interceptor with 3 lasers
+                tint_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+                tint_surf.fill((180, 150, 80, 25))
+                sprite.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+                turret_positions = [
+                    (cx, h//4 + 2),
+                    (cx - 8, h//4 + 6),
+                    (cx + 8, h//4 + 6),
+                ]
+                for tx, ty in turret_positions:
+                    pygame.draw.circle(sprite, laser_base, (tx, ty), 3)
+                    pygame.draw.circle(sprite, laser_crystal, (tx, ty), 2)
+
+                # Warp disruptor indicator (tackling ship)
+                pygame.draw.circle(sprite, (255, 100, 100), (cx, h//2), 3)
+                pygame.draw.circle(sprite, (255, 200, 200), (cx, h//2), 2)
+
+            else:
+                # Executioner: T1 Frigate with 3 pulse lasers
+                turret_positions = [
+                    (cx - 8, h//4 + 4),
+                    (cx, h//4),
+                    (cx + 8, h//4 + 4),
+                ]
+                for tx, ty in turret_positions:
+                    pygame.draw.circle(sprite, laser_base, (tx, ty), 3)
+                    pygame.draw.circle(sprite, laser_crystal, (tx, ty), 2)
+
+            # Add blue engine glow (Amarr ships)
+            for offset in [-6, 0, 6]:
+                ex = cx + offset
+                ey = h - 5
+                pygame.draw.circle(sprite, engine_glow, (ex, ey), 3)
+                pygame.draw.circle(sprite, engine_color, (ex, ey), 2)
+                pygame.draw.circle(sprite, (200, 220, 255), (ex, ey), 1)
+
+            return sprite
+
         else:
             # === RIFTER: 3 TURRETS + 1 LAUNCHER (standard T1 loadout) ===
             # 3 Autocannon turrets
@@ -689,7 +771,7 @@ class Player(pygame.sprite.Sprite):
             pygame.draw.circle(sprite, launcher_tube, (lx, ly), 2)
             pygame.draw.circle(sprite, launcher_tip, (lx, ly - 2), 1)
 
-        # Add engine glow (all ships)
+        # Add engine glow (Minmatar ships - orange)
         for offset in [-6, 0, 6]:
             ex = cx + offset
             ey = h - 5 if ship_class != 'Jaguar' else h - 8
@@ -1565,12 +1647,19 @@ class Player(pygame.sprite.Sprite):
             for i in range(num_shots):
                 offset = (i - (num_shots - 1) / 2) * spread_offset
                 angle = angles[i] if i < len(angles) else 0
-                rad = math.radians(angle)
+                # Add base aim angle for right stick aiming
+                rad = math.radians(angle) + base_angle_rad
                 vx = math.sin(rad) * BULLET_SPEED
                 vy = -math.cos(rad) * BULLET_SPEED
+                # Rotate spawn offset based on aim direction
+                rotated_offset_x = offset * math.cos(base_angle_rad)
+                rotated_offset_y = offset * math.sin(base_angle_rad)
+                # Spawn position offset in aim direction
+                spawn_x = self.rect.centerx + int(rotated_offset_x)
+                spawn_y = self.rect.centery + int(-15 * math.cos(base_angle_rad))
                 bullet = Bullet(
-                    self.rect.centerx + offset,
-                    self.rect.top,
+                    spawn_x,
+                    spawn_y,
                     vx, vy,
                     bullet_color,
                     bullet_damage
@@ -1805,15 +1894,24 @@ class Wingman(pygame.sprite.Sprite):
         self.damage = 8
 
     def _create_wingman_sprite(self):
-        """Create exact scaled copy of player Rifter sprite (76% scale)"""
+        """Load and scale actual Rifter sprite for wingman (76% scale)"""
+        # Try to load the actual Rifter sprite
+        rifter_sprite = load_ship_sprite('rifter', target_size=(self.width, self.height))
+
+        if rifter_sprite:
+            return rifter_sprite
+
+        # Fallback to procedural sprite if image not found
+        return self._create_fallback_sprite()
+
+    def _create_fallback_sprite(self):
+        """Fallback procedural Rifter sprite if image not available"""
         surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         w, h = self.width, self.height
         cx = w // 2
+        s = 0.76  # Scale factor
 
-        # Scale factor from player (46x58) to wingman (35x44)
-        s = 0.76
-
-        # Exact same Rifter colors as player
+        # Minmatar rust colors
         base = (70, 40, 30)
         mid = (110, 60, 40)
         light = (150, 85, 55)
@@ -1822,59 +1920,19 @@ class Wingman(pygame.sprite.Sprite):
         engine_color = (255, 120, 40)
         engine_glow = (255, 180, 100)
 
-        # === RIFTER HULL (exact copy, scaled) ===
-        # Shadow layer (3D depth)
-        hull_shadow = [(cx, int(5*s)), (cx+int(18*s), int(25*s)), (cx+int(15*s), int(50*s)),
-                       (cx, int(55*s)), (cx-int(15*s), int(50*s)), (cx-int(18*s), int(25*s))]
-        pygame.draw.polygon(surf, base, hull_shadow)
+        # Simple Rifter silhouette
+        hull = [(cx, int(5*s)), (cx+int(15*s), int(25*s)), (cx+int(12*s), int(48*s)),
+                (cx, int(52*s)), (cx-int(12*s), int(48*s)), (cx-int(15*s), int(25*s))]
+        pygame.draw.polygon(surf, mid, hull)
+        pygame.draw.polygon(surf, light, [(cx, int(8*s)), (cx+int(10*s), int(25*s)), (cx, int(40*s))])
 
-        # Main hull body
-        hull_main = [(cx, int(8*s)), (cx+int(15*s), int(25*s)), (cx+int(12*s), int(48*s)),
-                     (cx, int(52*s)), (cx-int(12*s), int(48*s)), (cx-int(15*s), int(25*s))]
-        pygame.draw.polygon(surf, mid, hull_main)
+        # Wings
+        pygame.draw.polygon(surf, base, [(cx-int(10*s), int(28*s)), (int(5*s), int(40*s)), (cx-int(8*s), int(42*s))])
+        pygame.draw.polygon(surf, base, [(cx+int(10*s), int(28*s)), (w-int(5*s), int(40*s)), (cx+int(8*s), int(42*s))])
 
-        # Hull highlight (top-right lighting)
-        hull_highlight = [(cx, int(10*s)), (cx+int(12*s), int(25*s)), (cx+int(10*s), int(40*s)), (cx+int(2*s), int(45*s))]
-        pygame.draw.polygon(surf, light, hull_highlight)
-
-        # Nose section (pointed)
-        pygame.draw.polygon(surf, light, [(cx, int(3*s)), (cx+int(8*s), int(18*s)), (cx, int(22*s)), (cx-int(8*s), int(18*s))])
-        pygame.draw.polygon(surf, highlight, [(cx, int(5*s)), (cx+int(5*s), int(16*s)), (cx, int(18*s))])
-
-        # === WING STRUTS (Minmatar asymmetric style) ===
-        pygame.draw.polygon(surf, base, [(cx-int(12*s), int(28*s)), (int(5*s), int(38*s)), (int(3*s), int(45*s)), (int(8*s), int(48*s)), (cx-int(10*s), int(42*s))])
-        pygame.draw.polygon(surf, mid, [(cx-int(11*s), int(30*s)), (int(7*s), int(39*s)), (int(6*s), int(44*s)), (cx-int(9*s), int(40*s))])
-        pygame.draw.polygon(surf, base, [(cx+int(12*s), int(28*s)), (w-int(5*s), int(38*s)), (w-int(3*s), int(45*s)), (w-int(8*s), int(48*s)), (cx+int(10*s), int(42*s))])
-        pygame.draw.polygon(surf, light, [(cx+int(11*s), int(30*s)), (w-int(7*s), int(39*s)), (w-int(6*s), int(44*s)), (cx+int(9*s), int(40*s))])
-
-        # Wing tips
-        pygame.draw.circle(surf, accent, (int(4*s), int(44*s)), max(2, int(3*s)))
-        pygame.draw.circle(surf, accent, (w-int(4*s), int(44*s)), max(2, int(3*s)))
-
-        # === COCKPIT ===
-        pygame.draw.ellipse(surf, (40, 60, 80), (cx-int(4*s), int(14*s), int(8*s), int(12*s)))
-        pygame.draw.ellipse(surf, (70, 100, 140), (cx-int(3*s), int(15*s), int(6*s), int(8*s)))
-        pygame.draw.ellipse(surf, (120, 160, 200), (cx-int(2*s), int(16*s), max(2, int(3*s)), max(3, int(4*s))))
-
-        # === ENGINE SECTION ===
-        pygame.draw.polygon(surf, base, [(cx-int(10*s), int(45*s)), (cx+int(10*s), int(45*s)), (cx+int(8*s), int(56*s)), (cx-int(8*s), int(56*s))])
-        pygame.draw.ellipse(surf, engine_color, (cx-int(6*s), int(52*s), int(12*s), int(6*s)))
-        pygame.draw.ellipse(surf, engine_glow, (cx-int(4*s), int(53*s), int(8*s), int(4*s)))
-        pygame.draw.ellipse(surf, (255, 255, 200), (cx-int(2*s), int(54*s), max(3, int(4*s)), max(2, int(2*s))))
-
-        # Side thrusters
-        pygame.draw.ellipse(surf, engine_color, (cx-int(12*s), int(50*s), int(5*s), int(4*s)))
-        pygame.draw.ellipse(surf, engine_color, (cx+int(7*s), int(50*s), int(5*s), int(4*s)))
-
-        # Panel lines
-        pygame.draw.line(surf, base, (cx, int(22*s)), (cx, int(45*s)), 1)
-        pygame.draw.line(surf, accent, (cx-int(5*s), int(30*s)), (cx-int(5*s), int(44*s)), 1)
-        pygame.draw.line(surf, accent, (cx+int(5*s), int(30*s)), (cx+int(5*s), int(44*s)), 1)
-
-        # Antennae
-        pygame.draw.line(surf, accent, (cx-int(3*s), int(6*s)), (cx-int(8*s), int(2*s)), 2)
-        pygame.draw.circle(surf, highlight, (cx-int(8*s), int(2*s)), max(1, int(2*s)))
-        pygame.draw.line(surf, accent, (cx+int(3*s), int(6*s)), (cx+int(6*s), int(3*s)), 1)
+        # Engine glow
+        pygame.draw.ellipse(surf, engine_color, (cx-int(6*s), int(50*s), int(12*s), int(6*s)))
+        pygame.draw.ellipse(surf, engine_glow, (cx-int(4*s), int(51*s), int(8*s), int(4*s)))
 
         return surf
 
@@ -1900,14 +1958,17 @@ class Wingman(pygame.sprite.Sprite):
         self._update_engine_animation()
 
     def _update_engine_animation(self):
-        """Redraw sprite with animated engine flicker and visual polish"""
-        # Recreate base sprite
-        self.image = self._create_wingman_sprite()
+        """Add animated engine glow effects to the sprite"""
+        # Use cached base sprite instead of recreating every frame
+        if not hasattr(self, '_base_sprite'):
+            self._base_sprite = self._create_wingman_sprite()
+
+        # Copy base sprite to add effects
+        self.image = self._base_sprite.copy()
 
         # Add engine flicker effect
         w, h = self.width, self.height
         cx = w // 2
-        s = 0.76
         now = pygame.time.get_ticks()
 
         # Flickering engine glow - more dynamic
@@ -1920,25 +1981,25 @@ class Wingman(pygame.sprite.Sprite):
 
         # Outer glow haze
         pygame.draw.ellipse(glow_surf, (255, 100, 30, int(50 * flicker)),
-                          (cx - int(12*s), int(52*s), int(24*s), int(18*s)))
+                          (cx - 9, h - 10, 18, 14))
 
         # Main engine exhaust
         pygame.draw.ellipse(glow_surf, (255, 150, 50, glow_alpha),
-                          (cx - int(8*s), int(54*s), int(16*s), int(12*s)))
+                          (cx - 6, h - 8, 12, 10))
 
         # Inner bright core
         pygame.draw.ellipse(glow_surf, (255, 200, 100, int(180 * fast_flicker)),
-                          (cx - int(5*s), int(55*s), int(10*s), int(8*s)))
+                          (cx - 4, h - 6, 8, 6))
 
         # Hot white center
         pygame.draw.ellipse(glow_surf, (255, 255, 220, int(200 * fast_flicker)),
-                          (cx - int(3*s), int(56*s), int(6*s), int(4*s)))
+                          (cx - 2, h - 4, 4, 3))
 
         # Exhaust particles (random sparkles)
         if random.random() < 0.5:
-            px = cx + random.randint(-6, 6)
-            py = int(58*s) + random.randint(0, 8)
-            pygame.draw.circle(glow_surf, (255, 180, 80, 150), (px, py), random.randint(1, 3))
+            px = cx + random.randint(-5, 5)
+            py = h + random.randint(0, 6)
+            pygame.draw.circle(glow_surf, (255, 180, 80, 150), (px, py), random.randint(1, 2))
 
         self.image.blit(glow_surf, (0, 0))
 
@@ -2470,6 +2531,11 @@ class Enemy(pygame.sprite.Sprite):
         self.base_image = self._create_image()  # Store pristine image
         self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
+
+        # Facing angle (degrees) - 0 = down, 90 = right, 180 = up, 270 = left
+        self.angle = 0  # Default facing down
+        self.vx = 0  # Velocity components for angle calculation
+        self.vy = 2.0  # Default moving down
 
         # Damage visualization state
         self.damage_flash_timer = 0
@@ -3113,6 +3179,9 @@ class Enemy(pygame.sprite.Sprite):
         """Update enemy position and behavior with advanced patterns"""
         self.pattern_timer += 0.05
 
+        # Store previous position for velocity calculation
+        prev_x, prev_y = self.rect.centerx, self.rect.centery
+
         # Update and render all damage effects
         self._update_damage_effects()
 
@@ -3122,8 +3191,10 @@ class Enemy(pygame.sprite.Sprite):
                 self.rect.y += self.speed * 1.5
             else:
                 self.entered = True
+            # Update facing angle during entry
+            self._update_facing_angle(0, self.speed * 1.5)
             return
-        
+
         # Execute movement pattern
         if self.pattern == self.PATTERN_DRIFT:
             self._move_drift()
@@ -3162,41 +3233,71 @@ class Enemy(pygame.sprite.Sprite):
         if self.is_boss:
             self._update_boss_behavior()
 
-        # === RESPAWN FROM TOP WHEN LEAVING SCREEN ===
-        # Non-boss enemies cycle back from top (except patterns that handle their own movement/exit)
-        excluded_patterns = [
-            self.PATTERN_DIAGONAL, self.PATTERN_FLYBY, self.PATTERN_ATTACK_RUN,
-            self.PATTERN_FLANKING, self.PATTERN_CRUISER, self.PATTERN_ARTILLERY,
-            self.PATTERN_FORMATION, self.PATTERN_WOLFPACK, self.PATTERN_DESTROYER
+        # Calculate velocity from movement and update facing angle
+        new_x, new_y = self.rect.centerx, self.rect.centery
+        dx = new_x - prev_x
+        dy = new_y - prev_y
+        self.vx = dx
+        self.vy = dy
+        self._update_facing_angle(dx, dy)
+
+        # === SCREEN WRAP-AROUND FOR FORMATIONS ===
+        # Enemies wrap around to opposite side instead of random respawn
+        wrap_patterns = [
+            self.PATTERN_DIAGONAL, self.PATTERN_FORMATION,
+            self.PATTERN_DRIFT, self.PATTERN_SINE, self.PATTERN_ZIGZAG
         ]
-        if not self.is_boss and self.pattern not in excluded_patterns:
-            respawn = False
 
-            # Exited bottom of screen
-            if self.rect.top > SCREEN_HEIGHT + 50:
-                respawn = True
-            # Exited left side
-            elif self.rect.right < -80:
-                respawn = True
-            # Exited right side
-            elif self.rect.left > SCREEN_WIDTH + 80:
-                respawn = True
+        if not self.is_boss and self.pattern in wrap_patterns:
+            # Wrap horizontally
+            if self.rect.right < -30:
+                self.rect.left = SCREEN_WIDTH + 20
+            elif self.rect.left > SCREEN_WIDTH + 30:
+                self.rect.right = -20
 
-            if respawn:
-                # Respawn from top at random x position
-                self.rect.bottom = -random.randint(30, 100)
-                self.rect.centerx = random.randint(60, SCREEN_WIDTH - 60)
-                # Reset movement state for clean re-entry
-                self.drift_target_x = random.randint(80, SCREEN_WIDTH - 80)
-                self.target_y = random.randint(80, 350)
+            # Wrap vertically
+            if self.rect.bottom < -30:
+                self.rect.top = SCREEN_HEIGHT + 20
+            elif self.rect.top > SCREEN_HEIGHT + 30:
+                self.rect.bottom = -20
 
-        # Gentle horizontal bounds for non-diagonal patterns (push back, don't clamp hard)
-        if self.pattern not in excluded_patterns:
-            if self.rect.left < -50:
-                self.rect.x += self.speed * 2  # Push back toward center
-            elif self.rect.right > SCREEN_WIDTH + 50:
-                self.rect.x -= self.speed * 2
+        # Non-wrapping patterns - respawn from appropriate edge
+        elif not self.is_boss:
+            excluded_patterns = [
+                self.PATTERN_FLYBY, self.PATTERN_ATTACK_RUN,
+                self.PATTERN_FLANKING, self.PATTERN_CRUISER, self.PATTERN_ARTILLERY,
+                self.PATTERN_WOLFPACK, self.PATTERN_DESTROYER, self.PATTERN_SWARM
+            ]
+            if self.pattern not in excluded_patterns:
+                if self.rect.top > SCREEN_HEIGHT + 50:
+                    self.rect.bottom = -30
+                    self.rect.centerx = random.randint(60, SCREEN_WIDTH - 60)
     
+    def _update_facing_angle(self, dx, dy):
+        """Update sprite rotation to face direction of travel"""
+        if abs(dx) > 0.1 or abs(dy) > 0.1:
+            # Calculate angle from velocity (0 = down, 90 = right, etc.)
+            target_angle = math.degrees(math.atan2(dx, dy))
+
+            # Smooth rotation toward target angle
+            angle_diff = target_angle - self.angle
+            # Normalize to -180 to 180
+            while angle_diff > 180:
+                angle_diff -= 360
+            while angle_diff < -180:
+                angle_diff += 360
+
+            # Rotate smoothly (faster for formation patterns)
+            if self.pattern == self.PATTERN_FORMATION or self.pattern == self.PATTERN_DIAGONAL:
+                self.angle += angle_diff * 0.15
+            else:
+                self.angle += angle_diff * 0.08
+
+            # Rotate the sprite
+            center = self.rect.center
+            self.image = pygame.transform.rotate(self.base_image, -self.angle)
+            self.rect = self.image.get_rect(center=center)
+
     def _move_drift(self):
         """Dynamic drift - smooth acceleration toward target points with constant downward flow"""
         # Decrement direction timer
@@ -3390,39 +3491,16 @@ class Enemy(pygame.sprite.Sprite):
 
     def _move_diagonal(self):
         """
-        Move diagonally across screen using patrol_vx/patrol_vy.
-        When exiting screen (bottom or sides), respawn from top.
-        Creates endless waves crossing the screen.
+        Move in straight line across screen - tight military formation.
+        Wraps around to opposite side when exiting (handled in update).
         """
-        # Use patrol velocities set at spawn
-        vx = getattr(self, 'patrol_vx', 2.0)
-        vy = getattr(self, 'patrol_vy', 2.5)
+        # Use patrol velocities set at spawn - constant velocity, no wobble
+        vx = getattr(self, 'patrol_vx', getattr(self, 'vx', 2.0))
+        vy = getattr(self, 'patrol_vy', getattr(self, 'vy', 2.5))
 
+        # Straight line movement - no deviation
         self.rect.x += vx
         self.rect.y += vy
-
-        # Check if exited screen - respawn from top
-        exited = False
-
-        # Exited bottom
-        if self.rect.top > SCREEN_HEIGHT + 50:
-            exited = True
-        # Exited left side (moving left)
-        elif vx < 0 and self.rect.right < -50:
-            exited = True
-        # Exited right side (moving right)
-        elif vx > 0 and self.rect.left > SCREEN_WIDTH + 50:
-            exited = True
-
-        if exited:
-            # Respawn from top, opposite side
-            self.rect.bottom = -30 - random.randint(0, 100)
-            if vx > 0:
-                # Was moving right, spawn on left
-                self.rect.right = -30 - random.randint(0, 50)
-            else:
-                # Was moving left, spawn on right
-                self.rect.left = SCREEN_WIDTH + 30 + random.randint(0, 50)
 
     def _move_flanking(self, player_rect):
         """
@@ -3654,16 +3732,10 @@ class Enemy(pygame.sprite.Sprite):
 
     def _move_formation(self, player_rect):
         """
-        Formation follower - maintain offset from formation leader.
-        Creates coordinated squadron movement.
+        Formation follower - maintain tight offset from formation leader.
+        Military precision - stays locked to leader position.
         """
-        if not hasattr(self, 'formation_timer'):
-            self.formation_timer = 0
-            self.formation_offset = getattr(self, 'formation_offset', (0, 0))
-
-        self.formation_timer += 1
-
-        # If we have a formation leader, follow them
+        # If we have a formation leader, follow them tightly
         if self.formation_leader and self.formation_leader.alive():
             leader = self.formation_leader
 
@@ -3671,38 +3743,24 @@ class Enemy(pygame.sprite.Sprite):
             target_x = leader.rect.centerx + self.formation_offset[0]
             target_y = leader.rect.centery + self.formation_offset[1]
 
-            # Smooth movement toward formation position
+            # TIGHT formation - snap to position with minimal lag
             dx = target_x - self.rect.centerx
             dy = target_y - self.rect.centery
 
-            # Move faster to catch up if far from position
-            distance = math.sqrt(dx * dx + dy * dy)
-            speed_mult = min(2.0, 1.0 + distance / 100)
+            # Very tight following - 25% correction per frame
+            self.rect.x += dx * 0.25
+            self.rect.y += dy * 0.25
 
-            self.rect.x += max(-self.speed * speed_mult, min(self.speed * speed_mult, dx * 0.08))
-            self.rect.y += max(-self.speed * speed_mult, min(self.speed * speed_mult, dy * 0.08))
-
-            # Match leader's facing angle roughly
-            if hasattr(leader, 'angle'):
-                target_angle = leader.angle
-                angle_diff = target_angle - self.angle
-                self.angle += angle_diff * 0.1
         else:
-            # Leader dead - break formation and become independent
-            if self.enemy_type in ['omen', 'maller']:
-                # Cruiser becomes independent cruiser AI
-                self.pattern = self.PATTERN_CRUISER
-                self._init_cruiser_behavior()
-            else:
-                # Smaller ships become aggressive attackers
-                self.pattern = self.PATTERN_SWOOP
-                self.swoop_state = 'dive'
-                if player_rect:
-                    self.swoop_target_x = player_rect.centerx
-
-        # Exit screen handling - formation ships just leave when off-screen
-        if self.rect.top > SCREEN_HEIGHT + 100 or self.rect.right < -100 or self.rect.left > SCREEN_WIDTH + 100:
-            self.kill()
+            # Leader dead - continue on same trajectory (maintain formation ghost)
+            vx = getattr(self, 'vx', 0)
+            vy = getattr(self, 'vy', 2.0)
+            self.rect.x += vx
+            self.rect.y += vy
+            # Switch to diagonal to keep moving
+            self.pattern = self.PATTERN_DIAGONAL
+            self.patrol_vx = vx
+            self.patrol_vy = vy
 
     def _move_wolfpack(self, player_rect):
         """

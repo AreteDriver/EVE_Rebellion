@@ -75,6 +75,58 @@ COLOR_AMARR_HULL = (218, 165, 32)
 COLOR_AMARR_ACCENT = (255, 215, 0)
 COLOR_AMARR_DARK = (139, 117, 0)
 
+# === FACTION DEFINITIONS ===
+FACTIONS = {
+    'minmatar': {
+        'name': 'Minmatar Republic',
+        'tagline': 'In Rust We Trust',
+        'color_primary': COLOR_MINMATAR_ACCENT,
+        'color_secondary': COLOR_MINMATAR_HULL,
+        'engine_color': (255, 150, 50),  # Orange engines
+        'weapon_type': 'projectile',  # Autocannons
+        'player_ships': ['rifter', 'wolf', 'jaguar'],
+        'enemy_faction': 'amarr',
+        'story_intro': "Your ancestors were enslaved by the Amarr Empire. Generations suffered under their golden heel. But the Minmatar spirit cannot be broken. Today, you strike back.",
+        'victory_text': "The Amarr fleet lies in ruins. Slaves are free. The Republic stands defiant. You are legend.",
+    },
+    'amarr': {
+        'name': 'Amarr Empire',
+        'tagline': 'Amarr Victor',
+        'color_primary': COLOR_AMARR_ACCENT,
+        'color_secondary': COLOR_AMARR_HULL,
+        'engine_color': (100, 150, 255),  # Blue engines
+        'weapon_type': 'laser',  # Pulse lasers
+        'player_ships': ['executioner', 'crusader', 'malediction'],
+        'enemy_faction': 'minmatar',
+        'story_intro': "The Minmatar rebels threaten the divine order of the Empire. As a loyal servant of the Empress, you will crush this insurrection and restore peace through strength.",
+        'victory_text': "The rebellion is crushed. Order is restored. The Empire endures eternal. Glory to Amarr.",
+    }
+}
+
+# Ship mappings for faction swapping
+MINMATAR_SHIPS = ['rifter', 'wolf', 'jaguar', 'slasher', 'hurricane', 'nidhoggur']
+AMARR_SHIPS = ['executioner', 'punisher', 'coercer', 'omen', 'maller', 'harbinger',
+               'apocalypse', 'abaddon', 'archon', 'avatar']
+
+# Equivalent ship classes between factions (for enemy substitution)
+SHIP_EQUIVALENTS = {
+    # Minmatar -> Amarr equivalent
+    'rifter': 'executioner',
+    'slasher': 'punisher',
+    'wolf': 'crusader',
+    'jaguar': 'malediction',
+    'hurricane': 'harbinger',
+    # Amarr -> Minmatar equivalent
+    'executioner': 'rifter',
+    'punisher': 'slasher',
+    'coercer': 'thrasher',
+    'omen': 'stabber',
+    'maller': 'rupture',
+    'harbinger': 'hurricane',
+    'apocalypse': 'typhoon',
+    'abaddon': 'maelstrom',
+}
+
 # UI Colors
 COLOR_SHIELD = (100, 150, 255)
 COLOR_ARMOR = (200, 150, 100)
@@ -346,6 +398,98 @@ ENEMY_STATS = {
         'size': (97, 129),  # Drone carriers
         'behavior': 'drone_carrier',
         'drones': 4  # Spawns more drones
+    },
+    # === MINMATAR SHIPS (for Amarr campaign enemies) ===
+    'rifter': {
+        'name': 'Rifter',
+        'shields': 40,
+        'armor': 50,
+        'hull': 25,
+        'speed': 3.0,
+        'fire_rate': 1300,
+        'score': 100,
+        'size': (69, 90),  # Frigate - fast attack
+        'faction': 'minmatar'
+    },
+    'slasher': {
+        'name': 'Slasher',
+        'shields': 50,
+        'armor': 30,
+        'hull': 20,
+        'speed': 3.5,
+        'fire_rate': 1100,
+        'score': 90,
+        'size': (65, 85),  # Frigate - very fast
+        'faction': 'minmatar'
+    },
+    'thrasher': {
+        'name': 'Thrasher',
+        'shields': 60,
+        'armor': 70,
+        'hull': 40,
+        'speed': 2.2,
+        'fire_rate': 1000,
+        'score': 180,
+        'size': (95, 125),  # Destroyer - heavy firepower
+        'faction': 'minmatar'
+    },
+    'stabber': {
+        'name': 'Stabber',
+        'shields': 120,
+        'armor': 180,
+        'hull': 90,
+        'speed': 1.1,
+        'fire_rate': 1100,
+        'score': 700,
+        'size': (300, 400),  # Cruiser - fast for its class
+        'faction': 'minmatar'
+    },
+    'rupture': {
+        'name': 'Rupture',
+        'shields': 100,
+        'armor': 250,
+        'hull': 120,
+        'speed': 0.8,
+        'fire_rate': 1400,
+        'score': 850,
+        'size': (320, 420),  # Cruiser - armor tank
+        'faction': 'minmatar'
+    },
+    'hurricane': {
+        'name': 'Hurricane',
+        'shields': 400,
+        'armor': 700,
+        'hull': 350,
+        'speed': 0.5,
+        'fire_rate': 900,
+        'score': 2200,
+        'size': (430, 570),  # Battlecruiser
+        'faction': 'minmatar',
+        'behavior': 'artillery'
+    },
+    'typhoon': {
+        'name': 'Typhoon',
+        'shields': 600,
+        'armor': 900,
+        'hull': 500,
+        'speed': 0.35,
+        'fire_rate': 1500,
+        'score': 4000,
+        'size': (480, 640),  # Battleship
+        'faction': 'minmatar',
+        'boss': True
+    },
+    'maelstrom': {
+        'name': 'Maelstrom',
+        'shields': 800,
+        'armor': 1000,
+        'hull': 600,
+        'speed': 0.3,
+        'fire_rate': 1200,
+        'score': 5000,
+        'size': (520, 700),  # Battleship - final boss
+        'faction': 'minmatar',
+        'boss': True
     }
 }
 
@@ -395,9 +539,13 @@ RANDOM_POWERUPS = ['nanite', 'weapon_upgrade', 'rapid_fire',
 HEALTH_POWERUPS = ['shield_recharger', 'armor_repairer', 'hull_repairer']
 
 # Stage definitions
-STAGES = [
+# === CAMPAIGN STAGES BY FACTION ===
+
+# Minmatar Campaign - Fighting Amarr oppressors
+STAGES_MINMATAR = [
     {
         'name': 'Asteroid Belt Escape',
+        'story': "Amarr slavers patrol the belt. Break through their picket and escape to Republic space.",
         'waves': 5,
         'enemies': ['executioner', 'punisher', 'drone'],
         'industrial_chance': 0.1,
@@ -405,6 +553,7 @@ STAGES = [
     },
     {
         'name': 'Amarr Patrol Interdiction',
+        'story': "An Amarr patrol blocks the only gate. Engage and destroy their cruiser commander.",
         'waves': 7,
         'enemies': ['executioner', 'punisher', 'coercer', 'drone'],
         'industrial_chance': 0.15,
@@ -412,6 +561,7 @@ STAGES = [
     },
     {
         'name': 'Slave Colony Liberation',
+        'story': "A hidden colony holds thousands of Minmatar slaves. Free them at any cost.",
         'waves': 8,
         'enemies': ['executioner', 'punisher', 'coercer', 'omen', 'interceptor'],
         'industrial_chance': 0.25,
@@ -419,6 +569,7 @@ STAGES = [
     },
     {
         'name': 'Gate Assault',
+        'story': "The Amarr have fortified the gate with a battleship. Punch through to open the escape route.",
         'waves': 10,
         'enemies': ['punisher', 'coercer', 'omen', 'maller', 'interceptor', 'bomber'],
         'industrial_chance': 0.15,
@@ -426,12 +577,60 @@ STAGES = [
     },
     {
         'name': 'Final Push - Amarr Station',
+        'story': "The Amarr flagship Damnation guards the station. Destroy it and the rebellion succeeds.",
         'waves': 12,
         'enemies': ['coercer', 'omen', 'maller', 'harbinger', 'interceptor', 'bomber', 'dragoon'],
         'industrial_chance': 0.2,
         'boss': 'abaddon'
     }
 ]
+
+# Amarr Campaign - Crushing Minmatar rebellion
+STAGES_AMARR = [
+    {
+        'name': 'Border Patrol',
+        'story': "Minmatar raiders have breached the border. Hunt them down in the asteroid field.",
+        'waves': 5,
+        'enemies': ['rifter', 'slasher', 'drone'],
+        'industrial_chance': 0.1,
+        'boss': None
+    },
+    {
+        'name': 'Rebel Convoy Ambush',
+        'story': "Intelligence reports a rebel supply convoy. Intercept and destroy their escort.",
+        'waves': 7,
+        'enemies': ['rifter', 'slasher', 'thrasher', 'drone'],
+        'industrial_chance': 0.15,
+        'boss': 'stabber'
+    },
+    {
+        'name': 'Terrorist Cell Raid',
+        'story': "A Minmatar terrorist cell operates from this station. Eliminate all hostiles.",
+        'waves': 8,
+        'enemies': ['rifter', 'slasher', 'thrasher', 'stabber', 'interceptor'],
+        'industrial_chance': 0.25,
+        'boss': None
+    },
+    {
+        'name': 'Gate Defense',
+        'story': "Rebels are attempting to seize the gate. Hold the line against their battlecruiser.",
+        'waves': 10,
+        'enemies': ['slasher', 'thrasher', 'stabber', 'rupture', 'interceptor', 'bomber'],
+        'industrial_chance': 0.15,
+        'boss': 'hurricane'
+    },
+    {
+        'name': 'Crushing the Rebellion',
+        'story': "The rebel flagship Defiance leads their final assault. Destroy it and end this war.",
+        'waves': 12,
+        'enemies': ['thrasher', 'stabber', 'rupture', 'hurricane', 'interceptor', 'bomber'],
+        'industrial_chance': 0.2,
+        'boss': 'maelstrom'
+    }
+]
+
+# Default stages (Minmatar campaign for backwards compatibility)
+STAGES = STAGES_MINMATAR
 
 
 def _convert_json_stage_to_stage_format(stage_data):

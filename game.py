@@ -74,7 +74,7 @@ class SplashScreen:
             })
 
     def _create_detailed_rifter(self):
-        """Load and enhance the Rifter sprite for title screen"""
+        """Load and display the Rifter sprite for title screen - clean and sharp"""
         import os
 
         # Try to load the actual Rifter sprite
@@ -84,45 +84,31 @@ class SplashScreen:
             # Load the Rifter sprite
             rifter_sprite = pygame.image.load(sprite_path).convert_alpha()
 
-            # Scale up for title screen prominence (300x400 or so)
+            # Scale up for title screen - keep it sharp
             orig_w, orig_h = rifter_sprite.get_size()
-            scale = 4.0  # Make it large for the title screen
+            scale = 4.5
             new_w = int(orig_w * scale)
             new_h = int(orig_h * scale)
             rifter_sprite = pygame.transform.smoothscale(rifter_sprite, (new_w, new_h))
 
-            # Create a surface with glow effect around the ship
-            size = max(new_w, new_h) + 80
+            # Simple canvas with minimal padding
+            padding = 60
+            size = max(new_w, new_h) + padding * 2
             final_surf = pygame.Surface((size, size), pygame.SRCALPHA)
-
-            # Add engine glow effect
-            engine_glow = pygame.Surface((size, size), pygame.SRCALPHA)
-            glow_color = (255, 140, 50)
             cx, cy = size // 2, size // 2
 
-            # Outer glow
-            for r in range(60, 0, -5):
-                alpha = int(20 * r / 60)
-                pygame.draw.circle(engine_glow, (*glow_color, alpha), (cx, cy), new_h // 2 + r)
-
-            final_surf.blit(engine_glow, (0, 0))
-
-            # Center the sprite
+            # Center the sprite - that's it, let the actual art speak
             sprite_x = (size - new_w) // 2
             sprite_y = (size - new_h) // 2
             final_surf.blit(rifter_sprite, (sprite_x, sprite_y))
 
-            # Add engine trail glow (at the bottom/rear of ship)
-            trail_surf = pygame.Surface((size, size), pygame.SRCALPHA)
-            for i in range(3):
-                trail_x = cx + (i - 1) * 25
-                trail_y = cy + new_h // 3
-                for r in range(20, 0, -3):
-                    alpha = int(150 * r / 20)
-                    pygame.draw.circle(trail_surf, (255, 180, 80, alpha), (trail_x, trail_y), r)
-                pygame.draw.circle(trail_surf, (255, 255, 200), (trail_x, trail_y), 5)
-
-            final_surf.blit(trail_surf, (0, 0))
+            # Simple engine glow at the rear (subtle)
+            glow_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            engine_y = sprite_y + new_h - 15
+            for r in range(25, 0, -3):
+                alpha = int(100 * (r / 25))
+                pygame.draw.circle(glow_surf, (255, 150, 50, alpha), (cx, engine_y), r)
+            final_surf.blit(glow_surf, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
             return final_surf
 
@@ -482,7 +468,7 @@ class Game:
         self.splash_screen = SplashScreen(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         # Game state
-        self.state = 'splash'  # splash, menu, ship_select, difficulty, mode_select, playing, shop, paused, gameover, victory, settings, credits
+        self.state = 'splash'  # splash, menu, difficulty, faction_select, ship_select, mode_select, playing, shop, paused, gameover, victory, settings, credits
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
@@ -539,6 +525,12 @@ class Game:
         # Mode selection
         self.mode_options = ['campaign', 'endless', 'boss_rush']
         self.mode_index = 0
+
+        # Faction selection
+        self.faction_options = ['minmatar', 'amarr']
+        self.faction_index = 0
+        self.selected_faction = 'minmatar'  # Default faction
+        self.active_stages = STAGES_MINMATAR  # Campaign stages for selected faction
 
         # Menu navigation
         self.menu_options = ['start', 'how_to_play', 'settings', 'leaderboard', 'credits', 'quit']
@@ -641,9 +633,11 @@ class Game:
         # Messages
         self.message = ""
         self.message_timer = 0
+        self.message_subtitle = None
 
     def apply_ship_selection(self):
         """Apply bonuses based on selected ship"""
+        # === MINMATAR SHIPS ===
         if self.selected_ship == 'wolf':
             # Wolf: T2 Assault Frigate - armor and weapon focused
             self.player.is_wolf = True
@@ -657,18 +651,43 @@ class Game:
             self.player.image = self.player._create_ship_image()
         elif self.selected_ship == 'jaguar':
             # Jaguar: T2 Assault Frigate - speed and evasion focused
-            self.player.is_wolf = True  # T2 ship flag
-            self.player.speed *= 1.4  # 40% speed bonus
-            self.player.max_shields += 30  # Better shields
+            self.player.is_jaguar = True
+            self.player.speed *= JAGUAR_SPEED_BONUS
+            self.player.max_shields += JAGUAR_SHIELD_BONUS
             self.player.shields = self.player.max_shields
             self.player.ship_class = 'Jaguar'
             self.player.image = self.player._create_ship_image()
-        # rifter is default, no changes needed
+        elif self.selected_ship == 'rifter':
+            # Rifter: T1 Frigate - default Minmatar
+            self.player.ship_class = 'Rifter'
+            self.player.image = self.player._create_ship_image()
+        # === AMARR SHIPS ===
+        elif self.selected_ship == 'executioner':
+            # Executioner: T1 Frigate - fast Amarr frigate
+            self.player.ship_class = 'Executioner'
+            self.player.image = self.player._create_ship_image()
+        elif self.selected_ship == 'crusader':
+            # Crusader: T2 Interceptor - speed focused
+            self.player.is_crusader = True
+            self.player.speed *= 1.35  # Fast interceptor
+            self.player.max_shields += 25
+            self.player.shields = self.player.max_shields
+            self.player.ship_class = 'Crusader'
+            self.player.image = self.player._create_ship_image()
+        elif self.selected_ship == 'malediction':
+            # Malediction: T2 Interceptor - tackle/evasion focused
+            self.player.is_malediction = True
+            self.player.speed *= 1.5  # Fastest interceptor
+            self.player.max_armor += 30
+            self.player.armor = self.player.max_armor
+            self.player.ship_class = 'Malediction'
+            self.player.image = self.player._create_ship_image()
     
-    def show_message(self, text, duration=120):
-        """Show a temporary message"""
+    def show_message(self, text, duration=120, subtitle=None):
+        """Show a temporary message with optional subtitle"""
         self.message = text
         self.message_timer = duration
+        self.message_subtitle = subtitle
     
     def spawn_wave(self):
         """Spawn enemies for current wave with progressive scaling"""
@@ -677,7 +696,7 @@ class Game:
             self._spawn_endless_wave()
             return
 
-        stage = STAGES[self.current_stage]
+        stage = self.active_stages[self.current_stage]
 
         # Progressive wave scaling formula - LOTS of enemies to plow through
         # Base enemies + wave bonus + stage bonus + difficulty modifier
@@ -861,7 +880,7 @@ class Game:
             self._spawn_endless_enemy()
             return
 
-        stage = STAGES[self.current_stage]
+        stage = self.active_stages[self.current_stage]
 
         # Chance for industrial - guarantee at least one per wave in later stages
         if (self.wave_spawned == self.wave_enemies - 1 and
@@ -1174,7 +1193,7 @@ class Game:
                 else:
                     enemy_types = ['coercer', 'omen']
             else:
-                stage = STAGES[self.current_stage]
+                stage = self.active_stages[self.current_stage]
                 enemy_types = [e for e in stage['enemies'] if e not in ['bestower', 'drone']]
                 if not enemy_types:
                     enemy_types = ['executioner']
@@ -1189,48 +1208,109 @@ class Game:
             self._spawn_line_formation(enemy_types)
         elif formation_type == 'diamond':
             self._spawn_diamond_formation(enemy_types)
+        elif formation_type == 'surround':
+            self._spawn_surround_formation(enemy_types)
         elif formation_type == 'roaming_fleet':
             self._spawn_roaming_fleet(enemy_types)
 
     def _spawn_v_formation(self, enemy_types):
-        """Spawn 5 enemies in V-shape pointing down with leader/follower relationships"""
-        center_x = random.randint(150, SCREEN_WIDTH - 150)
-        base_y = -50
+        """Spawn V-formation from any direction - 360 degree spawning"""
+        # Choose spawn direction with weights
+        directions = ['top', 'left', 'right', 'bottom', 'top_left', 'top_right', 'bottom_left', 'bottom_right']
+        weights = [15, 15, 15, 10, 12, 12, 10, 10]  # Slightly favor sides
+        direction = random.choices(directions, weights=weights)[0]
+
+        self._spawn_directional_v_formation(enemy_types, direction)
+
+    def _spawn_directional_v_formation(self, enemy_types, direction, size=5):
+        """Spawn V-formation from specified direction pointing toward screen center"""
         spacing = 45
 
-        # V-shape positions: leader at front, wings spread back
-        # Offsets relative to leader for formation following
-        positions_and_offsets = [
-            ((center_x, base_y), (0, 0)),                               # Leader
-            ((center_x - spacing, base_y - spacing), (-spacing, -spacing)),  # Left wing 1
-            ((center_x + spacing, base_y - spacing), (spacing, -spacing)),   # Right wing 1
-            ((center_x - spacing * 2, base_y - spacing * 2), (-spacing * 2, -spacing * 2)),  # Left wing 2
-            ((center_x + spacing * 2, base_y - spacing * 2), (spacing * 2, -spacing * 2)),   # Right wing 2
-        ]
+        # Calculate spawn position and velocity based on direction
+        if direction == 'top':
+            cx, cy = random.randint(150, SCREEN_WIDTH - 150), -50
+            vx, vy = 0, 2.5
+            # V points down (direction of travel)
+            wing_dx, wing_dy = spacing, -spacing
+        elif direction == 'bottom':
+            cx, cy = random.randint(150, SCREEN_WIDTH - 150), SCREEN_HEIGHT + 50
+            vx, vy = 0, -2.5
+            # V points up
+            wing_dx, wing_dy = spacing, spacing
+        elif direction == 'left':
+            cx, cy = -50, random.randint(150, SCREEN_HEIGHT - 200)
+            vx, vy = 3.0, 0.5
+            # V points right
+            wing_dx, wing_dy = -spacing, spacing
+        elif direction == 'right':
+            cx, cy = SCREEN_WIDTH + 50, random.randint(150, SCREEN_HEIGHT - 200)
+            vx, vy = -3.0, 0.5
+            # V points left
+            wing_dx, wing_dy = spacing, spacing
+        elif direction == 'top_left':
+            cx, cy = -50, -50
+            vx, vy = 2.5, 2.0
+            # V points bottom-right (diagonal)
+            wing_dx, wing_dy = -spacing * 0.7, -spacing * 0.7
+        elif direction == 'top_right':
+            cx, cy = SCREEN_WIDTH + 50, -50
+            vx, vy = -2.5, 2.0
+            # V points bottom-left
+            wing_dx, wing_dy = spacing * 0.7, -spacing * 0.7
+        elif direction == 'bottom_left':
+            cx, cy = -50, SCREEN_HEIGHT + 50
+            vx, vy = 2.5, -2.0
+            # V points top-right
+            wing_dx, wing_dy = -spacing * 0.7, spacing * 0.7
+        else:  # bottom_right
+            cx, cy = SCREEN_WIDTH + 50, SCREEN_HEIGHT + 50
+            vx, vy = -2.5, -2.0
+            # V points top-left
+            wing_dx, wing_dy = spacing * 0.7, spacing * 0.7
+
+        # Build V-formation positions: leader at tip, wings spread back
+        positions_and_offsets = [(0, 0)]  # Leader at tip
+        for row in range(1, (size + 1) // 2):
+            positions_and_offsets.append((wing_dx * row, wing_dy * row))      # Left wing
+            positions_and_offsets.append((-wing_dx * row, wing_dy * row))     # Right wing
 
         leader_type = random.choice(enemy_types)
         leader = None
 
-        for i, ((x, y), offset) in enumerate(positions_and_offsets):
+        for i, (off_x, off_y) in enumerate(positions_and_offsets):
+            if i >= size:
+                break
+            x = cx + off_x
+            y = cy + off_y
             etype = leader_type if i == 0 else random.choice(enemy_types)
             enemy = Enemy(etype, x, y, self.difficulty_settings)
 
+            # Set velocity for the formation direction
+            enemy.vx = vx
+            enemy.vy = vy
+            enemy.pattern = enemy.PATTERN_DIAGONAL
+
             if i == 0:
-                # Leader uses normal pattern (cruiser AI if it's a cruiser, else drift)
                 leader = enemy
                 enemy.formation_role = 'leader'
             else:
-                # Followers use formation pattern - track the leader
                 enemy.pattern = enemy.PATTERN_FORMATION
                 enemy.formation_leader = leader
-                enemy.formation_offset = offset
+                enemy.formation_offset = (off_x, off_y)
                 enemy.formation_role = 'follower'
 
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
 
-        self.wave_spawned += 5
-        self.show_message("V-FORMATION INCOMING!", 60)
+        self.wave_spawned += min(size, len(positions_and_offsets))
+
+        # Direction-specific messages
+        dir_names = {
+            'top': 'ABOVE', 'bottom': 'BELOW', 'left': 'PORT', 'right': 'STARBOARD',
+            'top_left': 'PORT BOW', 'top_right': 'STARBOARD BOW',
+            'bottom_left': 'PORT STERN', 'bottom_right': 'STARBOARD STERN'
+        }
+        self.show_message(f"V-FORMATION FROM {dir_names.get(direction, 'UNKNOWN')}!", 60)
 
     def _spawn_escort_formation(self, enemy_types):
         """Spawn escorts protecting a Bestower with formation following"""
@@ -1267,63 +1347,166 @@ class Game:
         self.show_message("ESCORT FORMATION - PROTECT THE SLAVES!", 90)
 
     def _spawn_pincer_formation(self, enemy_types):
-        """Spawn enemies from both sides in pincer attack"""
-        base_y = -50
+        """Spawn enemies from opposite sides - 360 degree pincer attack"""
         count_per_side = 3
 
-        # Left side
-        for i in range(count_per_side):
-            x = -30
-            y = base_y + i * 50
-            enemy = Enemy(random.choice(enemy_types), x, y, self.difficulty_settings)
-            enemy.vx = 1.5  # Move right
-            self.enemies.add(enemy)
-            self.all_sprites.add(enemy)
+        # Choose pincer axis: horizontal (left/right), vertical (top/bottom), or diagonal
+        axis = random.choice(['horizontal', 'vertical', 'diagonal_1', 'diagonal_2'])
 
-        # Right side
-        for i in range(count_per_side):
-            x = SCREEN_WIDTH + 30
-            y = base_y + i * 50
-            enemy = Enemy(random.choice(enemy_types), x, y, self.difficulty_settings)
-            enemy.vx = -1.5  # Move left
-            self.enemies.add(enemy)
-            self.all_sprites.add(enemy)
+        if axis == 'horizontal':
+            # Classic left-right pincer
+            center_y = random.randint(200, SCREEN_HEIGHT - 200)
+            for i in range(count_per_side):
+                # Left side
+                enemy = Enemy(random.choice(enemy_types), -30, center_y + (i - 1) * 50, self.difficulty_settings)
+                enemy.vx, enemy.vy = 2.5, 0.3
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+                # Right side
+                enemy = Enemy(random.choice(enemy_types), SCREEN_WIDTH + 30, center_y + (i - 1) * 50, self.difficulty_settings)
+                enemy.vx, enemy.vy = -2.5, 0.3
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+            msg = "PINCER - PORT AND STARBOARD!"
+
+        elif axis == 'vertical':
+            # Top-bottom pincer (requires 360 aiming!)
+            center_x = random.randint(150, SCREEN_WIDTH - 150)
+            for i in range(count_per_side):
+                # Top
+                enemy = Enemy(random.choice(enemy_types), center_x + (i - 1) * 50, -30, self.difficulty_settings)
+                enemy.vx, enemy.vy = 0, 2.5
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+                # Bottom
+                enemy = Enemy(random.choice(enemy_types), center_x + (i - 1) * 50, SCREEN_HEIGHT + 30, self.difficulty_settings)
+                enemy.vx, enemy.vy = 0, -2.5
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+            msg = "PINCER - ABOVE AND BELOW!"
+
+        elif axis == 'diagonal_1':
+            # Top-left to bottom-right diagonal
+            for i in range(count_per_side):
+                offset = (i - 1) * 40
+                # Top-left
+                enemy = Enemy(random.choice(enemy_types), -30 + offset, -30 - offset, self.difficulty_settings)
+                enemy.vx, enemy.vy = 2.2, 2.2
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+                # Bottom-right
+                enemy = Enemy(random.choice(enemy_types), SCREEN_WIDTH + 30 - offset, SCREEN_HEIGHT + 30 + offset, self.difficulty_settings)
+                enemy.vx, enemy.vy = -2.2, -2.2
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+            msg = "DIAGONAL PINCER!"
+
+        else:  # diagonal_2
+            # Top-right to bottom-left diagonal
+            for i in range(count_per_side):
+                offset = (i - 1) * 40
+                # Top-right
+                enemy = Enemy(random.choice(enemy_types), SCREEN_WIDTH + 30 - offset, -30 - offset, self.difficulty_settings)
+                enemy.vx, enemy.vy = -2.2, 2.2
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+                # Bottom-left
+                enemy = Enemy(random.choice(enemy_types), -30 + offset, SCREEN_HEIGHT + 30 + offset, self.difficulty_settings)
+                enemy.vx, enemy.vy = 2.2, -2.2
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+            msg = "DIAGONAL PINCER!"
 
         self.wave_spawned += count_per_side * 2
-        self.show_message("PINCER ATTACK!", 60)
+        self.show_message(msg, 60)
 
     def _spawn_line_formation(self, enemy_types):
-        """Spawn enemies in horizontal line"""
+        """Spawn enemies in line formation from any edge"""
         count = 5
-        y = -50
-        spacing = (SCREEN_WIDTH - 100) // (count + 1)
+        direction = random.choice(['top', 'bottom', 'left', 'right'])
 
-        for i in range(count):
-            x = 50 + spacing * (i + 1)
-            enemy = Enemy(random.choice(enemy_types), x, y, self.difficulty_settings)
-            self.enemies.add(enemy)
-            self.all_sprites.add(enemy)
+        if direction == 'top':
+            spacing = (SCREEN_WIDTH - 100) // (count + 1)
+            for i in range(count):
+                x = 50 + spacing * (i + 1)
+                enemy = Enemy(random.choice(enemy_types), x, -50, self.difficulty_settings)
+                enemy.vy = 2.0
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+            msg = "LINE FROM ABOVE!"
+
+        elif direction == 'bottom':
+            spacing = (SCREEN_WIDTH - 100) // (count + 1)
+            for i in range(count):
+                x = 50 + spacing * (i + 1)
+                enemy = Enemy(random.choice(enemy_types), x, SCREEN_HEIGHT + 50, self.difficulty_settings)
+                enemy.vy = -2.5
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+            msg = "LINE FROM BELOW!"
+
+        elif direction == 'left':
+            spacing = (SCREEN_HEIGHT - 200) // (count + 1)
+            for i in range(count):
+                y = 100 + spacing * (i + 1)
+                enemy = Enemy(random.choice(enemy_types), -50, y, self.difficulty_settings)
+                enemy.vx = 2.5
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+            msg = "LINE FROM PORT!"
+
+        else:  # right
+            spacing = (SCREEN_HEIGHT - 200) // (count + 1)
+            for i in range(count):
+                y = 100 + spacing * (i + 1)
+                enemy = Enemy(random.choice(enemy_types), SCREEN_WIDTH + 50, y, self.difficulty_settings)
+                enemy.vx = -2.5
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+            msg = "LINE FROM STARBOARD!"
 
         self.wave_spawned += count
-        self.show_message("LINE FORMATION!", 60)
+        self.show_message(msg, 60)
 
     def _spawn_diamond_formation(self, enemy_types):
-        """Spawn enemies in diamond shape with formation leader"""
-        center_x = random.randint(150, SCREEN_WIDTH - 150)
-        base_y = -50
+        """Spawn diamond formation from any direction"""
+        direction = random.choice(['top', 'bottom', 'left', 'right'])
         spacing = 50
 
-        # (position, offset from leader)
-        positions_and_offsets = [
-            ((center_x, base_y), (0, 0)),                      # Leader at front
-            ((center_x - spacing, base_y - spacing), (-spacing, -spacing)),  # Left wing
-            ((center_x + spacing, base_y - spacing), (spacing, -spacing)),   # Right wing
-            ((center_x, base_y - spacing * 2), (0, -spacing * 2)),           # Rear guard
-        ]
+        if direction == 'top':
+            cx, cy = random.randint(150, SCREEN_WIDTH - 150), -50
+            vx, vy = 0, 2.5
+            offsets = [(0, 0), (-spacing, -spacing), (spacing, -spacing), (0, -spacing * 2)]
+        elif direction == 'bottom':
+            cx, cy = random.randint(150, SCREEN_WIDTH - 150), SCREEN_HEIGHT + 50
+            vx, vy = 0, -2.5
+            offsets = [(0, 0), (-spacing, spacing), (spacing, spacing), (0, spacing * 2)]
+        elif direction == 'left':
+            cx, cy = -50, random.randint(200, SCREEN_HEIGHT - 200)
+            vx, vy = 2.5, 0.3
+            offsets = [(0, 0), (-spacing, -spacing), (-spacing, spacing), (-spacing * 2, 0)]
+        else:  # right
+            cx, cy = SCREEN_WIDTH + 50, random.randint(200, SCREEN_HEIGHT - 200)
+            vx, vy = -2.5, 0.3
+            offsets = [(0, 0), (spacing, -spacing), (spacing, spacing), (spacing * 2, 0)]
 
         leader = None
-        for i, ((x, y), offset) in enumerate(positions_and_offsets):
+        for i, (off_x, off_y) in enumerate(offsets):
+            x, y = cx + off_x, cy + off_y
             enemy = Enemy(random.choice(enemy_types), x, y, self.difficulty_settings)
+            enemy.vx, enemy.vy = vx, vy
+            enemy.pattern = enemy.PATTERN_DIAGONAL
 
             if i == 0:
                 leader = enemy
@@ -1331,14 +1514,57 @@ class Game:
             else:
                 enemy.pattern = enemy.PATTERN_FORMATION
                 enemy.formation_leader = leader
-                enemy.formation_offset = offset
+                enemy.formation_offset = (off_x, off_y)
                 enemy.formation_role = 'wingman'
 
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
 
+        dir_names = {'top': 'ABOVE', 'bottom': 'BELOW', 'left': 'PORT', 'right': 'STARBOARD'}
         self.wave_spawned += 4
-        self.show_message("DIAMOND FORMATION!", 60)
+        self.show_message(f"DIAMOND FROM {dir_names[direction]}!", 60)
+
+    def _spawn_surround_formation(self, enemy_types):
+        """Spawn enemies from all 4 cardinal directions simultaneously - true 360 combat!"""
+        count_per_direction = 2
+
+        # Get player position for targeting (or screen center if no player)
+        if hasattr(self, 'player') and self.player.alive():
+            target_x = self.player.rect.centerx
+            target_y = self.player.rect.centery
+        else:
+            target_x = SCREEN_WIDTH // 2
+            target_y = SCREEN_HEIGHT // 2
+
+        spawn_points = [
+            # (start_x, start_y, velocity toward center)
+            (target_x, -50, 0, 2.5),                          # Top
+            (target_x, SCREEN_HEIGHT + 50, 0, -2.5),          # Bottom
+            (-50, target_y, 2.5, 0),                          # Left
+            (SCREEN_WIDTH + 50, target_y, -2.5, 0),           # Right
+        ]
+
+        for base_x, base_y, vx, vy in spawn_points:
+            for i in range(count_per_direction):
+                # Offset perpendicular to velocity
+                if vx == 0:  # Vertical movement, offset horizontally
+                    offset = (i - (count_per_direction - 1) / 2) * 60
+                    x = base_x + offset
+                    y = base_y
+                else:  # Horizontal movement, offset vertically
+                    offset = (i - (count_per_direction - 1) / 2) * 60
+                    x = base_x
+                    y = base_y + offset
+
+                enemy = Enemy(random.choice(enemy_types), x, y, self.difficulty_settings)
+                enemy.vx = vx
+                enemy.vy = vy
+                enemy.pattern = enemy.PATTERN_DIAGONAL
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+
+        self.wave_spawned += count_per_direction * 4
+        self.show_message("SURROUNDED! ALL DIRECTIONS!", 90)
 
     def _spawn_roaming_fleet(self, enemy_types):
         """
@@ -1441,13 +1667,21 @@ class Game:
         # Formation chance increases with progression
         if self.game_mode == 'endless':
             # More formations as endless waves progress
-            formation_chance = min(0.25, 0.05 + self.endless_wave * 0.01)
+            formation_chance = min(0.35, 0.08 + self.endless_wave * 0.015)
         else:
             # Formations start appearing in stage 2+
-            formation_chance = 0.1 + self.current_stage * 0.05
+            formation_chance = 0.15 + self.current_stage * 0.06
 
         if random.random() < formation_chance:
-            formations = ['v_shape', 'line', 'pincer', 'diamond']
+            # Base formations - all support 360 degree spawning
+            formations = ['v_shape', 'v_shape', 'line', 'pincer', 'diamond']
+
+            # Surround attack - requires 360 aiming, appears after wave 3
+            if self.game_mode == 'endless' and self.endless_wave >= 3:
+                formations.append('surround')
+            elif self.game_mode != 'endless' and self.current_stage >= 2:
+                formations.append('surround')
+
             # Escort only if bestower makes sense
             if self.game_mode == 'endless' and self.endless_wave >= 5:
                 formations.append('escort')
@@ -1887,8 +2121,10 @@ class Game:
                     self.state = 'paused'
                     self.pause_menu_index = 0
 
-            # Controller button shortcuts
-            if self.controller and self.controller.connected:
+            if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP or event.type == pygame.JOYHATMOTION:
+                pass  # Events handled by controller.handle_event()
+
+            if False and self.controller and self.controller.connected:  # DISABLED - moved outside loop
                 # Tutorial controller support
                 if self.tutorial.active:
                     if self.controller.is_button_just_pressed(XboxButton.A):
@@ -1947,7 +2183,7 @@ class Game:
                         self._controller_moved = False
                     if self.controller.is_button_just_pressed(XboxButton.A):
                         selected_key = self.ship_options[self.ship_select_index]
-                        is_locked = selected_key in ['wolf', 'jaguar'] and not self.t2_ships_unlocked
+                        is_locked = selected_key in ['wolf', 'jaguar', 'crusader', 'malediction'] and not self.t2_ships_unlocked
                         if is_locked:
                             self.play_sound('menu_error')  # Can't select locked ship
                         else:
@@ -1955,7 +2191,33 @@ class Game:
                             self.state = 'mode_select'  # Go to mode select after ship
                             self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.B):
+                        self.state = 'faction_select'  # Back to faction selection
+                        self.play_sound('menu_select')
+                elif self.state == 'faction_select':
+                    # Left/Right navigation for faction selection
+                    move_x, move_y = self.controller.get_movement_vector()
+                    if not getattr(self, '_faction_controller_moved', False):
+                        if move_x < -0.5:
+                            self.faction_index = 0
+                            self.play_sound('menu_select')
+                            self._faction_controller_moved = True
+                        elif move_x > 0.5:
+                            self.faction_index = 1
+                            self.play_sound('menu_select')
+                            self._faction_controller_moved = True
+                    if abs(move_x) < 0.3:
+                        self._faction_controller_moved = False
+
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self.set_faction(self.faction_options[self.faction_index])
+                    elif self.controller.is_button_just_pressed(XboxButton.B):
                         self.state = 'difficulty'  # Back to difficulty
+                        self.play_sound('menu_select')
+                    elif self.controller.is_button_just_pressed(XboxButton.LB):
+                        self.faction_index = 0
+                        self.play_sound('menu_select')
+                    elif self.controller.is_button_just_pressed(XboxButton.RB):
+                        self.faction_index = 1
                         self.play_sound('menu_select')
                 elif self.state == 'difficulty':
                     # 2x2 grid navigation for difficulty
@@ -2197,7 +2459,7 @@ class Game:
                         self.play_sound('menu_select')
                     elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         selected_key = self.ship_options[self.ship_select_index]
-                        is_locked = selected_key in ['wolf', 'jaguar'] and not self.t2_ships_unlocked
+                        is_locked = selected_key in ['wolf', 'jaguar', 'crusader', 'malediction'] and not self.t2_ships_unlocked
                         if is_locked:
                             self.play_sound('menu_error')  # Can't select locked ship
                         else:
@@ -2205,7 +2467,7 @@ class Game:
                             self.state = 'mode_select'  # Go to mode select after ship
                             self.play_sound('menu_select')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = 'difficulty'  # Back to difficulty
+                        self.state = 'faction_select'  # Back to faction selection
                         self.play_sound('menu_select')
 
                 elif self.state == 'difficulty':
@@ -2219,6 +2481,23 @@ class Game:
                         self.set_difficulty('nightmare')
                     elif event.key == pygame.K_ESCAPE:
                         self.state = 'menu'  # Back to main menu
+                        self.play_sound('menu_select')
+
+                elif self.state == 'faction_select':
+                    if event.key == pygame.K_1:
+                        self.set_faction('minmatar')
+                    elif event.key == pygame.K_2:
+                        self.set_faction('amarr')
+                    elif event.key == pygame.K_LEFT:
+                        self.faction_index = 0
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_RIGHT:
+                        self.faction_index = 1
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        self.set_faction(self.faction_options[self.faction_index])
+                    elif event.key == pygame.K_ESCAPE:
+                        self.state = 'difficulty'  # Back to difficulty
                         self.play_sound('menu_select')
 
                 elif self.state == 'mode_select':
@@ -2311,6 +2590,267 @@ class Game:
                 # Handle splash screen mouse click
                 if self.state == 'splash':
                     self.splash_screen.handle_event(event)
+
+        # Controller menu navigation (runs once per frame after all events processed)
+        if self.controller and self.controller.connected:
+            # Tutorial controller support
+            if self.tutorial.active:
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.tutorial.skip_timer = 1
+                elif self.controller.is_button_just_pressed(XboxButton.B):
+                    self.tutorial.tutorial_complete = True
+                    self.tutorial.active = False
+
+            if self.state == 'menu':
+                move_x, move_y = self.controller.get_movement_vector()
+                if move_y < -0.5 and not getattr(self, '_menu_controller_moved', False):
+                    self.menu_index = (self.menu_index - 1) % len(self.menu_options)
+                    self.play_sound('menu_select')
+                    self._menu_controller_moved = True
+                elif move_y > 0.5 and not getattr(self, '_menu_controller_moved', False):
+                    self.menu_index = (self.menu_index + 1) % len(self.menu_options)
+                    self.play_sound('menu_select')
+                    self._menu_controller_moved = True
+                elif abs(move_y) < 0.3:
+                    self._menu_controller_moved = False
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    option = self.menu_options[self.menu_index]
+                    if option == 'start':
+                        self.state = 'difficulty'
+                    elif option == 'how_to_play':
+                        self.state = 'how_to_play'
+                        self.how_to_play_scroll = 0
+                    elif option == 'settings':
+                        self.state = 'settings'
+                    elif option == 'leaderboard':
+                        self.state = 'leaderboard'
+                    elif option == 'credits':
+                        self.state = 'credits'
+                    elif option == 'quit':
+                        pygame.quit()
+                        sys.exit()
+                    self.play_sound('menu_select')
+                elif self.controller.is_button_just_pressed(XboxButton.BACK):
+                    self.state = 'settings'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'ship_select':
+                move_x, move_y = self.controller.get_movement_vector()
+                if move_y < -0.5 and not getattr(self, '_controller_moved', False):
+                    self.ship_select_index = (self.ship_select_index - 1) % len(self.ship_options)
+                    self.play_sound('menu_select')
+                    self._controller_moved = True
+                elif move_y > 0.5 and not getattr(self, '_controller_moved', False):
+                    self.ship_select_index = (self.ship_select_index + 1) % len(self.ship_options)
+                    self.play_sound('menu_select')
+                    self._controller_moved = True
+                elif abs(move_y) < 0.3:
+                    self._controller_moved = False
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    selected_key = self.ship_options[self.ship_select_index]
+                    is_locked = selected_key in ['wolf', 'jaguar', 'crusader', 'malediction'] and not self.t2_ships_unlocked
+                    if is_locked:
+                        self.play_sound('menu_error')
+                    else:
+                        self.selected_ship = selected_key
+                        self.state = 'mode_select'
+                        self.play_sound('menu_select')
+                elif self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'faction_select'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'faction_select':
+                move_x, move_y = self.controller.get_movement_vector()
+                if not getattr(self, '_faction_controller_moved', False):
+                    if move_x < -0.5:
+                        self.faction_index = 0
+                        self.play_sound('menu_select')
+                        self._faction_controller_moved = True
+                    elif move_x > 0.5:
+                        self.faction_index = 1
+                        self.play_sound('menu_select')
+                        self._faction_controller_moved = True
+                if abs(move_x) < 0.3:
+                    self._faction_controller_moved = False
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.set_faction(self.faction_options[self.faction_index])
+                elif self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'difficulty'
+                    self.play_sound('menu_select')
+                elif self.controller.is_button_just_pressed(XboxButton.LB):
+                    self.faction_index = 0
+                    self.play_sound('menu_select')
+                elif self.controller.is_button_just_pressed(XboxButton.RB):
+                    self.faction_index = 1
+                    self.play_sound('menu_select')
+
+            elif self.state == 'difficulty':
+                move_x, move_y = self.controller.get_movement_vector()
+                moved = False
+                if not getattr(self, '_diff_controller_moved', False):
+                    if move_y < -0.5 and self.difficulty_index >= 2:
+                        self.difficulty_index -= 2
+                        self.play_sound('menu_select')
+                        moved = True
+                    elif move_y > 0.5 and self.difficulty_index < 2:
+                        self.difficulty_index += 2
+                        self.play_sound('menu_select')
+                        moved = True
+                    elif move_x < -0.5 and self.difficulty_index % 2 == 1:
+                        self.difficulty_index -= 1
+                        self.play_sound('menu_select')
+                        moved = True
+                    elif move_x > 0.5 and self.difficulty_index % 2 == 0:
+                        self.difficulty_index += 1
+                        self.play_sound('menu_select')
+                        moved = True
+                    if moved or abs(move_x) > 0.5 or abs(move_y) > 0.5:
+                        self._diff_controller_moved = True
+                if abs(move_x) < 0.3 and abs(move_y) < 0.3:
+                    self._diff_controller_moved = False
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.set_difficulty(self.difficulty_options[self.difficulty_index])
+                    self.play_sound('menu_select')
+                elif self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'menu'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'mode_select':
+                move_x, move_y = self.controller.get_movement_vector()
+                if move_y < -0.5 and not getattr(self, '_mode_controller_moved', False):
+                    self.mode_index = (self.mode_index - 1) % len(self.mode_options)
+                    self.play_sound('menu_select')
+                    self._mode_controller_moved = True
+                elif move_y > 0.5 and not getattr(self, '_mode_controller_moved', False):
+                    self.mode_index = (self.mode_index + 1) % len(self.mode_options)
+                    self.play_sound('menu_select')
+                    self._mode_controller_moved = True
+                elif abs(move_y) < 0.3:
+                    self._mode_controller_moved = False
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.start_game(self.mode_options[self.mode_index])
+                elif self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'ship_select'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'playing':
+                if self.controller.is_button_just_pressed(XboxButton.START):
+                    self.state = 'paused'
+                    self.pause_menu_index = 0
+                    self.play_sound('menu_select')
+                if self.controller.is_button_just_pressed(XboxButton.L_STICK):
+                    self.hud_mode = (self.hud_mode + 1) % 3
+                    hud_names = ['FULL', 'MINIMAL', 'OFF']
+                    self.show_message(f"HUD: {hud_names[self.hud_mode]}", 60)
+                    self.play_sound('menu_select')
+                self._handle_dpad_input()
+
+            elif self.state == 'paused':
+                if self.controller.is_button_just_pressed(XboxButton.START):
+                    self.state = 'playing'
+                    self.play_sound('menu_select')
+                elif self.controller.is_button_just_pressed(XboxButton.A):
+                    self._select_pause_option()
+                elif self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'playing'
+                    self.play_sound('menu_select')
+                else:
+                    move_x, move_y = self.controller.get_movement_vector()
+                    if move_y < -0.5 and not getattr(self, '_pause_controller_moved', False):
+                        self.pause_menu_index = (self.pause_menu_index - 1) % len(self.pause_menu_options)
+                        self.play_sound('menu_select')
+                        self._pause_controller_moved = True
+                    elif move_y > 0.5 and not getattr(self, '_pause_controller_moved', False):
+                        self.pause_menu_index = (self.pause_menu_index + 1) % len(self.pause_menu_options)
+                        self.play_sound('menu_select')
+                        self._pause_controller_moved = True
+                    elif abs(move_y) < 0.3:
+                        self._pause_controller_moved = False
+
+            elif self.state in ['gameover', 'victory']:
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.reset_game()
+                    self.state = 'menu'
+                    self.play_sound('menu_select')
+                elif self.controller.is_button_just_pressed(XboxButton.X):
+                    self.reset_game()
+                    self.start_game(self.game_mode)
+                    self.play_sound('menu_select')
+
+            elif self.state == 'settings':
+                move_x, move_y = self.controller.get_movement_vector()
+                if move_y < -0.5 and not getattr(self, '_settings_controller_moved', False):
+                    self.settings_index = (self.settings_index - 1) % len(self.settings_options)
+                    self.play_sound('menu_select')
+                    self._settings_controller_moved = True
+                elif move_y > 0.5 and not getattr(self, '_settings_controller_moved', False):
+                    self.settings_index = (self.settings_index + 1) % len(self.settings_options)
+                    self.play_sound('menu_select')
+                    self._settings_controller_moved = True
+                elif abs(move_y) < 0.3:
+                    self._settings_controller_moved = False
+                option_key, _, option_type = self.settings_options[self.settings_index]
+                if option_type == 'toggle':
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self.settings[option_key] = not self.settings[option_key]
+                        self.play_sound('ammo_switch')
+                        self._apply_settings()
+                elif option_type == 'slider':
+                    if move_x < -0.5 and not getattr(self, '_settings_x_moved', False):
+                        self.settings[option_key] = max(0, self.settings[option_key] - 10)
+                        self.play_sound('ammo_switch')
+                        self._apply_settings()
+                        self._settings_x_moved = True
+                    elif move_x > 0.5 and not getattr(self, '_settings_x_moved', False):
+                        self.settings[option_key] = min(100, self.settings[option_key] + 10)
+                        self.play_sound('ammo_switch')
+                        self._apply_settings()
+                        self._settings_x_moved = True
+                    elif abs(move_x) < 0.3:
+                        self._settings_x_moved = False
+                if self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'menu'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'pause_settings':
+                move_x, move_y = self.controller.get_movement_vector()
+                if move_y < -0.5 and not getattr(self, '_settings_controller_moved', False):
+                    self.settings_index = (self.settings_index - 1) % len(self.settings_options)
+                    self.play_sound('menu_select')
+                    self._settings_controller_moved = True
+                elif move_y > 0.5 and not getattr(self, '_settings_controller_moved', False):
+                    self.settings_index = (self.settings_index + 1) % len(self.settings_options)
+                    self.play_sound('menu_select')
+                    self._settings_controller_moved = True
+                elif abs(move_y) < 0.3:
+                    self._settings_controller_moved = False
+                option_key, _, option_type = self.settings_options[self.settings_index]
+                if option_type == 'toggle':
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self.settings[option_key] = not self.settings[option_key]
+                        self.play_sound('ammo_switch')
+                        self._apply_settings()
+                elif option_type == 'slider':
+                    if move_x < -0.5 and not getattr(self, '_settings_x_moved', False):
+                        self.settings[option_key] = max(0, self.settings[option_key] - 10)
+                        self.play_sound('ammo_switch')
+                        self._apply_settings()
+                        self._settings_x_moved = True
+                    elif move_x > 0.5 and not getattr(self, '_settings_x_moved', False):
+                        self.settings[option_key] = min(100, self.settings[option_key] + 10)
+                        self.play_sound('ammo_switch')
+                        self._apply_settings()
+                        self._settings_x_moved = True
+                    elif abs(move_x) < 0.3:
+                        self._settings_x_moved = False
+                if self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'paused'
+                    self.play_sound('menu_select')
+
+            elif self.state in ['leaderboard', 'credits', 'how_to_play']:
+                if self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'menu'
+                    self.play_sound('menu_select')
 
     def _handle_pause_input(self, key):
         """Handle pause menu navigation"""
@@ -2488,10 +3028,36 @@ class Game:
             pass  # Silently fail if can't save
 
     def set_difficulty(self, difficulty):
-        """Set game difficulty and go to ship selection"""
+        """Set game difficulty and go to faction selection"""
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
-        self.state = 'ship_select'  # Go to ship selection after difficulty
+        self.state = 'faction_select'  # Go to faction selection after difficulty
+        self.play_sound('menu_select')
+
+    def set_faction(self, faction):
+        """Set player faction and load appropriate campaign stages"""
+        self.selected_faction = faction
+        faction_data = FACTIONS[faction]
+
+        # Load faction-specific campaign stages
+        if faction == 'minmatar':
+            self.active_stages = STAGES_MINMATAR
+            self.ship_options = ['rifter', 'wolf', 'jaguar']
+            enemy_faction = 'amarr'
+        else:
+            self.active_stages = STAGES_AMARR
+            self.ship_options = ['executioner', 'crusader', 'malediction']
+            enemy_faction = 'minmatar'
+
+        # Set enemy faction for background carrier images
+        if hasattr(self, 'stage_background'):
+            self.stage_background.set_enemy_faction(enemy_faction)
+
+        # Set default ship for this faction
+        self.selected_ship = self.ship_options[0]
+        self.ship_select_index = 0
+
+        self.state = 'ship_select'
         self.play_sound('menu_select')
 
     def start_game(self, mode='campaign'):
@@ -2510,7 +3076,8 @@ class Game:
             # Spawn first boss immediately
             self._spawn_boss_rush_boss()
         else:
-            self.show_message(STAGES[0]['name'], 180)
+            stage = self.active_stages[0]
+            self.show_message(stage['name'], 180, subtitle=stage.get('story'))
 
         self.state = 'playing'
         self.play_sound('wave_start')
@@ -2665,7 +3232,7 @@ class Game:
         elif key == pygame.K_RETURN or key == pygame.K_SPACE:
             # Continue to next stage
             self.current_stage += 1
-            if self.current_stage >= len(STAGES):
+            if self.current_stage >= len(self.active_stages):
                 self.state = 'victory'
                 self.play_sound('victory', 0.8)
                 self._record_game_end(victory=True)
@@ -2689,7 +3256,8 @@ class Game:
                 self._bc_spawned_this_stage = False
                 self._cruiser_count = 0
                 self._destroyer_wing_timer = 0
-                self.show_message(STAGES[self.current_stage]['name'], 180)
+                stage = self.active_stages[self.current_stage]
+                self.show_message(stage['name'], 180, subtitle=stage.get('story'))
                 self.play_sound('wave_start')
                 # Change music theme for new stage
                 if self.music_enabled:
@@ -3470,7 +4038,7 @@ class Game:
             self._update_boss_rush()
             return
 
-        stage = STAGES[self.current_stage]
+        stage = self.active_stages[self.current_stage]
 
         # Wave delay
         if self.wave_delay > 0:
@@ -3767,6 +4335,8 @@ class Game:
             self.draw_ship_select()
         elif self.state == 'difficulty':
             self.draw_difficulty()
+        elif self.state == 'faction_select':
+            self.draw_faction_select()
         elif self.state == 'mode_select':
             self.draw_mode_select()
         elif self.state == 'playing':
@@ -3826,7 +4396,7 @@ class Game:
         pygame.display.flip()
     
     def draw_difficulty(self):
-        """Draw polished difficulty selection screen"""
+        """Draw clean difficulty selection screen"""
         cx = SCREEN_WIDTH // 2
 
         # Title
@@ -3837,69 +4407,56 @@ class Game:
         pygame.draw.line(self.render_surface, (100, 60, 40), (cx - 180, 105), (cx + 180, 105), 2)
 
         difficulties = [
-            ('1', 'easy', 'CAREBEAR', 'Forgiving. Learn systems. Minimal punishment.', (100, 200, 100), 1.0),
-            ('2', 'normal', 'NEWBRO', 'Real mechanics. Teaches heat, positioning, failure.', (200, 180, 100), 2.0),
-            ('3', 'hard', 'BITTER VET', 'No mercy. Assumes mastery and discipline.', (255, 150, 80), 3.0),
-            ('4', 'nightmare', 'TRIGLAVIAN', 'Hostile reality. Systems turn against you.', (255, 80, 80), 4.0)
+            ('1', 'easy', 'CAREBEAR', (100, 200, 100), 1.0),
+            ('2', 'normal', 'NEWBRO', (200, 180, 100), 2.0),
+            ('3', 'hard', 'BITTER VET', (255, 150, 80), 3.0),
+            ('4', 'nightmare', 'TRIGLAVIAN', (255, 80, 80), 4.0)
         ]
 
         # Draw difficulty cards in a 2x2 grid
-        card_w, card_h = 240, 100
-        start_y = 140
-        for i, (key, diff_id, name, desc, color, intensity) in enumerate(difficulties):
+        card_w, card_h = 220, 70
+        start_y = 150
+        for i, (key, diff_id, name, color, intensity) in enumerate(difficulties):
             row, col = i // 2, i % 2
             card_x = cx - card_w - 10 + col * (card_w + 20)
-            card_y = start_y + row * (card_h + 15)
+            card_y = start_y + row * (card_h + 20)
 
             is_selected = (i == self.difficulty_index)
 
-            # Card background - highlighted if selected
+            # Card background
             card_surf = pygame.Surface((card_w, card_h), pygame.SRCALPHA)
             if is_selected:
                 card_surf.fill((40, 35, 45, 220))
-                # Draw selection glow
                 glow_rect = pygame.Rect(card_x - 4, card_y - 4, card_w + 8, card_h + 8)
-                pygame.draw.rect(self.render_surface, (*color, 100), glow_rect, 4, border_radius=10)
+                pygame.draw.rect(self.render_surface, (*color, 100), glow_rect, 4, border_radius=8)
             else:
                 card_surf.fill((25, 25, 35, 180))
             border_width = 3 if is_selected else 2
             pygame.draw.rect(card_surf, color, (0, 0, card_w, card_h), border_width, border_radius=6)
             self.render_surface.blit(card_surf, (card_x, card_y))
 
-            # Selection indicator arrow
+            # Selection arrow
             if is_selected:
-                arrow_x = card_x - 20
+                arrow_x = card_x - 18
                 arrow_y = card_y + card_h // 2
                 pygame.draw.polygon(self.render_surface, color,
-                    [(arrow_x, arrow_y), (arrow_x + 12, arrow_y - 8), (arrow_x + 12, arrow_y + 8)])
+                    [(arrow_x, arrow_y), (arrow_x + 10, arrow_y - 6), (arrow_x + 10, arrow_y + 6)])
 
-            # Key hint
-            key_bg = pygame.Rect(card_x + 10, card_y + 10, 30, 30)
-            bg_color = (60, 50, 60) if is_selected else (40, 40, 50)
-            pygame.draw.rect(self.render_surface, bg_color, key_bg, border_radius=4)
-            pygame.draw.rect(self.render_surface, color, key_bg, 2 if is_selected else 1, border_radius=4)
-            key_text = self.font.render(key, True, color)
-            key_rect = key_text.get_rect(center=key_bg.center)
-            self.render_surface.blit(key_text, key_rect)
-
-            # Name
+            # Name centered
+            name_font = pygame.font.Font(None, 36)
             name_color = (255, 255, 255) if is_selected else color
-            name_text = self.font.render(name, True, name_color)
-            self.render_surface.blit(name_text, (card_x + 50, card_y + 15))
-
-            # Description
-            desc_color = (180, 180, 180) if is_selected else (140, 140, 140)
-            desc_text = self.font_small.render(desc, True, desc_color)
-            self.render_surface.blit(desc_text, (card_x + 15, card_y + 50))
+            name_text = name_font.render(name, True, name_color)
+            name_rect = name_text.get_rect(center=(card_x + card_w // 2, card_y + 28))
+            self.render_surface.blit(name_text, name_rect)
 
             # Difficulty bar
-            bar_y = card_y + card_h - 20
-            bar_width = card_w - 30
+            bar_y = card_y + card_h - 18
+            bar_width = card_w - 40
             pygame.draw.rect(self.render_surface, (40, 40, 50),
-                           (card_x + 15, bar_y, bar_width, 8), border_radius=2)
+                           (card_x + 20, bar_y, bar_width, 6), border_radius=2)
             fill_width = int(bar_width * intensity / 4)
             pygame.draw.rect(self.render_surface, color,
-                           (card_x + 15, bar_y, fill_width, 8), border_radius=2)
+                           (card_x + 20, bar_y, fill_width, 6), border_radius=2)
 
         # Controller/Back hints
         hint_y = SCREEN_HEIGHT - 60
@@ -3907,6 +4464,166 @@ class Game:
             hint_text = self.font_small.render("[A] Select    [B] Back", True, (100, 100, 100))
         else:
             hint_text = self.font_small.render("[1-4] Select    [ESC] Back", True, (100, 100, 100))
+        hint_rect = hint_text.get_rect(center=(cx, hint_y))
+        self.render_surface.blit(hint_text, hint_rect)
+
+    def draw_faction_select(self):
+        """Draw faction selection screen - Minmatar vs Amarr"""
+        cx = SCREEN_WIDTH // 2
+
+        # Title
+        title_font = pygame.font.Font(None, 56)
+        title = title_font.render("CHOOSE YOUR SIDE", True, (255, 200, 150))
+        rect = title.get_rect(center=(cx, 60))
+        self.render_surface.blit(title, rect)
+        pygame.draw.line(self.render_surface, (100, 60, 40), (cx - 200, 90), (cx + 200, 90), 2)
+
+        # Difficulty badge
+        diff_name = self.difficulty_settings['name'].upper()
+        diff_colors = {'CAREBEAR': (100, 200, 100), 'NEWBRO': (200, 180, 100),
+                      'BITTER VET': (255, 150, 80), 'TRIGLAVIAN': (255, 80, 80)}
+        diff_color = diff_colors.get(diff_name, (150, 150, 150))
+        badge_font = pygame.font.Font(None, 22)
+        badge_text = badge_font.render(diff_name, True, diff_color)
+        badge_rect = badge_text.get_rect(center=(cx, 110))
+        self.render_surface.blit(badge_text, badge_rect)
+
+        # Faction cards - side by side
+        card_w, card_h = 320, 380
+        spacing = 60
+        start_x = cx - card_w - spacing // 2
+
+        factions = [
+            ('minmatar', FACTIONS['minmatar']),
+            ('amarr', FACTIONS['amarr'])
+        ]
+
+        for i, (faction_id, faction_data) in enumerate(factions):
+            card_x = start_x + i * (card_w + spacing)
+            card_y = 140
+
+            is_selected = (i == self.faction_index)
+            color = faction_data['color_primary']
+
+            # Card background with glow if selected
+            card_surf = pygame.Surface((card_w, card_h), pygame.SRCALPHA)
+            if is_selected:
+                card_surf.fill((40, 35, 45, 230))
+                # Glow effect
+                glow_rect = pygame.Rect(card_x - 6, card_y - 6, card_w + 12, card_h + 12)
+                pygame.draw.rect(self.render_surface, (*color[:3], 80), glow_rect, 6, border_radius=12)
+            else:
+                card_surf.fill((25, 25, 35, 180))
+
+            border_width = 4 if is_selected else 2
+            pygame.draw.rect(card_surf, color, (0, 0, card_w, card_h), border_width, border_radius=10)
+            self.render_surface.blit(card_surf, (card_x, card_y))
+
+            # Selection indicator
+            if is_selected:
+                indicator_y = card_y - 20
+                pygame.draw.polygon(self.render_surface, color,
+                    [(card_x + card_w // 2, indicator_y),
+                     (card_x + card_w // 2 - 12, indicator_y - 15),
+                     (card_x + card_w // 2 + 12, indicator_y - 15)])
+
+            # Faction name
+            name_font = pygame.font.Font(None, 44)
+            name_color = (255, 255, 255) if is_selected else color
+            name_text = name_font.render(faction_data['name'], True, name_color)
+            name_rect = name_text.get_rect(center=(card_x + card_w // 2, card_y + 35))
+            self.render_surface.blit(name_text, name_rect)
+
+            # Tagline
+            tagline_font = pygame.font.Font(None, 28)
+            tagline_text = tagline_font.render(f'"{faction_data["tagline"]}"', True, color)
+            tagline_rect = tagline_text.get_rect(center=(card_x + card_w // 2, card_y + 65))
+            self.render_surface.blit(tagline_text, tagline_rect)
+
+            # Divider line
+            pygame.draw.line(self.render_surface, (*color[:3], 100),
+                           (card_x + 20, card_y + 90), (card_x + card_w - 20, card_y + 90), 1)
+
+            # Story intro (wrapped text)
+            story_font = pygame.font.Font(None, 22)
+            story_text = faction_data['story_intro']
+            words = story_text.split()
+            lines = []
+            current_line = ""
+            max_width = card_w - 40
+
+            for word in words:
+                test_line = current_line + " " + word if current_line else word
+                test_surf = story_font.render(test_line, True, (180, 180, 180))
+                if test_surf.get_width() < max_width:
+                    current_line = test_line
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+            if current_line:
+                lines.append(current_line)
+
+            # Draw story lines
+            story_y = card_y + 105
+            for line in lines[:6]:  # Max 6 lines
+                line_text = story_font.render(line, True, (160, 160, 160))
+                line_rect = line_text.get_rect(center=(card_x + card_w // 2, story_y))
+                self.render_surface.blit(line_text, line_rect)
+                story_y += 22
+
+            # Weapon type indicator
+            weapon_y = card_y + card_h - 100
+            weapon_font = pygame.font.Font(None, 26)
+            weapon_type = "AUTOCANNONS" if faction_id == 'minmatar' else "LASERS"
+            weapon_color = (255, 150, 50) if faction_id == 'minmatar' else (100, 150, 255)
+            weapon_text = weapon_font.render(f"Weapon: {weapon_type}", True, weapon_color)
+            weapon_rect = weapon_text.get_rect(center=(card_x + card_w // 2, weapon_y))
+            self.render_surface.blit(weapon_text, weapon_rect)
+
+            # Engine color indicator
+            engine_y = weapon_y + 28
+            engine_color = faction_data['engine_color']
+            engine_text = weapon_font.render("Engines:", True, (120, 120, 120))
+            engine_rect = engine_text.get_rect(midright=(card_x + card_w // 2 - 5, engine_y))
+            self.render_surface.blit(engine_text, engine_rect)
+            # Draw engine color swatch
+            pygame.draw.circle(self.render_surface, engine_color,
+                             (card_x + card_w // 2 + 20, engine_y), 8)
+            pygame.draw.circle(self.render_surface, (255, 255, 255),
+                             (card_x + card_w // 2 + 20, engine_y), 8, 1)
+
+            # Ship preview sprites
+            ships_y = engine_y + 30
+            ship_preview_size = 45
+            ship_spacing = 55
+            ships = faction_data['player_ships']
+            total_width = len(ships) * ship_spacing - 10
+            start_ship_x = card_x + (card_w - total_width) // 2
+
+            for j, ship_name in enumerate(ships):
+                ship_x = start_ship_x + j * ship_spacing
+                # Try to load and display ship sprite
+                try:
+                    from sprites import load_ship_sprite
+                    ship_sprite = load_ship_sprite(ship_name, (ship_preview_size, ship_preview_size))
+                    if ship_sprite:
+                        sprite_rect = ship_sprite.get_rect(center=(ship_x + ship_preview_size // 2, ships_y))
+                        self.render_surface.blit(ship_sprite, sprite_rect)
+                        # Ship name below
+                        name_font = pygame.font.Font(None, 16)
+                        name_text = name_font.render(ship_name.title(), True, (120, 120, 120))
+                        name_rect = name_text.get_rect(center=(ship_x + ship_preview_size // 2, ships_y + 32))
+                        self.render_surface.blit(name_text, name_rect)
+                except:
+                    pass
+
+        # Controller/keyboard hints
+        hint_y = SCREEN_HEIGHT - 60
+        if self.controller.connected:
+            hint_text = self.font_small.render("[A] Select    [B] Back    [LB/RB] Switch", True, (100, 100, 100))
+        else:
+            hint_text = self.font_small.render("[1/2] or [LEFT/RIGHT] Select    [ESC] Back", True, (100, 100, 100))
         hint_rect = hint_text.get_rect(center=(cx, hint_y))
         self.render_surface.blit(hint_text, hint_rect)
 
@@ -4202,9 +4919,65 @@ class Game:
 
         # Draw message
         if self.message_timer > 0:
+            msg_y = SCREEN_HEIGHT // 3
+            cx = SCREEN_WIDTH // 2
+
+            # Get faction color for accent
+            faction_color = FACTIONS[self.selected_faction]['color_primary']
+
+            # Calculate fade alpha based on timer
+            fade_alpha = min(255, self.message_timer * 4)
+
+            # Draw subtitle box if present (story text)
+            if self.message_subtitle:
+                # Wrap text first to calculate box size
+                words = self.message_subtitle.split()
+                lines = []
+                current_line = ""
+                max_width = SCREEN_WIDTH - 300
+
+                for word in words:
+                    test_line = current_line + " " + word if current_line else word
+                    test_surf = self.font_small.render(test_line, True, (200, 200, 200))
+                    if test_surf.get_width() < max_width:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
+                if current_line:
+                    lines.append(current_line)
+
+                # Draw semi-transparent background box
+                box_width = max_width + 60
+                box_height = 50 + len(lines[:3]) * 24
+                box_x = cx - box_width // 2
+                box_y = msg_y - 20
+
+                box_surf = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
+                box_surf.fill((15, 15, 25, int(180 * fade_alpha / 255)))
+                pygame.draw.rect(box_surf, (*faction_color[:3], int(120 * fade_alpha / 255)),
+                               (0, 0, box_width, box_height), 2, border_radius=8)
+                self.render_surface.blit(box_surf, (box_x, box_y))
+
+                # Faction accent line at top
+                line_y = box_y + 2
+                pygame.draw.line(self.render_surface, (*faction_color[:3], int(200 * fade_alpha / 255)),
+                               (box_x + 20, line_y), (box_x + box_width - 20, line_y), 2)
+
+            # Stage name (main message)
             text = self.font_large.render(self.message, True, (255, 255, 255))
-            rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 3))
+            rect = text.get_rect(center=(cx, msg_y))
             self.render_surface.blit(text, rect)
+
+            # Draw subtitle lines
+            if self.message_subtitle:
+                subtitle_y = msg_y + 40
+                for line in lines[:3]:  # Max 3 lines
+                    subtitle_text = self.font_small.render(line, True, (180, 180, 180))
+                    subtitle_rect = subtitle_text.get_rect(center=(cx, subtitle_y))
+                    self.render_surface.blit(subtitle_text, subtitle_rect)
+                    subtitle_y += 24
 
     def _draw_player_powerup_glow(self):
         """Draw glow effects around player for active powerups"""
@@ -4399,6 +5172,9 @@ class Game:
             self.render_surface.blit(score_text, (SCREEN_WIDTH - 160, 10))
             return
 
+        # Faction indicator - top left corner
+        self._draw_faction_indicator()
+
         # Vertical thrust cooldown bar (left side of status panel)
         self._draw_thrust_gauge(cx - 75, cy)
 
@@ -4556,8 +5332,8 @@ class Game:
             wave_color = (255, 150, 100) if self.endless_wave % 10 == 0 else (200, 180, 150)
             text = self.font_small.render(f"Wave {self.endless_wave}", True, wave_color)
             self.render_surface.blit(text, (x, y))
-        elif self.current_stage < len(STAGES):
-            text = self.font_small.render(f"Wave {self.current_wave}/{STAGES[self.current_stage]['waves']}", True, (180, 180, 180))
+        elif self.current_stage < len(self.active_stages):
+            text = self.font_small.render(f"Wave {self.current_wave}/{self.active_stages[self.current_stage]['waves']}", True, (180, 180, 180))
             self.render_surface.blit(text, (x, y))
 
         # Berserk multiplier HUD (top right area)
@@ -5485,6 +6261,57 @@ class Game:
             txt = self.font_small.render("HEAT", True, symbol_color)
             self.render_surface.blit(txt, txt.get_rect(center=(cx, cy + 30)))
 
+    def _draw_faction_indicator(self):
+        """Draw faction emblem and name in top-left corner"""
+        if not hasattr(self, 'selected_faction') or not self.selected_faction:
+            return
+
+        faction_data = FACTIONS.get(self.selected_faction)
+        if not faction_data:
+            return
+
+        x, y = 10, 10
+        faction_color = faction_data['color_primary']
+        faction_name = faction_data['name'].upper()
+
+        # Background panel
+        panel_width = 140
+        panel_height = 28
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((15, 15, 25, 180))
+
+        # Faction color accent bar on left
+        pygame.draw.rect(panel_surf, faction_color, (0, 0, 4, panel_height))
+
+        # Border
+        pygame.draw.rect(panel_surf, (*faction_color[:3], 120), (0, 0, panel_width, panel_height), 1)
+
+        self.render_surface.blit(panel_surf, (x, y))
+
+        # Faction emblem (small geometric shape)
+        emblem_x = x + 14
+        emblem_y = y + panel_height // 2
+        if self.selected_faction == 'minmatar':
+            # Minmatar tribal symbol - angular/tribal
+            points = [
+                (emblem_x, emblem_y - 8),
+                (emblem_x + 6, emblem_y),
+                (emblem_x, emblem_y + 8),
+                (emblem_x - 6, emblem_y),
+            ]
+            pygame.draw.polygon(self.render_surface, faction_color, points)
+            pygame.draw.polygon(self.render_surface, (255, 200, 150), points, 1)
+        else:
+            # Amarr symbol - golden circle with cross
+            pygame.draw.circle(self.render_surface, faction_color, (emblem_x, emblem_y), 7)
+            pygame.draw.circle(self.render_surface, (255, 230, 180), (emblem_x, emblem_y), 7, 1)
+            pygame.draw.line(self.render_surface, (60, 50, 30), (emblem_x - 4, emblem_y), (emblem_x + 4, emblem_y), 2)
+            pygame.draw.line(self.render_surface, (60, 50, 30), (emblem_x, emblem_y - 4), (emblem_x, emblem_y + 4), 2)
+
+        # Faction name text
+        text = self.font_small.render(faction_name, True, faction_color)
+        self.render_surface.blit(text, (x + 26, y + 7))
+
     def _draw_thrust_gauge(self, x, cy):
         """Draw EVE-style vertical thrust/afterburner gauge"""
         now = pygame.time.get_ticks()
@@ -6118,17 +6945,29 @@ class Game:
         """Draw polished ship selection screen"""
         cx = SCREEN_WIDTH // 2
 
+        # Get faction info
+        faction_data = FACTIONS[self.selected_faction]
+        faction_color = faction_data['color_primary']
+
         # Title with glow
         title_font = pygame.font.Font(None, 48)
-        title = title_font.render("SELECT YOUR SHIP", True, (255, 180, 100))
-        rect = title.get_rect(center=(cx, 60))
+        title = title_font.render("SELECT YOUR SHIP", True, faction_color)
+        rect = title.get_rect(center=(cx, 50))
         self.render_surface.blit(title, rect)
 
-        # Decorative line
-        pygame.draw.line(self.render_surface, (100, 60, 40), (cx - 180, 85), (cx + 180, 85), 2)
+        # Faction badge
+        badge_font = pygame.font.Font(None, 24)
+        faction_name = faction_data['name'].upper()
+        badge_text = badge_font.render(faction_name, True, faction_color)
+        badge_rect = badge_text.get_rect(center=(cx, 78))
+        self.render_surface.blit(badge_text, badge_rect)
 
-        # Ship data
+        # Decorative line
+        pygame.draw.line(self.render_surface, (*faction_color[:3], 150), (cx - 180, 95), (cx + 180, 95), 2)
+
+        # Ship data - includes both Minmatar and Amarr ships
         ship_data = {
+            # === MINMATAR ===
             'rifter': {
                 'name': 'RIFTER',
                 'class': 'T1 Frigate',
@@ -6154,6 +6993,33 @@ class Game:
                 'speed': 140, 'armor': 100, 'firepower': 100,
                 'color': (100, 180, 220),
                 'icon_color': (80, 160, 200)
+            },
+            # === AMARR ===
+            'executioner': {
+                'name': 'EXECUTIONER',
+                'class': 'T1 Frigate',
+                'desc': 'Swift and elegant. Pulse lasers deliver divine judgment.',
+                'speed': 110, 'armor': 90, 'firepower': 100,
+                'color': COLOR_AMARR_ACCENT,
+                'icon_color': (200, 180, 80)
+            },
+            'crusader': {
+                'name': 'CRUSADER',
+                'class': 'T2 Interceptor',
+                'desc': 'Holy blade. High speed + enhanced shields for rapid strikes.',
+                'desc_locked': 'Complete campaign to unlock T2 ships.',
+                'speed': 135, 'armor': 100, 'firepower': 120,
+                'color': (255, 215, 100),
+                'icon_color': (220, 190, 80)
+            },
+            'malediction': {
+                'name': 'MALEDICTION',
+                'class': 'T2 Interceptor',
+                'desc': 'Fastest ship in the fleet. Tackle specialist with armor bonuses.',
+                'desc_locked': 'Complete campaign to unlock T2 ships.',
+                'speed': 150, 'armor': 130, 'firepower': 90,
+                'color': (200, 150, 100),
+                'icon_color': (180, 140, 80)
             }
         }
 
@@ -6167,7 +7033,7 @@ class Game:
         for i, ship_key in enumerate(self.ship_options):
             ship = ship_data[ship_key]
             is_selected = i == self.ship_select_index
-            is_locked = ship_key in ['wolf', 'jaguar'] and not self.t2_ships_unlocked
+            is_locked = ship_key in ['wolf', 'jaguar', 'crusader', 'malediction'] and not self.t2_ships_unlocked
             card_x = start_x + i * (card_width + spacing)
             card_y = 120
 
@@ -6192,22 +7058,50 @@ class Game:
 
             self.render_surface.blit(card_surf, card_rect)
 
-            # Ship icon (simple geometric ship)
+            # Ship sprite preview
             icon_cx = card_x + card_width // 2
             icon_cy = card_y + 50
-            if is_locked:
-                icon_color = (40, 40, 50)  # Dark gray for locked
-            else:
-                icon_color = ship['icon_color'] if is_selected else (80, 80, 90)
-            # Draw simple ship shape
-            ship_points = [
-                (icon_cx, icon_cy - 25),
-                (icon_cx + 20, icon_cy + 20),
-                (icon_cx, icon_cy + 10),
-                (icon_cx - 20, icon_cy + 20)
-            ]
-            pygame.draw.polygon(self.render_surface, icon_color, ship_points)
-            pygame.draw.polygon(self.render_surface, (255, 255, 255, 100) if is_selected and not is_locked else (100, 100, 100), ship_points, 2)
+            sprite_size = 60
+
+            try:
+                from sprites import load_ship_sprite
+                ship_sprite = load_ship_sprite(ship_key, (sprite_size, sprite_size))
+                if ship_sprite:
+                    if is_locked:
+                        # Darken locked ships
+                        dark_surf = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+                        dark_surf.blit(ship_sprite, (0, 0))
+                        dark_surf.fill((30, 30, 40, 180), special_flags=pygame.BLEND_RGBA_MULT)
+                        sprite_rect = dark_surf.get_rect(center=(icon_cx, icon_cy))
+                        self.render_surface.blit(dark_surf, sprite_rect)
+                    else:
+                        sprite_rect = ship_sprite.get_rect(center=(icon_cx, icon_cy))
+                        self.render_surface.blit(ship_sprite, sprite_rect)
+                        if is_selected:
+                            # Add glow around selected ship
+                            glow_surf = pygame.Surface((sprite_size + 20, sprite_size + 20), pygame.SRCALPHA)
+                            for r in range(10, 0, -2):
+                                alpha = int(30 * r / 10)
+                                pygame.draw.circle(glow_surf, (*ship['color'][:3], alpha),
+                                                 (sprite_size // 2 + 10, sprite_size // 2 + 10), sprite_size // 2 + r)
+                            self.render_surface.blit(glow_surf, (icon_cx - sprite_size // 2 - 10, icon_cy - sprite_size // 2 - 10))
+                            self.render_surface.blit(ship_sprite, sprite_rect)
+                else:
+                    raise Exception("No sprite")
+            except:
+                # Fallback to geometric ship
+                if is_locked:
+                    icon_color = (40, 40, 50)
+                else:
+                    icon_color = ship['icon_color'] if is_selected else (80, 80, 90)
+                ship_points = [
+                    (icon_cx, icon_cy - 25),
+                    (icon_cx + 20, icon_cy + 20),
+                    (icon_cx, icon_cy + 10),
+                    (icon_cx - 20, icon_cy + 20)
+                ]
+                pygame.draw.polygon(self.render_surface, icon_color, ship_points)
+                pygame.draw.polygon(self.render_surface, (255, 255, 255, 100) if is_selected and not is_locked else (100, 100, 100), ship_points, 2)
 
             # Lock icon for locked ships
             if is_locked:
@@ -6265,7 +7159,7 @@ class Game:
         # Selected ship description panel
         selected_ship = ship_data[self.ship_options[self.ship_select_index]]
         selected_key = self.ship_options[self.ship_select_index]
-        is_selected_locked = selected_key in ['wolf', 'jaguar'] and not self.t2_ships_unlocked
+        is_selected_locked = selected_key in ['wolf', 'jaguar', 'crusader', 'malediction'] and not self.t2_ships_unlocked
 
         desc_y = 340
         desc_panel = pygame.Surface((SCREEN_WIDTH - 80, 60), pygame.SRCALPHA)
@@ -6479,7 +7373,12 @@ class Game:
             self.render_surface.blit(rank_text, rank_rect)
             y += 10
 
-        text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
+        # Faction-specific rescued text
+        if self.selected_faction == 'minmatar':
+            rescue_text = f"Souls Liberated: {self.player.total_refugees}"
+        else:
+            rescue_text = f"Civilians Secured: {self.player.total_refugees}"
+        text = self.font.render(rescue_text, True, (100, 255, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
         self.render_surface.blit(text, rect)
 
@@ -6503,7 +7402,7 @@ class Game:
                 self.render_surface.blit(best_text, best_rect)
                 y += 25
         else:
-            stage_name = STAGES[self.current_stage]['name'] if self.current_stage < len(STAGES) else "Final Stage"
+            stage_name = self.active_stages[self.current_stage]['name'] if self.current_stage < len(self.active_stages) else "Final Stage"
             text = self.font_small.render(f"Reached: {stage_name} - Wave {self.current_wave + 1}", True, COLOR_TEXT)
             rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 70))
             self.render_surface.blit(text, rect)
@@ -6553,17 +7452,44 @@ class Game:
 
     def draw_victory(self):
         """Draw victory screen with berserk stats"""
-        title = self.font_large.render("VICTORY!", True, COLOR_MINMATAR_ACCENT)
+        # Faction-specific colors and text
+        faction_data = FACTIONS[self.selected_faction]
+        faction_color = faction_data['color_primary']
+
+        title = self.font_large.render("VICTORY!", True, faction_color)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 80))
         self.render_surface.blit(title, rect)
 
-        text = self.font.render("The Amarr station has fallen.", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 130))
-        self.render_surface.blit(text, rect)
+        # Faction tagline
+        tagline = self.font.render(faction_data['tagline'], True, faction_color)
+        rect = tagline.get_rect(center=(SCREEN_WIDTH // 2, 120))
+        self.render_surface.blit(tagline, rect)
 
-        text = self.font.render("The Minmatar Rebellion grows stronger!", True, COLOR_MINMATAR_ACCENT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 160))
-        self.render_surface.blit(text, rect)
+        # Victory text (wrapped)
+        victory_text = faction_data['victory_text']
+        words = victory_text.split()
+        lines = []
+        current_line = ""
+        max_width = SCREEN_WIDTH - 200
+
+        for word in words:
+            test_line = current_line + " " + word if current_line else word
+            test_surf = self.font_small.render(test_line, True, COLOR_TEXT)
+            if test_surf.get_width() < max_width:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+
+        y_offset = 150
+        for line in lines[:2]:  # Max 2 lines
+            text = self.font_small.render(line, True, COLOR_TEXT)
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, y_offset))
+            self.render_surface.blit(text, rect)
+            y_offset += 22
 
         # Main stats
         y = 210
@@ -6583,7 +7509,12 @@ class Game:
             self.render_surface.blit(rank_text, rank_rect)
             y += 10
 
-        text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
+        # Faction-specific rescued text
+        if self.selected_faction == 'minmatar':
+            rescue_text = f"Souls Liberated: {self.player.total_refugees}"
+        else:
+            rescue_text = f"Civilians Secured: {self.player.total_refugees}"
+        text = self.font.render(rescue_text, True, (100, 255, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
         self.render_surface.blit(text, rect)
 

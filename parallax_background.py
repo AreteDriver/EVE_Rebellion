@@ -6,7 +6,66 @@ Multi-layer starfields, nebulae, ambient traffic, and stage-specific environment
 import pygame
 import random
 import math
+import os
 from typing import List, Tuple, Optional
+
+# Cache for loaded ship images
+_carrier_image_cache = {}
+
+# Carrier definitions: Amarr and Minmatar only
+CARRIER_TYPES = {
+    'amarr': {
+        'name': 'archon',
+        'engine_color': (100, 150, 255),  # Amarr blue engines
+    },
+    'minmatar': {
+        'name': 'nidhoggur',
+        'engine_color': (255, 150, 50),  # Minmatar orange engines
+    }
+}
+
+def _load_carrier_image(size: int, faction: str = None) -> Tuple[Optional[pygame.Surface], str]:
+    """Load and cache a carrier image at the specified size.
+
+    Args:
+        size: Base size for scaling
+        faction: 'amarr' or 'minmatar' - if None, randomly selects
+
+    Returns:
+        Tuple of (surface, faction_name) or (None, faction_name)
+    """
+    # Select faction if not specified
+    if faction is None:
+        faction = random.choice(['amarr', 'minmatar'])
+
+    carrier_info = CARRIER_TYPES.get(faction, CARRIER_TYPES['amarr'])
+    ship_name = carrier_info['name']
+
+    cache_key = f"{faction}_{size}"
+    if cache_key in _carrier_image_cache:
+        return _carrier_image_cache[cache_key], faction
+
+    # Try to load carrier image
+    base_dir = os.path.dirname(__file__)
+    image_paths = [
+        os.path.join(base_dir, 'assets', 'ship_sprites', f'{ship_name}.png'),
+        os.path.join(base_dir, 'assets', 'eve_renders', f'{ship_name}.png'),
+    ]
+
+    for path in image_paths:
+        if os.path.exists(path):
+            try:
+                img = pygame.image.load(path).convert_alpha()
+                # Scale to appropriate size (carriers are large)
+                target_width = size * 5
+                target_height = size * 3
+                img = pygame.transform.smoothscale(img, (target_width, target_height))
+                _carrier_image_cache[cache_key] = img
+                return img, faction
+            except pygame.error:
+                pass
+
+    return None, faction
 
 
 # Constants
@@ -225,9 +284,11 @@ class AmbientShip:
     # Carriers are rare - not in normal rotation, spawned specially
 
     def __init__(self, width: int = SCREEN_WIDTH, height: int = SCREEN_HEIGHT,
-                 force_type: str = None):
+                 force_type: str = None, enemy_faction: str = None):
         self.width = width
         self.height = height
+        # Store enemy faction for carrier image selection
+        self.enemy_faction = enemy_faction or 'amarr'
 
         # Spawn position (off-screen)
         self.direction = random.choice(['left', 'right', 'up', 'down'])
@@ -526,131 +587,66 @@ class AmbientShip:
                                   max(2, size // 4), (255, 200, 100))
 
         else:  # carrier
-            # Massive Amarr-style carrier - imposing silhouette far in background
-            # Story: enemy fleet carriers launching fighters against rebels
-            base_color = (brightness + 15, brightness + 5, brightness - 35)  # Golden Amarr
-            color = self._apply_atmospheric_perspective(base_color, alpha)
+            # Try to use actual carrier image (Amarr Archon or Minmatar Nidhoggur)
+            # Use enemy faction if set, otherwise random
+            carrier_img, faction = _load_carrier_image(size, self.enemy_faction)
 
-            # Carriers need a larger canvas due to their massive size
-            # Recreate surface with carrier proportions
-            surf = pygame.Surface((size * 5, size * 3), pygame.SRCALPHA)
-            cx, cy = size * 2.5, size * 1.5
+            # Get faction-specific engine color
+            engine_color = CARRIER_TYPES.get(faction, CARRIER_TYPES['amarr'])['engine_color']
 
-            # === MAIN HULL - elongated capital ship ===
-            hull_points = [
-                (cx + size * 2.0, cy),                    # Bow point
-                (cx + size * 1.7, cy - size * 0.25),     # Upper bow
-                (cx + size * 1.2, cy - size * 0.35),     # Upper forward
-                (cx + size * 0.3, cy - size * 0.45),     # Upper mid
-                (cx - size * 0.8, cy - size * 0.5),      # Upper aft
-                (cx - size * 1.5, cy - size * 0.35),     # Upper stern
-                (cx - size * 1.8, cy),                    # Stern center
-                (cx - size * 1.5, cy + size * 0.35),     # Lower stern
-                (cx - size * 0.8, cy + size * 0.5),      # Lower aft
-                (cx + size * 0.3, cy + size * 0.45),     # Lower mid
-                (cx + size * 1.2, cy + size * 0.35),     # Lower forward
-                (cx + size * 1.7, cy + size * 0.25),     # Lower bow
-            ]
-            pygame.draw.polygon(surf, color, hull_points)
+            if carrier_img:
+                # Use actual carrier image with atmospheric effects
+                surf = carrier_img.copy()
 
-            # === FLIGHT DECK - distinctive carrier feature ===
-            # Upper flight deck (where fighters launch)
-            deck_color = (max(0, color[0] - 20), max(0, color[1] - 18),
-                         max(0, color[2] - 15), color[3])
-            deck_points = [
-                (cx + size * 0.8, cy - size * 0.38),
-                (cx - size * 0.6, cy - size * 0.45),
-                (cx - size * 1.2, cy - size * 0.38),
-                (cx - size * 1.2, cy - size * 0.28),
-                (cx - size * 0.6, cy - size * 0.32),
-                (cx + size * 0.8, cy - size * 0.28),
-            ]
-            pygame.draw.polygon(surf, deck_color, deck_points)
+                # Apply atmospheric perspective (fade distant objects)
+                if alpha < 255:
+                    fade_surf = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+                    fade_surf.fill((0, 0, 0, 255 - alpha))
+                    surf.blit(fade_surf, (0, 0), special_flags=pygame.BLEND_RGBA_SUB)
 
-            # Flight deck runway markings
-            for i in range(5):
-                mark_x = int(cx + size * 0.6 - i * size * 0.35)
-                mark_y = int(cy - size * 0.35)
-                pygame.draw.line(surf, (min(255, color[0] + 40), min(255, color[1] + 35),
-                                       color[2], min(255, color[3] + 20)),
-                               (mark_x, mark_y), (mark_x - int(size * 0.1), mark_y), 2)
+                # Add engine glow effects
+                w, h = surf.get_size()
+                cx, cy = w // 2, h // 2
 
-            # === COMMAND TOWER / SUPERSTRUCTURE ===
-            tower_color = (min(255, color[0] + 25), min(255, color[1] + 20),
-                          color[2], color[3])
-            tower_points = [
-                (cx - size * 0.2, cy - size * 0.45),
-                (cx + size * 0.1, cy - size * 0.65),
-                (cx + size * 0.3, cy - size * 0.6),
-                (cx + size * 0.35, cy - size * 0.38),
-            ]
-            pygame.draw.polygon(surf, tower_color, tower_points)
+                # Engine banks on the stern - faction-appropriate color
+                engine_positions = [-0.2, 0, 0.2]
+                for offset in engine_positions:
+                    engine_y = int(cy + h * offset * 0.3)
+                    engine_x = int(w * 0.1)  # Left side (stern)
+                    self._draw_engine_glow(surf, engine_x, engine_y,
+                                          max(6, size // 5), engine_color)
 
-            # Tower windows (command bridge)
-            for i in range(3):
-                wx = int(cx + size * 0.05 + i * size * 0.08)
-                wy = int(cy - size * 0.55)
-                pygame.draw.rect(surf, (180, 200, 255, min(180, color[3])),
-                               (wx, wy, max(2, size // 15), max(1, size // 20)))
+                # Running lights
+                pygame.draw.circle(surf, (255, 80, 80, 180),
+                                 (int(w * 0.9), int(cy - h * 0.15)), 3)
+                pygame.draw.circle(surf, (80, 255, 80, 180),
+                                 (int(w * 0.9), int(cy + h * 0.15)), 3)
+            else:
+                # Fallback: Simple silhouette if image not available
+                # Use faction-appropriate colors
+                if faction == 'minmatar':
+                    base_color = (brightness - 10, brightness - 15, brightness - 20)  # Rusty Minmatar
+                else:
+                    base_color = (brightness + 15, brightness + 5, brightness - 35)  # Golden Amarr
+                color = self._apply_atmospheric_perspective(base_color, alpha)
+                surf = pygame.Surface((size * 5, size * 3), pygame.SRCALPHA)
+                cx, cy = size * 2.5, size * 1.5
 
-            # === HULL PANELING & DETAILS ===
-            panel_color = (max(0, color[0] - 12), max(0, color[1] - 10),
-                          max(0, color[2] - 8), color[3])
-            # Horizontal hull lines
-            for i in range(4):
-                line_y = int(cy - size * 0.2 + i * size * 0.15)
-                pygame.draw.line(surf, panel_color,
-                               (int(cx + size * 1.5), line_y),
-                               (int(cx - size * 1.4), line_y), 1)
+                # Simple carrier hull shape
+                hull_points = [
+                    (cx + size * 2.0, cy),
+                    (cx + size * 1.5, cy - size * 0.4),
+                    (cx - size * 1.5, cy - size * 0.4),
+                    (cx - size * 1.8, cy),
+                    (cx - size * 1.5, cy + size * 0.4),
+                    (cx + size * 1.5, cy + size * 0.4),
+                ]
+                pygame.draw.polygon(surf, color, hull_points)
+                pygame.draw.polygon(surf, (200, 170, 100, min(255, alpha)), hull_points, 2)
 
-            # Vertical ribbing
-            for i in range(6):
-                line_x = int(cx + size * 1.2 - i * size * 0.45)
-                pygame.draw.line(surf, panel_color,
-                               (line_x, int(cy - size * 0.35)),
-                               (line_x, int(cy + size * 0.35)), 1)
-
-            # === HANGAR BAY (lower hull) ===
-            hangar_color = (20, 18, 15, color[3])
-            pygame.draw.rect(surf, hangar_color,
-                           (int(cx - size * 0.5), int(cy + size * 0.25),
-                            int(size * 0.8), int(size * 0.18)))
-            # Hangar interior glow (active launch bay)
-            pygame.draw.rect(surf, (80, 60, 40, min(120, color[3])),
-                           (int(cx - size * 0.45), int(cy + size * 0.28),
-                            int(size * 0.7), int(size * 0.12)))
-
-            # === GOLDEN AMARR ACCENTS ===
-            accent_color = (200, 170, 100, min(255, color[3] + 30))
-            pygame.draw.polygon(surf, accent_color, hull_points, 2)
-            # Golden trim on flight deck
-            pygame.draw.polygon(surf, accent_color, deck_points, 1)
-
-            # === ENGINE BANKS (multiple large engines) ===
-            # Carriers have massive engine arrays
-            engine_positions = [-0.25, -0.08, 0.08, 0.25]
-            for offset in engine_positions:
-                engine_y = int(cy + size * offset)
-                engine_x = int(cx - size * 1.75)
-                # Large engine glow
-                self._draw_engine_glow(surf, engine_x, engine_y,
-                                      max(4, size // 6), (100, 150, 255))
-
-            # Central massive engine
-            self._draw_engine_glow(surf, int(cx - size * 1.7), int(cy),
-                                  max(6, size // 4), (120, 180, 255))
-
-            # === RUNNING LIGHTS ===
-            # Navigation lights on extremities
-            pygame.draw.circle(surf, (255, 80, 80, 200),
-                             (int(cx + size * 1.9), int(cy - size * 0.15)), 3)
-            pygame.draw.circle(surf, (80, 255, 80, 200),
-                             (int(cx + size * 1.9), int(cy + size * 0.15)), 3)
-            # Stern warning light
-            pygame.draw.circle(surf, (255, 200, 80, 180),
-                             (int(cx - size * 1.7), int(cy)), 4)
-
-            self._draw_hull_details(surf, hull_points, color, size)
+                # Engine glow - faction-appropriate color
+                self._draw_engine_glow(surf, int(cx - size * 1.7), int(cy),
+                                      max(6, size // 4), engine_color)
 
         # Scale based on depth for distant ships
         if self.depth < 0.5:
@@ -691,18 +687,23 @@ class AmbientTraffic:
     """Manages background ship traffic"""
 
     def __init__(self, width: int = SCREEN_WIDTH, height: int = SCREEN_HEIGHT,
-                 max_ships: int = 5, spawn_rate: float = 0.005):
+                 max_ships: int = 5, spawn_rate: float = 0.005, enemy_faction: str = None):
         self.width = width
         self.height = height
         self.max_ships = max_ships
         self.spawn_rate = spawn_rate
         self.ships: List[AmbientShip] = []
+        self.enemy_faction = enemy_faction or 'amarr'
+
+    def set_enemy_faction(self, faction: str):
+        """Set the enemy faction for carrier images"""
+        self.enemy_faction = faction
 
     def update(self):
         """Update all ambient ships"""
         # Spawn new ships
         if len(self.ships) < self.max_ships and random.random() < self.spawn_rate:
-            self.ships.append(AmbientShip(self.width, self.height))
+            self.ships.append(AmbientShip(self.width, self.height, enemy_faction=self.enemy_faction))
 
         # Update existing ships
         for ship in self.ships:
@@ -1826,6 +1827,10 @@ class ParallaxBackground:
         else:
             self.traffic.max_ships = 4
             self.traffic.spawn_rate = 0.005
+
+    def set_enemy_faction(self, faction: str):
+        """Set the enemy faction for background carrier images"""
+        self.traffic.set_enemy_faction(faction)
 
     def transition_to_stage(self, stage: int):
         """Start transition to a new stage"""
