@@ -2124,7 +2124,7 @@ class Game:
             if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP or event.type == pygame.JOYHATMOTION:
                 pass  # Events handled by controller.handle_event()
 
-            if False and self.controller and self.controller.connected:  # DISABLED - moved outside loop
+            if self.controller and self.controller.connected:
                 # Tutorial controller support
                 if self.tutorial.active:
                     if self.controller.is_button_just_pressed(XboxButton.A):
