@@ -1,0 +1,901 @@
+{
+    "metadata": {
+        "version": "3.0",
+        "description": "Complete ship roster for EVE Rebellion - All factions, all chapters",
+        "ccp_image_base_url": "https://images.evetech.net/types/{type_id}/render?size=512"
+    },
+    
+    "factions": {
+        "minmatar": {
+            "name": "Minmatar Republic",
+            "philosophy": "Never again in chains",
+            "combat_style": "Projectiles, speed, flexibility",
+            "visual_theme": "Rust/red, salvaged, industrial",
+            "color_primary": "#8B4513",
+            "color_secondary": "#CD853F"
+        },
+        "amarr": {
+            "name": "Amarr Empire",
+            "philosophy": "God wills it",
+            "combat_style": "Lasers, armor, drones",
+            "visual_theme": "Gold/bronze, ornate, religious",
+            "color_primary": "#DAA520",
+            "color_secondary": "#B8860B"
+        },
+        "caldari": {
+            "name": "Caldari State",
+            "philosophy": "The corporation is family",
+            "combat_style": "Missiles, shields, EWAR",
+            "visual_theme": "Blue/grey, angular, functional",
+            "color_primary": "#1E3A5F",
+            "color_secondary": "#4682B4"
+        },
+        "gallente": {
+            "name": "Gallente Federation",
+            "philosophy": "Liberty, equality, fraternity",
+            "combat_style": "Drones, hybrid turrets, armor",
+            "visual_theme": "Green/gold, organic curves, elegant",
+            "color_primary": "#2E5D2E",
+            "color_secondary": "#6B8E23"
+        },
+        "triglavian": {
+            "name": "Triglavian Collective",
+            "philosophy": "Prove worthy through struggle",
+            "combat_style": "Disintegrators (ramping damage), armor",
+            "visual_theme": "Red/black, alien geometry, menacing",
+            "color_primary": "#8B0000",
+            "color_secondary": "#FF4500"
+        },
+        "sansha": {
+            "name": "Sansha's Nation",
+            "philosophy": "One mind, one purpose",
+            "combat_style": "Lasers, afterburners, swarm tactics",
+            "visual_theme": "Black/gold, sleek, corrupted",
+            "color_primary": "#1C1C1C",
+            "color_secondary": "#FFD700"
+        }
+    },
+    
+    "ships": {
+        "minmatar": {
+            "frigates": [
+                {
+                    "id": "rifter",
+                    "name": "Rifter",
+                    "type_id": 587,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 100,
+                        "shield": 80,
+                        "speed": 350,
+                        "damage": 1.0
+                    },
+                    "available_chapters": ["minmatar_rebellion", "elder_fleet", "abyssal_depths"],
+                    "catchphrase": "In Rust We Trust!",
+                    "unlock": "default"
+                },
+                {
+                    "id": "breacher",
+                    "name": "Breacher",
+                    "type_id": 594,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 90,
+                        "shield": 100,
+                        "speed": 320,
+                        "damage": 0.9
+                    },
+                    "available_chapters": ["minmatar_rebellion", "abyssal_depths"],
+                    "unlock": "rebellion_boss_3"
+                }
+            ],
+            "assault_frigates": [
+                {
+                    "id": "wolf",
+                    "name": "Wolf",
+                    "type_id": 11396,
+                    "class": "assault_frigate",
+                    "tier": "t2",
+                    "stats": {
+                        "hull": 180,
+                        "shield": 150,
+                        "speed": 320,
+                        "damage": 1.4
+                    },
+                    "available_chapters": ["minmatar_rebellion", "elder_fleet", "abyssal_depths"],
+                    "catchphrase": "No more rust - just steel!",
+                    "unlock": "rebellion_boss_7"
+                },
+                {
+                    "id": "jaguar",
+                    "name": "Jaguar",
+                    "type_id": 11196,
+                    "class": "assault_frigate",
+                    "tier": "t2",
+                    "stats": {
+                        "hull": 160,
+                        "shield": 200,
+                        "speed": 380,
+                        "damage": 1.3
+                    },
+                    "available_chapters": ["minmatar_rebellion", "elder_fleet", "abyssal_depths"],
+                    "catchphrase": "From rust to legend!",
+                    "unlock": "rebellion_boss_13"
+                }
+            ],
+            "destroyers": [
+                {
+                    "id": "thrasher",
+                    "name": "Thrasher",
+                    "type_id": 594,
+                    "class": "destroyer",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 200,
+                        "shield": 120,
+                        "speed": 280,
+                        "damage": 1.8
+                    },
+                    "available_chapters": ["abyssal_depths"],
+                    "unlock": "abyssal_t2_complete"
+                }
+            ],
+            "cruisers": [
+                {
+                    "id": "stabber",
+                    "name": "Stabber",
+                    "type_id": 620,
+                    "class": "cruiser",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 400,
+                        "shield": 300,
+                        "speed": 220,
+                        "damage": 2.0
+                    },
+                    "available_chapters": ["abyssal_depths"],
+                    "unlock": "abyssal_t3_complete"
+                }
+            ],
+            "battleships": [
+                {
+                    "id": "tempest",
+                    "name": "Tempest",
+                    "type_id": 639,
+                    "class": "battleship",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 1000,
+                        "shield": 800,
+                        "speed": 120,
+                        "damage": 4.0
+                    },
+                    "available_chapters": ["elder_fleet"],
+                    "unlock": "elder_fleet_complete"
+                }
+            ],
+            "titans": [
+                {
+                    "id": "ragnarok",
+                    "name": "Ragnarok",
+                    "type_id": 24693,
+                    "class": "titan",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 10000,
+                        "shield": 8000,
+                        "speed": 50,
+                        "damage": 20.0
+                    },
+                    "available_chapters": [],
+                    "unlock": "all_chapters_100"
+                }
+            ]
+        },
+        
+        "amarr": {
+            "frigates": [
+                {
+                    "id": "executioner",
+                    "name": "Executioner",
+                    "type_id": 589,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 90,
+                        "shield": 60,
+                        "armor": 100,
+                        "speed": 340,
+                        "damage": 1.0
+                    },
+                    "ai_behavior": "weaver"
+                },
+                {
+                    "id": "punisher",
+                    "name": "Punisher",
+                    "type_id": 597,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 120,
+                        "shield": 50,
+                        "armor": 150,
+                        "speed": 280,
+                        "damage": 1.2
+                    },
+                    "ai_behavior": "tank"
+                },
+                {
+                    "id": "tormentor",
+                    "name": "Tormentor",
+                    "type_id": 593,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 80,
+                        "shield": 50,
+                        "armor": 90,
+                        "speed": 300,
+                        "damage": 0.9
+                    },
+                    "ai_behavior": "basic"
+                },
+                {
+                    "id": "inquisitor",
+                    "name": "Inquisitor",
+                    "type_id": 596,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 70,
+                        "shield": 40,
+                        "armor": 80,
+                        "speed": 320,
+                        "damage": 0.6
+                    },
+                    "ai_behavior": "spawner"
+                }
+            ],
+            "assault_frigates": [
+                {
+                    "id": "retribution",
+                    "name": "Retribution",
+                    "type_id": 11393,
+                    "class": "assault_frigate",
+                    "tier": "t2",
+                    "stats": {
+                        "hull": 150,
+                        "shield": 80,
+                        "armor": 200,
+                        "speed": 300,
+                        "damage": 1.5
+                    },
+                    "available_chapters": ["abyssal_depths"],
+                    "unlock": "abyssal_t4_complete"
+                }
+            ],
+            "cruisers": [
+                {
+                    "id": "omen",
+                    "name": "Omen",
+                    "type_id": 628,
+                    "class": "cruiser",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 350,
+                        "shield": 150,
+                        "armor": 450,
+                        "speed": 180,
+                        "damage": 2.2
+                    },
+                    "ai_behavior": "sniper"
+                },
+                {
+                    "id": "maller",
+                    "name": "Maller",
+                    "type_id": 624,
+                    "class": "cruiser",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 500,
+                        "shield": 100,
+                        "armor": 600,
+                        "speed": 150,
+                        "damage": 1.8
+                    },
+                    "ai_behavior": "tank"
+                }
+            ],
+            "battleships": [
+                {
+                    "id": "apocalypse",
+                    "name": "Apocalypse",
+                    "type_id": 642,
+                    "class": "battleship",
+                    "tier": "t1",
+                    "role": "boss",
+                    "stats": {
+                        "hull": 1200,
+                        "shield": 400,
+                        "armor": 1500,
+                        "speed": 100,
+                        "damage": 5.0
+                    },
+                    "ai_behavior": "sniper"
+                },
+                {
+                    "id": "abaddon",
+                    "name": "Abaddon",
+                    "type_id": 24692,
+                    "class": "battleship",
+                    "tier": "t1",
+                    "role": "boss",
+                    "stats": {
+                        "hull": 1500,
+                        "shield": 300,
+                        "armor": 2000,
+                        "speed": 80,
+                        "damage": 6.0
+                    },
+                    "ai_behavior": "tank"
+                }
+            ],
+            "carriers": [
+                {
+                    "id": "archon",
+                    "name": "Archon",
+                    "type_id": 23757,
+                    "class": "carrier",
+                    "tier": "capital",
+                    "role": "background_spawner",
+                    "stats": {
+                        "hull": 5000,
+                        "armor": 8000,
+                        "fighter_capacity": 20
+                    }
+                },
+                {
+                    "id": "aeon",
+                    "name": "Aeon",
+                    "type_id": 23919,
+                    "class": "supercarrier",
+                    "tier": "capital",
+                    "role": "final_boss",
+                    "stats": {
+                        "hull": 10000,
+                        "armor": 15000,
+                        "fighter_capacity": 40
+                    }
+                }
+            ],
+            "titans": [
+                {
+                    "id": "avatar",
+                    "name": "Avatar",
+                    "type_id": 11567,
+                    "class": "titan",
+                    "tier": "titan",
+                    "role": "ultimate_boss",
+                    "stats": {
+                        "hull": 20000,
+                        "armor": 30000,
+                        "doomsday_damage": 50000
+                    }
+                }
+            ]
+        },
+        
+        "caldari": {
+            "frigates": [
+                {
+                    "id": "kestrel",
+                    "name": "Kestrel",
+                    "type_id": 602,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 80,
+                        "shield": 120,
+                        "speed": 300,
+                        "damage": 1.1
+                    },
+                    "ai_behavior": "sniper"
+                },
+                {
+                    "id": "merlin",
+                    "name": "Merlin",
+                    "type_id": 603,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 100,
+                        "shield": 140,
+                        "speed": 280,
+                        "damage": 1.0
+                    },
+                    "ai_behavior": "basic"
+                }
+            ],
+            "assault_frigates": [
+                {
+                    "id": "hawk",
+                    "name": "Hawk",
+                    "type_id": 11377,
+                    "class": "assault_frigate",
+                    "tier": "t2",
+                    "stats": {
+                        "hull": 140,
+                        "shield": 220,
+                        "speed": 290,
+                        "damage": 1.4
+                    },
+                    "available_chapters": ["abyssal_depths"],
+                    "abyssal_bonus": "+20% Shield resist in Electrical",
+                    "unlock": "abyssal_t3_complete"
+                }
+            ],
+            "destroyers": [
+                {
+                    "id": "corax",
+                    "name": "Corax",
+                    "type_id": 16236,
+                    "class": "destroyer",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 180,
+                        "shield": 200,
+                        "speed": 250,
+                        "damage": 2.0
+                    },
+                    "ai_behavior": "sniper"
+                }
+            ],
+            "cruisers": [
+                {
+                    "id": "caracal",
+                    "name": "Caracal",
+                    "type_id": 621,
+                    "class": "cruiser",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 380,
+                        "shield": 500,
+                        "speed": 170,
+                        "damage": 2.5
+                    },
+                    "ai_behavior": "sniper"
+                }
+            ],
+            "dreadnoughts": [
+                {
+                    "id": "phoenix",
+                    "name": "Phoenix",
+                    "type_id": 19724,
+                    "class": "dreadnought",
+                    "tier": "capital",
+                    "stats": {
+                        "hull": 4000,
+                        "shield": 6000,
+                        "speed": 80,
+                        "damage": 15.0
+                    },
+                    "available_chapters": ["the_last_stand"],
+                    "unlock": "last_stand_caldari_50"
+                }
+            ],
+            "supercarriers": [
+                {
+                    "id": "wyvern",
+                    "name": "Wyvern",
+                    "type_id": 23915,
+                    "class": "supercarrier",
+                    "tier": "capital",
+                    "stats": {
+                        "hull": 8000,
+                        "shield": 12000,
+                        "fighter_capacity": 35
+                    },
+                    "available_chapters": ["the_last_stand"],
+                    "unlock": "last_stand_caldari_80"
+                }
+            ],
+            "titans": [
+                {
+                    "id": "leviathan",
+                    "name": "Leviathan",
+                    "type_id": 3764,
+                    "class": "titan",
+                    "tier": "titan",
+                    "stats": {
+                        "hull": 15000,
+                        "shield": 25000,
+                        "doomsday_damage": 45000
+                    },
+                    "available_chapters": ["the_last_stand"],
+                    "role": "player_titan",
+                    "unlock": "default_caldari_the_last_stand"
+                }
+            ]
+        },
+        
+        "gallente": {
+            "frigates": [
+                {
+                    "id": "tristan",
+                    "name": "Tristan",
+                    "type_id": 598,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 90,
+                        "armor": 100,
+                        "speed": 310,
+                        "damage": 0.8,
+                        "drone_capacity": 3
+                    },
+                    "ai_behavior": "spawner"
+                },
+                {
+                    "id": "atron",
+                    "name": "Atron",
+                    "type_id": 604,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 70,
+                        "armor": 80,
+                        "speed": 360,
+                        "damage": 0.9
+                    },
+                    "ai_behavior": "kamikaze"
+                }
+            ],
+            "assault_frigates": [
+                {
+                    "id": "enyo",
+                    "name": "Enyo",
+                    "type_id": 11373,
+                    "class": "assault_frigate",
+                    "tier": "t2",
+                    "stats": {
+                        "hull": 160,
+                        "armor": 200,
+                        "speed": 280,
+                        "damage": 1.6
+                    },
+                    "available_chapters": ["abyssal_depths"],
+                    "unlock": "abyssal_t4_complete"
+                }
+            ],
+            "destroyers": [
+                {
+                    "id": "catalyst",
+                    "name": "Catalyst",
+                    "type_id": 16238,
+                    "class": "destroyer",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 160,
+                        "armor": 180,
+                        "speed": 260,
+                        "damage": 2.2
+                    },
+                    "ai_behavior": "kamikaze"
+                }
+            ],
+            "cruisers": [
+                {
+                    "id": "thorax",
+                    "name": "Thorax",
+                    "type_id": 622,
+                    "class": "cruiser",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 400,
+                        "armor": 450,
+                        "speed": 180,
+                        "damage": 2.4,
+                        "drone_capacity": 5
+                    },
+                    "ai_behavior": "spawner"
+                }
+            ],
+            "dreadnoughts": [
+                {
+                    "id": "moros",
+                    "name": "Moros",
+                    "type_id": 19722,
+                    "class": "dreadnought",
+                    "tier": "capital",
+                    "stats": {
+                        "hull": 4500,
+                        "armor": 6500,
+                        "speed": 75,
+                        "damage": 16.0
+                    },
+                    "available_chapters": ["the_last_stand"],
+                    "unlock": "last_stand_gallente_50"
+                }
+            ],
+            "carriers": [
+                {
+                    "id": "thanatos",
+                    "name": "Thanatos",
+                    "type_id": 23911,
+                    "class": "carrier",
+                    "tier": "capital",
+                    "stats": {
+                        "hull": 5500,
+                        "armor": 7000,
+                        "fighter_capacity": 25
+                    },
+                    "available_chapters": ["the_last_stand"],
+                    "unlock": "last_stand_gallente_80"
+                }
+            ],
+            "titans": [
+                {
+                    "id": "erebus",
+                    "name": "Erebus",
+                    "type_id": 671,
+                    "class": "titan",
+                    "tier": "titan",
+                    "stats": {
+                        "hull": 18000,
+                        "armor": 28000,
+                        "doomsday_damage": 48000
+                    },
+                    "available_chapters": ["the_last_stand"],
+                    "role": "player_titan",
+                    "unlock": "default_gallente_the_last_stand"
+                }
+            ]
+        },
+        
+        "triglavian": {
+            "frigates": [
+                {
+                    "id": "damavik",
+                    "name": "Damavik",
+                    "type_id": 47269,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 100,
+                        "armor": 120,
+                        "speed": 300,
+                        "damage": 0.8,
+                        "damage_ramp_max": 2.0,
+                        "damage_ramp_time": 6.0
+                    },
+                    "weapon_type": "disintegrator",
+                    "available_chapters": ["abyssal_depths"],
+                    "abyssal_bonus": "+10% Disintegrator damage in Abyss",
+                    "unlock": "default"
+                }
+            ],
+            "destroyers": [
+                {
+                    "id": "kikimora",
+                    "name": "Kikimora",
+                    "type_id": 49710,
+                    "class": "destroyer",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 180,
+                        "armor": 200,
+                        "speed": 320,
+                        "damage": 1.2,
+                        "damage_ramp_max": 2.0,
+                        "damage_ramp_time": 5.0
+                    },
+                    "weapon_type": "disintegrator",
+                    "available_chapters": ["abyssal_depths"],
+                    "abyssal_bonus": "+15% Speed in Abyss",
+                    "unlock": "abyssal_t2_complete"
+                }
+            ],
+            "cruisers": [
+                {
+                    "id": "vedmak",
+                    "name": "Vedmak",
+                    "type_id": 47271,
+                    "class": "cruiser",
+                    "tier": "t1",
+                    "stats": {
+                        "hull": 400,
+                        "armor": 500,
+                        "speed": 200,
+                        "damage": 1.8,
+                        "damage_ramp_max": 2.5,
+                        "damage_ramp_time": 8.0
+                    },
+                    "weapon_type": "disintegrator",
+                    "available_chapters": ["abyssal_depths"],
+                    "abyssal_bonus": "+20% Armor repair in Abyss",
+                    "unlock": "abyssal_t3_complete"
+                }
+            ],
+            "battlecruisers": [
+                {
+                    "id": "drekavac",
+                    "name": "Drekavac",
+                    "type_id": 49711,
+                    "class": "battlecruiser",
+                    "tier": "t1",
+                    "role": "boss",
+                    "stats": {
+                        "hull": 800,
+                        "armor": 1000,
+                        "speed": 150,
+                        "damage": 3.0,
+                        "damage_ramp_max": 3.0,
+                        "damage_ramp_time": 10.0
+                    },
+                    "weapon_type": "disintegrator"
+                }
+            ],
+            "dreadnoughts": [
+                {
+                    "id": "zirnitra",
+                    "name": "Zirnitra",
+                    "type_id": 52907,
+                    "class": "dreadnought",
+                    "tier": "capital",
+                    "role": "final_boss",
+                    "stats": {
+                        "hull": 5000,
+                        "armor": 8000,
+                        "speed": 60,
+                        "damage": 12.0,
+                        "damage_ramp_max": 4.0,
+                        "damage_ramp_time": 15.0
+                    },
+                    "weapon_type": "disintegrator"
+                }
+            ]
+        },
+        
+        "sansha": {
+            "frigates": [
+                {
+                    "id": "centii_loyal_servant",
+                    "name": "Centii Loyal Servant",
+                    "type_id": 17703,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 80,
+                        "armor": 100,
+                        "speed": 380,
+                        "damage": 0.8
+                    },
+                    "ai_behavior": "kamikaze",
+                    "true_slave_variant": true
+                },
+                {
+                    "id": "centii_ravager",
+                    "name": "Centii Ravager",
+                    "type_id": 17704,
+                    "class": "frigate",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 90,
+                        "armor": 110,
+                        "speed": 360,
+                        "damage": 1.0
+                    },
+                    "ai_behavior": "weaver"
+                }
+            ],
+            "cruisers": [
+                {
+                    "id": "centum_fiend",
+                    "name": "Centum Fiend",
+                    "type_id": 17718,
+                    "class": "cruiser",
+                    "tier": "t1",
+                    "role": "enemy",
+                    "stats": {
+                        "hull": 350,
+                        "armor": 450,
+                        "speed": 220,
+                        "damage": 2.0
+                    },
+                    "ai_behavior": "sniper"
+                }
+            ],
+            "battleships": [
+                {
+                    "id": "centus_overlord",
+                    "name": "Centus Overlord",
+                    "type_id": 17738,
+                    "class": "battleship",
+                    "tier": "t1",
+                    "role": "boss",
+                    "stats": {
+                        "hull": 1200,
+                        "armor": 1800,
+                        "speed": 90,
+                        "damage": 5.5
+                    },
+                    "ai_behavior": "tank"
+                }
+            ],
+            "supercarriers": [
+                {
+                    "id": "revenant",
+                    "name": "Revenant",
+                    "type_id": 3514,
+                    "class": "supercarrier",
+                    "tier": "capital",
+                    "role": "final_boss",
+                    "stats": {
+                        "hull": 12000,
+                        "armor": 18000,
+                        "fighter_capacity": 50
+                    }
+                }
+            ]
+        }
+    },
+    
+    "chapter_ship_filters": {
+        "minmatar_rebellion": {
+            "player_factions": ["minmatar"],
+            "enemy_factions": ["amarr", "caldari", "gallente"],
+            "player_classes": ["frigate", "assault_frigate"],
+            "enemy_classes": ["frigate", "cruiser", "battleship", "carrier"]
+        },
+        "the_last_stand": {
+            "caldari_side": {
+                "player_factions": ["caldari"],
+                "enemy_factions": ["gallente"],
+                "player_classes": ["dreadnought", "supercarrier", "titan"],
+                "enemy_classes": ["frigate", "destroyer", "cruiser", "battleship"]
+            },
+            "gallente_side": {
+                "player_factions": ["gallente"],
+                "enemy_factions": ["caldari"],
+                "player_classes": ["dreadnought", "carrier", "titan"],
+                "enemy_classes": ["frigate", "destroyer", "cruiser", "battleship"]
+            }
+        },
+        "abyssal_depths": {
+            "player_factions": ["minmatar", "amarr", "caldari", "gallente", "triglavian"],
+            "enemy_factions": ["triglavian"],
+            "player_classes": ["frigate", "assault_frigate", "destroyer", "cruiser"],
+            "enemy_classes": ["frigate", "destroyer", "cruiser", "battlecruiser", "dreadnought"]
+        },
+        "sansha_incursion": {
+            "player_factions": ["minmatar", "amarr", "caldari", "gallente"],
+            "enemy_factions": ["sansha"],
+            "player_classes": ["frigate", "assault_frigate", "cruiser", "battleship"],
+            "enemy_classes": ["frigate", "cruiser", "battleship", "supercarrier"]
+        },
+        "elder_fleet": {
+            "player_factions": ["minmatar"],
+            "enemy_factions": ["amarr"],
+            "player_classes": ["frigate", "assault_frigate", "cruiser", "battleship"],
+            "enemy_classes": ["frigate", "cruiser", "battleship", "carrier", "titan"]
+        }
+    }
+}

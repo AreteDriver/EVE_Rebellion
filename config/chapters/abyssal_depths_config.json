@@ -1,0 +1,449 @@
+{
+    "metadata": {
+        "version": "1.0",
+        "chapter": "abyssal_depths",
+        "description": "Triglavian roguelike extraction mode configuration"
+    },
+    
+    "filaments": {
+        "exotic": {
+            "id": "exotic",
+            "name": "Exotic",
+            "color": "#FFFFFF",
+            "visual_effect": "stable_void",
+            "player_buff": null,
+            "player_debuff": null,
+            "enemy_damage_type": "omni",
+            "icon": "filament_exotic"
+        },
+        "firestorm": {
+            "id": "firestorm",
+            "name": "Firestorm",
+            "color": "#FF4500",
+            "visual_effect": "flames_heat_distortion",
+            "player_buff": { "armor_hp": 1.5 },
+            "player_debuff": { "shield_hp": 0.5 },
+            "enemy_damage_bonus": { "thermal": 1.3 },
+            "icon": "filament_firestorm"
+        },
+        "electrical": {
+            "id": "electrical",
+            "name": "Electrical",
+            "color": "#00BFFF",
+            "visual_effect": "lightning_static",
+            "player_buff": { "shield_hp": 1.5 },
+            "player_debuff": { "armor_hp": 0.5 },
+            "enemy_damage_bonus": { "em": 1.3 },
+            "icon": "filament_electrical"
+        },
+        "dark_matter": {
+            "id": "dark_matter",
+            "name": "Dark Matter",
+            "color": "#9400D3",
+            "visual_effect": "darkness_particles",
+            "player_buff": { "signature": 0.7 },
+            "player_debuff": { "turret_range": 0.5 },
+            "enemy_damage_bonus": { "kinetic": 1.3 },
+            "icon": "filament_dark"
+        },
+        "gamma": {
+            "id": "gamma",
+            "name": "Gamma",
+            "color": "#32CD32",
+            "visual_effect": "radiation_glow",
+            "player_buff": { "shield_boost": 1.5 },
+            "player_debuff": { "explosive_resist": 0.7 },
+            "enemy_damage_bonus": { "explosive": 1.3 },
+            "icon": "filament_gamma"
+        }
+    },
+    
+    "tiers": {
+        "1": {
+            "name": "Calm",
+            "timer_seconds": 1200,
+            "enemy_hp_mult": 1.0,
+            "enemy_damage_mult": 1.0,
+            "enemy_count_mult": 1.0,
+            "loot_mult": 1.0,
+            "boss_tier": "none",
+            "unlock_requirement": null,
+            "color": "#90EE90"
+        },
+        "2": {
+            "name": "Agitated",
+            "timer_seconds": 1080,
+            "enemy_hp_mult": 1.3,
+            "enemy_damage_mult": 1.2,
+            "enemy_count_mult": 1.2,
+            "loot_mult": 1.5,
+            "boss_tier": "light",
+            "unlock_requirement": null,
+            "color": "#FFFF00"
+        },
+        "3": {
+            "name": "Fierce",
+            "timer_seconds": 900,
+            "enemy_hp_mult": 1.6,
+            "enemy_damage_mult": 1.4,
+            "enemy_count_mult": 1.4,
+            "loot_mult": 2.0,
+            "boss_tier": "medium",
+            "unlock_requirement": { "tier_complete": 2 },
+            "color": "#FFA500"
+        },
+        "4": {
+            "name": "Raging",
+            "timer_seconds": 720,
+            "enemy_hp_mult": 2.0,
+            "enemy_damage_mult": 1.7,
+            "enemy_count_mult": 1.6,
+            "loot_mult": 3.0,
+            "boss_tier": "heavy",
+            "unlock_requirement": { "tier_complete": 3 },
+            "color": "#FF4500"
+        },
+        "5": {
+            "name": "Chaotic",
+            "timer_seconds": 600,
+            "enemy_hp_mult": 2.5,
+            "enemy_damage_mult": 2.0,
+            "enemy_count_mult": 1.8,
+            "loot_mult": 4.5,
+            "boss_tier": "elite",
+            "drifter_chance": 0.1,
+            "unlock_requirement": { "tier_complete": 4 },
+            "color": "#DC143C"
+        },
+        "6": {
+            "name": "Cataclysmic",
+            "timer_seconds": 480,
+            "enemy_hp_mult": 3.0,
+            "enemy_damage_mult": 2.5,
+            "enemy_count_mult": 2.0,
+            "loot_mult": 7.0,
+            "boss_tier": "drifter",
+            "drifter_chance": 0.3,
+            "unlock_requirement": { "tier_complete": 5 },
+            "color": "#8B0000"
+        }
+    },
+    
+    "rooms": {
+        "room_1": {
+            "name": "Pockets",
+            "description": "Light enemies, orientation",
+            "enemy_composition": {
+                "light": 0.8,
+                "medium": 0.2,
+                "heavy": 0.0
+            },
+            "enemy_count_by_tier": [8, 10, 12, 14, 16, 18],
+            "hazard_count": 0,
+            "has_cache": true,
+            "gate_spawn_delay": 2.0,
+            "value_multiplier": 1.0
+        },
+        "room_2": {
+            "name": "Escalation",
+            "description": "Medium + heavy enemies, environmental hazards",
+            "enemy_composition": {
+                "light": 0.4,
+                "medium": 0.4,
+                "heavy": 0.2
+            },
+            "enemy_count_by_tier": [12, 15, 18, 22, 26, 30],
+            "hazard_count_by_tier": [0, 1, 1, 2, 2, 3],
+            "hazard_types": ["deviant_automata", "ephialtes_cloud", "tachyon_cloud"],
+            "has_cache": true,
+            "gate_spawn_delay": 3.0,
+            "value_multiplier": 2.0
+        },
+        "room_3": {
+            "name": "Extraction",
+            "description": "Boss + swarm, extraction gate",
+            "enemy_composition": {
+                "light": 0.3,
+                "medium": 0.3,
+                "heavy": 0.2,
+                "boss": 0.2
+            },
+            "enemy_count_by_tier": [15, 18, 22, 26, 30, 35],
+            "hazard_count_by_tier": [1, 1, 2, 2, 3, 4],
+            "hazard_types": ["all"],
+            "pylon_guaranteed_t4_plus": true,
+            "has_cache": true,
+            "has_extraction_gate": true,
+            "extraction_channel_time": 2.0,
+            "value_multiplier": 5.0
+        }
+    },
+    
+    "hazards": {
+        "deviant_automata": {
+            "name": "Deviant Automata",
+            "visual": "spinning_drone",
+            "effect": "aoe_damage_pulse",
+            "damage": 20,
+            "pulse_interval": 3.0,
+            "radius": 100,
+            "hp": 150,
+            "counterplay": "destroy_or_avoid"
+        },
+        "ephialtes_cloud": {
+            "name": "Ephialtes Cloud",
+            "visual": "purple_mist",
+            "effect": "tracking_disruption",
+            "tracking_penalty": 0.5,
+            "radius": 150,
+            "duration": 5.0,
+            "counterplay": "fly_through_quickly"
+        },
+        "tachyon_cloud": {
+            "name": "Tachyon Cloud",
+            "visual": "blue_static",
+            "effect": "speed_reduction",
+            "speed_penalty": 0.4,
+            "radius": 120,
+            "counterplay": "avoid_entirely"
+        },
+        "filament_cloud": {
+            "name": "Filament Cloud",
+            "visual": "matches_filament_type",
+            "effect": "type_specific_damage",
+            "damage_per_second": 15,
+            "radius": 100,
+            "counterplay": "depends_on_type"
+        },
+        "triglavian_pylon": {
+            "name": "Triglavian Pylon",
+            "visual": "energy_tower",
+            "effect": "buffs_nearby_enemies",
+            "buff_radius": 200,
+            "damage_buff": 1.3,
+            "speed_buff": 1.2,
+            "hp": 300,
+            "counterplay": "destroy_first"
+        },
+        "extraction_denied": {
+            "name": "Extraction Denied",
+            "visual": "red_zone",
+            "effect": "blocks_extract_gate",
+            "counterplay": "clear_enemies"
+        }
+    },
+    
+    "enemies": {
+        "triglavian": {
+            "raznaborg_damavik": {
+                "name": "Raznaborg Damavik",
+                "ship_id": "damavik",
+                "class": "light",
+                "hp": 120,
+                "speed": 300,
+                "base_damage": 8,
+                "damage_ramp_max": 2.0,
+                "damage_ramp_time": 6.0,
+                "behavior": "swarm_close_range"
+            },
+            "starving_damavik": {
+                "name": "Starving Damavik",
+                "ship_id": "damavik",
+                "class": "light",
+                "hp": 80,
+                "speed": 340,
+                "base_damage": 6,
+                "damage_ramp_max": 1.8,
+                "damage_ramp_time": 5.0,
+                "behavior": "fast_evasive"
+            },
+            "harrowing_vedmak": {
+                "name": "Harrowing Vedmak",
+                "ship_id": "vedmak",
+                "class": "heavy",
+                "hp": 400,
+                "speed": 180,
+                "base_damage": 15,
+                "damage_ramp_max": 2.5,
+                "damage_ramp_time": 8.0,
+                "behavior": "anchor_sustained"
+            },
+            "blinding_vedmak": {
+                "name": "Blinding Vedmak",
+                "ship_id": "vedmak",
+                "class": "heavy",
+                "hp": 350,
+                "speed": 200,
+                "base_damage": 12,
+                "damage_ramp_max": 2.0,
+                "damage_ramp_time": 7.0,
+                "behavior": "ewar_disrupts_player",
+                "ewar_type": "tracking_disruption"
+            },
+            "drekavac": {
+                "name": "Drekavac",
+                "ship_id": "drekavac",
+                "class": "boss",
+                "hp": 800,
+                "speed": 140,
+                "base_damage": 25,
+                "damage_ramp_max": 3.0,
+                "damage_ramp_time": 10.0,
+                "behavior": "boss_phases",
+                "phases": 3
+            }
+        },
+        "rogue_drones": {
+            "tessera": {
+                "name": "Tessera",
+                "class": "light",
+                "hp": 100,
+                "speed": 320,
+                "damage": 10,
+                "behavior": "swarm"
+            },
+            "phorus": {
+                "name": "Phorus",
+                "class": "medium",
+                "hp": 250,
+                "speed": 220,
+                "damage": 15,
+                "behavior": "spawner",
+                "spawn_type": "tessera",
+                "spawn_count": 2,
+                "spawn_interval": 5.0
+            },
+            "tyrannos": {
+                "name": "Tyrannos",
+                "class": "heavy",
+                "hp": 500,
+                "speed": 150,
+                "damage": 30,
+                "behavior": "tank"
+            }
+        },
+        "sleepers": {
+            "circadian_seeker": {
+                "name": "Circadian Seeker",
+                "class": "light",
+                "hp": 90,
+                "speed": 380,
+                "damage": 8,
+                "behavior": "fast_scout"
+            },
+            "sleeper_sentinel": {
+                "name": "Sleeper Sentinel",
+                "class": "medium",
+                "hp": 280,
+                "speed": 200,
+                "damage": 18,
+                "behavior": "patrol"
+            },
+            "sleeper_warden": {
+                "name": "Sleeper Warden",
+                "class": "heavy",
+                "hp": 450,
+                "speed": 160,
+                "damage": 22,
+                "behavior": "ewar",
+                "ewar_type": "web_scramble"
+            }
+        },
+        "drifters": {
+            "drifter_battleship": {
+                "name": "Drifter Battleship",
+                "class": "boss",
+                "hp": 2000,
+                "speed": 120,
+                "damage": 40,
+                "behavior": "drifter_boss",
+                "has_doomsday": true,
+                "doomsday_charge_time": 8.0,
+                "doomsday_damage": 500,
+                "doomsday_interruptible": false,
+                "spawn_tiers": [5, 6]
+            }
+        }
+    },
+    
+    "disintegrator_mechanics": {
+        "description": "Disintegrators ramp damage over time while maintaining fire on target",
+        "implementation": {
+            "base_formula": "damage = base_damage * (1.0 + (ramp_max - 1.0) * min(time_on_target / ramp_time, 1.0))",
+            "lock_break_penalty": "Resets time_on_target to 0",
+            "player_counter": "Break their lock. Move erratically. Don't let them spool."
+        },
+        "visual_feedback": {
+            "beam_width_scales": true,
+            "beam_color_intensifies": true,
+            "sound_pitch_rises": true
+        }
+    },
+    
+    "extraction": {
+        "gate_spawn_condition": "all_enemies_cleared",
+        "channel_time": 2.0,
+        "channel_interruptible": true,
+        "success_effect": "fade_to_white",
+        "success_screen": "results_with_loot",
+        "failure_effects": {
+            "death": "screen_shatter",
+            "timeout": "abyss_collapse"
+        },
+        "failure_message": "LOST IN THE ABYSS",
+        "failure_penalty": "ship_lost_for_run"
+    },
+    
+    "loot": {
+        "base_values": {
+            "room_1": 100,
+            "room_2": 200,
+            "room_3": 500
+        },
+        "types": {
+            "isk_equivalent": {
+                "description": "Currency for upgrades and unlocks"
+            },
+            "mutaplasmid": {
+                "description": "Modify weapon stats",
+                "drop_rate_by_tier": [0.0, 0.1, 0.15, 0.2, 0.25, 0.3]
+            },
+            "blueprint": {
+                "description": "Unlock Triglavian ships",
+                "drop_rate_by_tier": [0.0, 0.0, 0.05, 0.1, 0.15, 0.2]
+            },
+            "filament": {
+                "description": "Higher tier access",
+                "drop_rate_by_tier": [0.0, 0.0, 0.0, 0.1, 0.15, 0.2]
+            }
+        }
+    },
+    
+    "ship_restrictions": {
+        "class_limits_by_tier": {
+            "1": { "frigate": true, "destroyer": true, "cruiser": false },
+            "2": { "frigate": true, "destroyer": true, "cruiser": false },
+            "3": { "frigate": true, "destroyer": true, "cruiser": true },
+            "4": { "frigate": true, "destroyer": true, "cruiser": true },
+            "5": { "frigate": true, "destroyer": true, "cruiser": true },
+            "6": { "frigate": true, "destroyer": true, "cruiser": true }
+        },
+        "frigate_in_t5_plus": "hard_mode"
+    },
+    
+    "audio": {
+        "music_by_room": {
+            "room_1": "tense_ambient_building",
+            "room_2": "drums_enter_tempo_increases",
+            "room_3": "full_combat_dynamic_layers",
+            "extract": "relief_sting_fade_calm"
+        },
+        "sound_effects": {
+            "filament_activation": "warping_reality_tear",
+            "room_transition": "whoosh_dimensional_shift",
+            "timer_warning": "progressive_urgency",
+            "disintegrator": "building_whine_sustained_beam",
+            "extraction": "rising_tone_release"
+        }
+    }
+}
