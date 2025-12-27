@@ -78,6 +78,9 @@ class BerserkSystem:
         self.danger_pulse = 0
         self.extreme_close_time = 0  # Frames spent in extreme danger
 
+        # Heat bonus tracking
+        self.current_heat_state = 'COOL'
+
         # Statistics
         self.kills_by_range = {
             'EXTREME': 0,
@@ -120,12 +123,42 @@ class BerserkSystem:
                 bonus = mult
         return bonus
 
+    def get_heat_bonus(self, heat_percent: float) -> Tuple[float, str]:
+        """
+        Get heat-based score bonus multiplier.
+        Higher heat = higher risk but higher reward.
+
+        Heat thresholds:
+        - 0-50%: 1.0x (COOL)
+        - 50-75%: 1.25x (WARM)
+        - 75-99%: 1.5x (HOT)
+        - 100%: 2.0x (OVERHEATED - maximum risk/reward)
+
+        Returns: (multiplier, heat_state_name)
+        """
+        if heat_percent >= 1.0:  # Overheated
+            return (2.0, 'OVERHEATED')
+        elif heat_percent >= 0.75:
+            return (1.5, 'HOT')
+        elif heat_percent >= 0.5:
+            return (1.25, 'WARM')
+        else:
+            return (1.0, 'COOL')
+
     def register_kill(self, base_score: int, player_pos: Tuple[float, float],
-                     enemy_pos: Tuple[float, float], enemy_type: str = "default") -> int:
+                     enemy_pos: Tuple[float, float], enemy_type: str = "default",
+                     heat_percent: float = 0.0) -> int:
         """
         Register an enemy kill and calculate berserked score
 
-        Returns: Final score value with berserk multiplier applied
+        Args:
+            base_score: Base score value of the enemy
+            player_pos: Player position at time of kill
+            enemy_pos: Enemy position at time of kill
+            enemy_type: Type of enemy (for potential future bonuses)
+            heat_percent: Player's current heat level (0.0-1.0)
+
+        Returns: Final score value with all multipliers applied
         """
         multiplier, range_name = self.calculate_multiplier(player_pos, enemy_pos)
 
@@ -138,8 +171,12 @@ class BerserkSystem:
         # Get combo bonus
         combo_bonus = self.get_combo_bonus()
 
-        # Apply multipliers (berserk * combo)
-        total_multiplier = multiplier * combo_bonus
+        # Get heat bonus
+        heat_bonus, heat_state = self.get_heat_bonus(heat_percent)
+        self.current_heat_state = heat_state
+
+        # Apply multipliers (berserk * combo * heat)
+        total_multiplier = multiplier * combo_bonus * heat_bonus
         final_score = int(base_score * total_multiplier)
 
         # Update stats

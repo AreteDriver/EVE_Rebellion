@@ -468,7 +468,7 @@ class Game:
         self.splash_screen = SplashScreen(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         # Game state
-        self.state = 'splash'  # splash, menu, difficulty, faction_select, ship_select, mode_select, playing, shop, paused, gameover, victory, settings, credits
+        self.state = 'splash'  # splash, menu, difficulty, empire_select, faction_select, ship_select, mode_select, playing, shop, paused, gameover, victory, settings, credits
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
@@ -523,14 +523,103 @@ class Game:
         self.difficulty_index = 1  # Default to normal
 
         # Mode selection
-        self.mode_options = ['campaign', 'endless', 'boss_rush']
+        self.mode_options = ['campaign', 'endless', 'boss_rush', 'abyssal']
         self.mode_index = 0
+
+        # Abyssal Depths mode data
+        self.abyssal_filaments = [
+            {
+                'id': 'exotic',
+                'name': 'EXOTIC',
+                'color': (255, 255, 255),
+                'description': 'Stable void. No modifiers.',
+                'player_buff': None,
+                'player_debuff': None
+            },
+            {
+                'id': 'firestorm',
+                'name': 'FIRESTORM',
+                'color': (255, 69, 0),
+                'description': '+50% Armor, -50% Shield',
+                'player_buff': {'armor': 1.5},
+                'player_debuff': {'shield': 0.5}
+            },
+            {
+                'id': 'electrical',
+                'name': 'ELECTRICAL',
+                'color': (0, 191, 255),
+                'description': '+50% Shield, -50% Armor',
+                'player_buff': {'shield': 1.5},
+                'player_debuff': {'armor': 0.5}
+            },
+            {
+                'id': 'dark_matter',
+                'name': 'DARK MATTER',
+                'color': (148, 0, 211),
+                'description': '-30% Signature, -50% Range',
+                'player_buff': {'signature': 0.7},
+                'player_debuff': {'range': 0.5}
+            },
+            {
+                'id': 'gamma',
+                'name': 'GAMMA',
+                'color': (50, 205, 50),
+                'description': '+50% Shield Boost, -30% Explosive Resist',
+                'player_buff': {'shield_boost': 1.5},
+                'player_debuff': {'explosive_resist': 0.7}
+            }
+        ]
+        self.abyssal_tiers = [
+            {'name': 'Calm', 'mult': 1.0, 'color': (144, 238, 144)},
+            {'name': 'Agitated', 'mult': 1.3, 'color': (255, 255, 0)},
+            {'name': 'Fierce', 'mult': 1.6, 'color': (255, 165, 0)},
+            {'name': 'Raging', 'mult': 2.0, 'color': (255, 69, 0)},
+            {'name': 'Chaotic', 'mult': 2.5, 'color': (220, 20, 60)},
+            {'name': 'Cataclysmic', 'mult': 3.0, 'color': (139, 0, 0)}
+        ]
+        self.abyssal_filament_index = 0
+        self.abyssal_tier_index = 0
+        self.abyssal_room = 1  # Current room (1-3)
+        self.abyssal_timer = 0  # Time remaining in abyss
 
         # Faction selection
         self.faction_options = ['minmatar', 'amarr']
         self.faction_index = 0
         self.selected_faction = 'minmatar'  # Default faction
         self.active_stages = STAGES_MINMATAR  # Campaign stages for selected faction
+
+        # Empire selection (choose enemy empire for Minmatar Rebellion)
+        self.empire_options = [
+            {
+                'id': 'amarr_front',
+                'name': 'AMARR FRONT',
+                'enemy_faction': 'amarr',
+                'description': 'Break the chains. Free our people.',
+                'narrative': 'The Amarr Empire has enslaved our people for centuries.',
+                'color_primary': (139, 69, 19),  # Saddle brown/gold
+                'color_secondary': (218, 165, 32),  # Golden rod
+            },
+            {
+                'id': 'caldari_front',
+                'name': 'CALDARI FRONT',
+                'enemy_faction': 'caldari',
+                'description': 'Mercenary contract. Corporate war.',
+                'narrative': 'The State pays well. Their enemies pay better.',
+                'color_primary': (30, 58, 95),  # Dark blue
+                'color_secondary': (70, 130, 180),  # Steel blue
+            },
+            {
+                'id': 'gallente_front',
+                'name': 'GALLENTE FRONT',
+                'enemy_faction': 'gallente',
+                'description': 'Freedom fighters. Prove liberty in blood.',
+                'narrative': 'The Federation claims to love liberty.',
+                'color_primary': (46, 93, 46),  # Dark green
+                'color_secondary': (107, 142, 35),  # Olive
+            }
+        ]
+        self.empire_index = 0
+        self.selected_empire = self.empire_options[0]  # Default to Amarr front
 
         # Menu navigation
         self.menu_options = ['start', 'how_to_play', 'settings', 'leaderboard', 'credits', 'quit']
@@ -1773,11 +1862,14 @@ class Game:
                     self.play_sound('boss_death', 0.8)
             else:
                 # Non-bosses are destroyed
+                # Calculate heat percent for berserk bonus
+                heat_percent = self.player.heat / self.player.max_heat if self.player.max_heat > 0 else 0
                 berserk_score = self.berserk.register_kill(
                     enemy.score,
                     (self.player.rect.centerx, self.player.rect.centery),
                     (enemy.rect.centerx, enemy.rect.centery),
-                    enemy.enemy_type
+                    enemy.enemy_type,
+                    heat_percent
                 )
                 self.player.score += berserk_score
 
@@ -2193,6 +2285,35 @@ class Game:
                     elif self.controller.is_button_just_pressed(XboxButton.B):
                         self.state = 'faction_select'  # Back to faction selection
                         self.play_sound('menu_select')
+                elif self.state == 'empire_select':
+                    # Left/Right navigation for empire selection (3 options)
+                    move_x, move_y = self.controller.get_movement_vector()
+                    if not getattr(self, '_empire_controller_moved', False):
+                        if move_x < -0.5 and self.empire_index > 0:
+                            self.empire_index -= 1
+                            self.play_sound('menu_select')
+                            self._empire_controller_moved = True
+                        elif move_x > 0.5 and self.empire_index < len(self.empire_options) - 1:
+                            self.empire_index += 1
+                            self.play_sound('menu_select')
+                            self._empire_controller_moved = True
+                    if abs(move_x) < 0.3:
+                        self._empire_controller_moved = False
+
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self.set_empire(self.empire_index)
+                    elif self.controller.is_button_just_pressed(XboxButton.B):
+                        self.state = 'difficulty'  # Back to difficulty
+                        self.play_sound('menu_select')
+                    elif self.controller.is_button_just_pressed(XboxButton.LB):
+                        if self.empire_index > 0:
+                            self.empire_index -= 1
+                            self.play_sound('menu_select')
+                    elif self.controller.is_button_just_pressed(XboxButton.RB):
+                        if self.empire_index < len(self.empire_options) - 1:
+                            self.empire_index += 1
+                            self.play_sound('menu_select')
+
                 elif self.state == 'faction_select':
                     # Left/Right navigation for faction selection
                     move_x, move_y = self.controller.get_movement_vector()
@@ -2211,7 +2332,7 @@ class Game:
                     if self.controller.is_button_just_pressed(XboxButton.A):
                         self.set_faction(self.faction_options[self.faction_index])
                     elif self.controller.is_button_just_pressed(XboxButton.B):
-                        self.state = 'difficulty'  # Back to difficulty
+                        self.state = 'empire_select'  # Back to empire selection
                         self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.LB):
                         self.faction_index = 0
@@ -2659,6 +2780,25 @@ class Game:
                     self.state = 'faction_select'
                     self.play_sound('menu_select')
 
+            elif self.state == 'empire_select':
+                move_x, move_y = self.controller.get_movement_vector()
+                if not getattr(self, '_empire_controller_moved', False):
+                    if move_x < -0.5 and self.empire_index > 0:
+                        self.empire_index -= 1
+                        self.play_sound('menu_select')
+                        self._empire_controller_moved = True
+                    elif move_x > 0.5 and self.empire_index < len(self.empire_options) - 1:
+                        self.empire_index += 1
+                        self.play_sound('menu_select')
+                        self._empire_controller_moved = True
+                if abs(move_x) < 0.3:
+                    self._empire_controller_moved = False
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.set_empire(self.empire_index)
+                elif self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'difficulty'
+                    self.play_sound('menu_select')
+
             elif self.state == 'faction_select':
                 move_x, move_y = self.controller.get_movement_vector()
                 if not getattr(self, '_faction_controller_moved', False):
@@ -2675,7 +2815,7 @@ class Game:
                 if self.controller.is_button_just_pressed(XboxButton.A):
                     self.set_faction(self.faction_options[self.faction_index])
                 elif self.controller.is_button_just_pressed(XboxButton.B):
-                    self.state = 'difficulty'
+                    self.state = 'empire_select'
                     self.play_sound('menu_select')
                 elif self.controller.is_button_just_pressed(XboxButton.LB):
                     self.faction_index = 0
@@ -3028,10 +3168,19 @@ class Game:
             pass  # Silently fail if can't save
 
     def set_difficulty(self, difficulty):
-        """Set game difficulty and go to faction selection"""
+        """Set game difficulty and go to empire selection"""
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
-        self.state = 'faction_select'  # Go to faction selection after difficulty
+        self.state = 'empire_select'  # Go to empire selection after difficulty
+        self.play_sound('menu_select')
+
+    def set_empire(self, empire_index):
+        """Set enemy empire and go to faction/tribe selection"""
+        self.selected_empire = self.empire_options[empire_index]
+        self.empire_index = empire_index
+        # For now, always play as Minmatar against selected empire
+        self.selected_faction = 'minmatar'
+        self.state = 'faction_select'
         self.play_sound('menu_select')
 
     def set_faction(self, faction):
@@ -3043,11 +3192,15 @@ class Game:
         if faction == 'minmatar':
             self.active_stages = STAGES_MINMATAR
             self.ship_options = ['rifter', 'wolf', 'jaguar']
-            enemy_faction = 'amarr'
+            # Use selected empire's enemy faction
+            enemy_faction = self.selected_empire.get('enemy_faction', 'amarr')
         else:
             self.active_stages = STAGES_AMARR
             self.ship_options = ['executioner', 'crusader', 'malediction']
             enemy_faction = 'minmatar'
+
+        # Store enemy faction for use in gameplay
+        self.enemy_faction = enemy_faction
 
         # Set enemy faction for background carrier images
         if hasattr(self, 'stage_background'):
@@ -3075,6 +3228,14 @@ class Game:
             self.show_message("BOSS RUSH - Defeat all bosses!", 180)
             # Spawn first boss immediately
             self._spawn_boss_rush_boss()
+        elif mode == 'abyssal':
+            self.abyssal_room = 1
+            self.abyssal_timer = 60 * 60 * 20  # 20 minutes in frames
+            filament = self.abyssal_filaments[self.abyssal_filament_index]
+            tier = self.abyssal_tiers[self.abyssal_tier_index]
+            self.show_message(f"ABYSSAL DEPTHS - {filament['name']} {tier['name']}", 180,
+                            subtitle="Clear 3 rooms to extract")
+            # Apply filament modifiers to player would go here
         else:
             stage = self.active_stages[0]
             self.show_message(stage['name'], 180, subtitle=stage.get('story'))
@@ -3706,12 +3867,14 @@ class Game:
 
                 bullet.kill()
                 if enemy.take_damage(bullet):
-                    # Enemy destroyed - use berserk scoring
+                    # Enemy destroyed - use berserk scoring with heat bonus
+                    heat_percent = self.player.heat / self.player.max_heat if self.player.max_heat > 0 else 0
                     berserk_score = self.berserk.register_kill(
                         enemy.score,
                         (self.player.rect.centerx, self.player.rect.centery),
                         (enemy.rect.centerx, enemy.rect.centery),
-                        enemy.enemy_type
+                        enemy.enemy_type,
+                        heat_percent
                     )
                     self.player.score += berserk_score
 
@@ -4335,6 +4498,8 @@ class Game:
             self.draw_ship_select()
         elif self.state == 'difficulty':
             self.draw_difficulty()
+        elif self.state == 'empire_select':
+            self.draw_empire_select()
         elif self.state == 'faction_select':
             self.draw_faction_select()
         elif self.state == 'mode_select':
@@ -4464,6 +4629,135 @@ class Game:
             hint_text = self.font_small.render("[A] Select    [B] Back", True, (100, 100, 100))
         else:
             hint_text = self.font_small.render("[1-4] Select    [ESC] Back", True, (100, 100, 100))
+        hint_rect = hint_text.get_rect(center=(cx, hint_y))
+        self.render_surface.blit(hint_text, hint_rect)
+
+    def draw_empire_select(self):
+        """Draw empire selection screen - Choose enemy empire"""
+        cx = SCREEN_WIDTH // 2
+
+        # Title
+        title_font = pygame.font.Font(None, 48)
+        title = title_font.render("THE REBELLION BURNS", True, (255, 150, 100))
+        rect = title.get_rect(center=(cx, 50))
+        self.render_surface.blit(title, rect)
+
+        subtitle_font = pygame.font.Font(None, 32)
+        subtitle = subtitle_font.render("Choose your battleground", True, (180, 180, 180))
+        sub_rect = subtitle.get_rect(center=(cx, 85))
+        self.render_surface.blit(subtitle, sub_rect)
+
+        # Difficulty badge
+        diff_name = self.difficulty_settings['name'].upper()
+        diff_colors = {'CAREBEAR': (100, 200, 100), 'NEWBRO': (200, 180, 100),
+                      'BITTER VET': (255, 150, 80), 'TRIGLAVIAN': (255, 80, 80)}
+        diff_color = diff_colors.get(diff_name, (150, 150, 150))
+        badge_font = pygame.font.Font(None, 22)
+        badge_text = badge_font.render(diff_name, True, diff_color)
+        badge_rect = badge_text.get_rect(center=(cx, 110))
+        self.render_surface.blit(badge_text, badge_rect)
+
+        # Empire cards - 3 side by side
+        card_w, card_h = 230, 340
+        spacing = 30
+        total_w = 3 * card_w + 2 * spacing
+        start_x = cx - total_w // 2
+
+        for i, empire in enumerate(self.empire_options):
+            card_x = start_x + i * (card_w + spacing)
+            card_y = 130
+
+            is_selected = (i == self.empire_index)
+            color = empire['color_primary']
+            color_sec = empire['color_secondary']
+
+            # Card background with glow if selected
+            card_surf = pygame.Surface((card_w, card_h), pygame.SRCALPHA)
+            if is_selected:
+                card_surf.fill((40, 35, 45, 230))
+                # Glow effect
+                glow_rect = pygame.Rect(card_x - 6, card_y - 6, card_w + 12, card_h + 12)
+                pygame.draw.rect(self.render_surface, (*color[:3], 80), glow_rect, 6, border_radius=12)
+            else:
+                card_surf.fill((25, 25, 35, 180))
+
+            border_width = 4 if is_selected else 2
+            pygame.draw.rect(card_surf, color, (0, 0, card_w, card_h), border_width, border_radius=10)
+            self.render_surface.blit(card_surf, (card_x, card_y))
+
+            # Selection indicator
+            if is_selected:
+                indicator_y = card_y - 15
+                pygame.draw.polygon(self.render_surface, color,
+                    [(card_x + card_w // 2, indicator_y),
+                     (card_x + card_w // 2 - 10, indicator_y - 12),
+                     (card_x + card_w // 2 + 10, indicator_y - 12)])
+
+            # Empire name
+            name_font = pygame.font.Font(None, 36)
+            name_color = (255, 255, 255) if is_selected else color
+            name_text = name_font.render(empire['name'], True, name_color)
+            name_rect = name_text.get_rect(center=(card_x + card_w // 2, card_y + 35))
+            self.render_surface.blit(name_text, name_rect)
+
+            # Description
+            desc_font = pygame.font.Font(None, 24)
+            desc_text = desc_font.render(empire['description'], True, color_sec)
+            desc_rect = desc_text.get_rect(center=(card_x + card_w // 2, card_y + 65))
+            self.render_surface.blit(desc_text, desc_rect)
+
+            # Divider line
+            pygame.draw.line(self.render_surface, (*color[:3], 100),
+                           (card_x + 15, card_y + 90), (card_x + card_w - 15, card_y + 90), 1)
+
+            # Narrative text (wrapped)
+            narr_font = pygame.font.Font(None, 22)
+            narrative = empire['narrative']
+            words = narrative.split()
+            lines = []
+            current_line = ""
+            max_width = card_w - 30
+
+            for word in words:
+                test_line = current_line + " " + word if current_line else word
+                test_surf = narr_font.render(test_line, True, (180, 180, 180))
+                if test_surf.get_width() < max_width:
+                    current_line = test_line
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+            if current_line:
+                lines.append(current_line)
+
+            # Draw narrative lines
+            narr_y = card_y + 105
+            for line in lines[:5]:  # Max 5 lines
+                line_text = narr_font.render(line, True, (140, 140, 140))
+                line_rect = line_text.get_rect(center=(card_x + card_w // 2, narr_y))
+                self.render_surface.blit(line_text, line_rect)
+                narr_y += 20
+
+            # Enemy faction indicator
+            enemy_y = card_y + card_h - 80
+            enemy_font = pygame.font.Font(None, 24)
+            enemy_name = empire['enemy_faction'].upper()
+            enemy_text = enemy_font.render(f"Enemy: {enemy_name}", True, (255, 100, 100))
+            enemy_rect = enemy_text.get_rect(center=(card_x + card_w // 2, enemy_y))
+            self.render_surface.blit(enemy_text, enemy_rect)
+
+            # "As Minmatar" indicator
+            player_y = enemy_y + 25
+            player_text = enemy_font.render("Play as: MINMATAR", True, (200, 150, 100))
+            player_rect = player_text.get_rect(center=(card_x + card_w // 2, player_y))
+            self.render_surface.blit(player_text, player_rect)
+
+        # Controls hint
+        hint_y = SCREEN_HEIGHT - 40
+        if self.controller and self.controller.connected:
+            hint_text = self.font_small.render("[A] Select    [B] Back    [LB/RB] Switch", True, (100, 100, 100))
+        else:
+            hint_text = self.font_small.render("[ENTER] Select    [ESC] Back    [LEFT/RIGHT] Switch", True, (100, 100, 100))
         hint_rect = hint_text.get_rect(center=(cx, hint_y))
         self.render_surface.blit(hint_text, hint_rect)
 
@@ -4658,7 +4952,9 @@ class Game:
             ('2', 'ENDLESS', 'Survive infinite waves', 'No end • Escalating • Leaderboard',
              (255, 150, 100), (200, 100, 50)),
             ('3', 'BOSS RUSH', 'All bosses back-to-back', f'{len(self.boss_rush_bosses)} bosses • No breaks',
-             (180, 130, 220), (140, 90, 180))
+             (180, 130, 220), (140, 90, 180)),
+            ('4', 'ABYSSAL', 'Roguelike Triglavian abyss', '3 rooms • Timer • Filaments',
+             (148, 0, 211), (100, 0, 150))
         ]
 
         card_w, card_h = SCREEN_WIDTH - 100, 85
@@ -6966,10 +7262,12 @@ class Game:
         pygame.draw.line(self.render_surface, (*faction_color[:3], 150), (cx - 180, 95), (cx + 180, 95), 2)
 
         # Ship data - includes both Minmatar and Amarr ships
+        # type_id is the CCP EVE Online type ID for image server
         ship_data = {
             # === MINMATAR ===
             'rifter': {
                 'name': 'RIFTER',
+                'type_id': 587,
                 'class': 'T1 Frigate',
                 'desc': 'The iconic rust bucket. Reliable but basic.',
                 'speed': 100, 'armor': 100, 'firepower': 100,
@@ -6978,6 +7276,7 @@ class Game:
             },
             'wolf': {
                 'name': 'WOLF',
+                'type_id': 11396,
                 'class': 'T2 Assault Frigate',
                 'desc': 'Autocannon barrage specialist. Fast armor regen + seeker missiles.',
                 'desc_locked': 'Complete campaign to unlock T2 ships.',
@@ -6987,6 +7286,7 @@ class Game:
             },
             'jaguar': {
                 'name': 'JAGUAR',
+                'type_id': 11196,
                 'class': 'T2 Assault Frigate',
                 'desc': 'Speed demon. Frontal shield + seeking rocket streams.',
                 'desc_locked': 'Complete campaign to unlock T2 ships.',
@@ -6997,6 +7297,7 @@ class Game:
             # === AMARR ===
             'executioner': {
                 'name': 'EXECUTIONER',
+                'type_id': 589,
                 'class': 'T1 Frigate',
                 'desc': 'Swift and elegant. Pulse lasers deliver divine judgment.',
                 'speed': 110, 'armor': 90, 'firepower': 100,
@@ -7005,6 +7306,7 @@ class Game:
             },
             'crusader': {
                 'name': 'CRUSADER',
+                'type_id': 11184,
                 'class': 'T2 Interceptor',
                 'desc': 'Holy blade. High speed + enhanced shields for rapid strikes.',
                 'desc_locked': 'Complete campaign to unlock T2 ships.',
@@ -7014,12 +7316,51 @@ class Game:
             },
             'malediction': {
                 'name': 'MALEDICTION',
+                'type_id': 11186,
                 'class': 'T2 Interceptor',
                 'desc': 'Fastest ship in the fleet. Tackle specialist with armor bonuses.',
                 'desc_locked': 'Complete campaign to unlock T2 ships.',
                 'speed': 150, 'armor': 130, 'firepower': 90,
                 'color': (200, 150, 100),
                 'icon_color': (180, 140, 80)
+            },
+            # === CALDARI ===
+            'merlin': {
+                'name': 'MERLIN',
+                'type_id': 603,
+                'class': 'T1 Frigate',
+                'desc': 'Shield-tanked hybrid turret platform.',
+                'speed': 95, 'armor': 80, 'firepower': 110,
+                'color': (70, 130, 180),
+                'icon_color': (70, 130, 180)
+            },
+            'kestrel': {
+                'name': 'KESTREL',
+                'type_id': 602,
+                'class': 'T1 Frigate',
+                'desc': 'Missile platform. Death from a distance.',
+                'speed': 100, 'armor': 85, 'firepower': 105,
+                'color': (70, 130, 180),
+                'icon_color': (70, 130, 180)
+            },
+            # === GALLENTE ===
+            'tristan': {
+                'name': 'TRISTAN',
+                'type_id': 593,
+                'class': 'T1 Frigate',
+                'desc': 'Drone boat. Let the swarm do the work.',
+                'speed': 105, 'armor': 90, 'firepower': 95,
+                'color': (107, 142, 35),
+                'icon_color': (107, 142, 35)
+            },
+            'atron': {
+                'name': 'ATRON',
+                'type_id': 608,
+                'class': 'T1 Frigate',
+                'desc': 'Fast and agile. Blaster brawler.',
+                'speed': 120, 'armor': 75, 'firepower': 100,
+                'color': (107, 142, 35),
+                'icon_color': (107, 142, 35)
             }
         }
 
