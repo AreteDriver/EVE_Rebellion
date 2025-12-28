@@ -24,6 +24,9 @@ from high_scores import HighScoreManager, AchievementManager
 from particle_effects import (ParticleEmitter, ScreenEffects, DamageNumberManager,
                               WarpTransition, HitMarker, ComboEffects)
 from environmental_hazards import HazardManager
+from ship_roster import get_ship_roster
+from wave_patterns import get_wave_pattern_manager
+from abyssal_mode import get_abyssal_mode
 
 
 class SplashScreen:
@@ -426,6 +429,16 @@ class Game:
         # Environmental hazards
         self.hazards = HazardManager()
 
+        # Wave pattern system
+        self.wave_patterns = get_wave_pattern_manager()
+        self.current_wave_pattern = None
+        self.pattern_spawn_queue = []  # Queue of SpawnPoints to spawn
+
+        # Abyssal Depths mode
+        self.abyssal = get_abyssal_mode()
+        self.selected_filament = 0  # Index into abyssal_filaments
+        self.selected_tier = 0  # Index into abyssal_tiers
+
         # Visual effects
         self.screen_flash_alpha = 0
         self.screen_flash_color = (255, 50, 50)
@@ -468,7 +481,7 @@ class Game:
         self.splash_screen = SplashScreen(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         # Game state
-        self.state = 'splash'  # splash, menu, difficulty, empire_select, faction_select, ship_select, mode_select, playing, shop, paused, gameover, victory, settings, credits
+        self.state = 'splash'  # splash, chapter_select, menu, difficulty, tribe_select, empire_select, faction_select, filament_select, ship_select, mode_select, playing, shop, paused, gameover, victory, settings, credits
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
@@ -512,9 +525,14 @@ class Game:
         self.pause_menu_index = 0
         self.pause_menu_options = ['Resume', 'Settings', 'Restart', 'Quit to Menu']
 
+        # Ship roster from JSON config
+        self.ship_roster = get_ship_roster()
+
         # Ship selection
-        self.selected_ship = 'rifter'  # rifter, wolf, jaguar
-        self.ship_options = ['rifter', 'wolf', 'jaguar']
+        self.selected_ship = 'rifter'  # Default ship
+        self.ship_options = self.ship_roster.get_ship_options('minmatar', 'minmatar_rebellion')
+        if not self.ship_options:
+            self.ship_options = ['rifter', 'wolf', 'jaguar']  # Fallback
         self.ship_select_index = 0
         self.t2_ships_unlocked = True  # TESTING: Wolf and Jaguar unlocked
 
@@ -620,6 +638,62 @@ class Game:
         ]
         self.empire_index = 0
         self.selected_empire = self.empire_options[0]  # Default to Amarr front
+
+        # Chapter selection - EVE Rebellion is a platform with multiple campaigns
+        self.chapter_options = [
+            {
+                'id': 'minmatar_rebellion',
+                'name': 'MINMATAR REBELLION',
+                'subtitle': 'Break the Chains',
+                'description': 'Fight for freedom against the Amarr Empire.',
+                'color': (180, 100, 50),  # Minmatar rust
+                'icon': 'rifter',
+                'unlocked': True,
+                'flow': ['empire_select', 'tribe_select', 'difficulty', 'ship_select', 'mode_select']
+            },
+            {
+                'id': 'the_last_stand',
+                'name': 'THE LAST STAND',
+                'subtitle': 'Caldari-Gallente War',
+                'description': 'Control a titan. Hold the line or stop the fall.',
+                'color': (100, 150, 200),  # Caldari blue
+                'icon': 'leviathan',
+                'unlocked': False,  # Unlock after completing Minmatar
+                'flow': ['faction_select', 'difficulty', 'ship_select']
+            },
+            {
+                'id': 'abyssal_depths',
+                'name': 'ABYSSAL DEPTHS',
+                'subtitle': 'Triglavian Roguelike',
+                'description': 'Enter the Abyss. Survive. Escape with loot.',
+                'color': (200, 50, 80),  # Triglavian red
+                'icon': 'vedmak',
+                'unlocked': False,
+                'flow': ['filament_select', 'ship_select']
+            },
+            {
+                'id': 'sansha_incursion',
+                'name': 'SANSHA INCURSION',
+                'subtitle': 'Nation Rising',
+                'description': 'Defend against the Sansha horde.',
+                'color': (100, 200, 150),  # Sansha teal
+                'icon': 'nightmare',
+                'unlocked': False,
+                'flow': ['difficulty', 'ship_select']
+            },
+            {
+                'id': 'elder_fleet',
+                'name': 'ELDER FLEET',
+                'subtitle': 'The Great Escape',
+                'description': 'Jove technology. Unlimited power.',
+                'color': (180, 150, 220),  # Jove purple
+                'icon': 'gnosis',
+                'unlocked': False,
+                'flow': ['difficulty', 'ship_select']
+            }
+        ]
+        self.chapter_index = 0
+        self.selected_chapter = self.chapter_options[0]
 
         # Menu navigation
         self.menu_options = ['start', 'how_to_play', 'settings', 'leaderboard', 'credits', 'quit']
@@ -840,6 +914,21 @@ class Game:
         if random.random() < stage['industrial_chance']:
             self.wave_enemies += 1
 
+        # Use wave patterns for varied enemy spawn formations
+        if random.random() < 0.4:  # 40% chance to use pattern-based spawning
+            pattern_name = self.wave_patterns.get_pattern_for_wave(
+                self.current_wave, self.current_stage
+            )
+            enemy_types = [e for e in stage['enemies'] if e not in ['bestower', 'drone']]
+            if not enemy_types:
+                enemy_types = ['executioner']
+
+            spawn_points = self.wave_patterns.generate_wave(
+                pattern_name, min(num_enemies, 15), enemy_types
+            )
+            self.pattern_spawn_queue = spawn_points
+            self.current_wave_pattern = pattern_name
+
     def _spawn_endless_wave(self):
         """Spawn enemies for endless mode with escalating difficulty"""
         self.endless_wave += 1
@@ -969,6 +1058,11 @@ class Game:
             self._spawn_endless_enemy()
             return
 
+        # Check pattern spawn queue first
+        if self.pattern_spawn_queue:
+            self._spawn_from_pattern()
+            return
+
         stage = self.active_stages[self.current_stage]
 
         # Chance for industrial - guarantee at least one per wave in later stages
@@ -999,6 +1093,41 @@ class Game:
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
             self.wave_spawned += 1
+
+    def _spawn_from_pattern(self):
+        """Spawn enemies from the pattern queue."""
+        if not self.pattern_spawn_queue:
+            return
+
+        # Process spawn points that are ready (delay == 0)
+        spawned_this_frame = 0
+        remaining = []
+
+        for spawn_point in self.pattern_spawn_queue:
+            if spawn_point.delay <= 0:
+                # Spawn this enemy
+                enemy_type = spawn_point.enemy_type or 'executioner'
+                enemy = Enemy(enemy_type, spawn_point.x, spawn_point.y, self.difficulty_settings)
+
+                # Apply custom velocity from pattern
+                if hasattr(enemy, 'rect'):
+                    enemy.vx = spawn_point.vx
+                    enemy.vy = spawn_point.vy
+
+                self.enemies.add(enemy)
+                self.all_sprites.add(enemy)
+                self.wave_spawned += 1
+                spawned_this_frame += 1
+
+                # Limit spawns per frame to prevent lag
+                if spawned_this_frame >= 3:
+                    remaining.extend([p for p in self.pattern_spawn_queue if p.delay > 0])
+                    break
+            else:
+                spawn_point.delay -= 1
+                remaining.append(spawn_point)
+
+        self.pattern_spawn_queue = remaining
 
     def _get_progressive_enemy_type(self, stage):
         """
@@ -2225,7 +2354,37 @@ class Game:
                         self.tutorial.tutorial_complete = True
                         self.tutorial.active = False
 
-                if self.state == 'menu':
+                if self.state == 'chapter_select':
+                    # Left/Right navigation for chapter selection
+                    move_x, move_y = self.controller.get_movement_vector()
+                    if not getattr(self, '_chapter_controller_moved', False):
+                        if move_x < -0.5 and self.chapter_index > 0:
+                            self.chapter_index -= 1
+                            self.play_sound('menu_select')
+                            self._chapter_controller_moved = True
+                        elif move_x > 0.5 and self.chapter_index < len(self.chapter_options) - 1:
+                            self.chapter_index += 1
+                            self.play_sound('menu_select')
+                            self._chapter_controller_moved = True
+                    if abs(move_x) < 0.3:
+                        self._chapter_controller_moved = False
+
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        chapter = self.chapter_options[self.chapter_index]
+                        if chapter.get('unlocked', False):
+                            self.selected_chapter = chapter
+                            self.start_chapter_flow()
+                            self.play_sound('menu_select')
+                        else:
+                            self.play_sound('menu_error')  # Locked chapter
+                    elif self.controller.is_button_just_pressed(XboxButton.B):
+                        pygame.quit()
+                        sys.exit()
+                    elif self.controller.is_button_just_pressed(XboxButton.BACK):
+                        self.state = 'settings'
+                        self.play_sound('menu_select')
+
+                elif self.state == 'menu':
                     # Navigation in main menu
                     move_x, move_y = self.controller.get_movement_vector()
                     if move_y < -0.5 and not getattr(self, '_menu_controller_moved', False):
@@ -2375,7 +2534,7 @@ class Game:
                         self.set_difficulty(self.difficulty_options[self.difficulty_index])
                         self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.B):
-                        self.state = 'menu'  # Back to main menu
+                        self.state = 'chapter_select'  # Back to chapter selection
                         self.play_sound('menu_select')
                 elif self.state == 'mode_select':
                     # Navigation for mode selection
@@ -2393,6 +2552,34 @@ class Game:
 
                     if self.controller.is_button_just_pressed(XboxButton.A):
                         self.start_game(self.mode_options[self.mode_index])
+                    elif self.controller.is_button_just_pressed(XboxButton.B):
+                        self.state = 'ship_select'  # Back to ship selection
+                        self.play_sound('menu_select')
+                elif self.state == 'filament_select':
+                    # Navigation for filament and tier selection
+                    move_x, move_y = self.controller.get_movement_vector()
+                    if move_x < -0.5 and not getattr(self, '_filament_controller_moved', False):
+                        self.selected_filament = (self.selected_filament - 1) % len(self.abyssal_filaments)
+                        self.play_sound('menu_select')
+                        self._filament_controller_moved = True
+                    elif move_x > 0.5 and not getattr(self, '_filament_controller_moved', False):
+                        self.selected_filament = (self.selected_filament + 1) % len(self.abyssal_filaments)
+                        self.play_sound('menu_select')
+                        self._filament_controller_moved = True
+                    elif move_y < -0.5 and not getattr(self, '_filament_controller_moved', False):
+                        self.selected_tier = max(0, self.selected_tier - 1)
+                        self.play_sound('menu_select')
+                        self._filament_controller_moved = True
+                    elif move_y > 0.5 and not getattr(self, '_filament_controller_moved', False):
+                        self.selected_tier = min(len(self.abyssal_tiers) - 1, self.selected_tier + 1)
+                        self.play_sound('menu_select')
+                        self._filament_controller_moved = True
+                    elif abs(move_x) < 0.3 and abs(move_y) < 0.3:
+                        self._filament_controller_moved = False
+
+                    if self.controller.is_button_just_pressed(XboxButton.A):
+                        self._start_abyssal_run()
+                        self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.B):
                         self.state = 'ship_select'  # Back to ship selection
                         self.play_sound('menu_select')
@@ -2537,6 +2724,45 @@ class Game:
                 if self.state == 'splash':
                     self.splash_screen.handle_event(event)
 
+                elif self.state == 'chapter_select':
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                        if self.chapter_index > 0:
+                            self.chapter_index -= 1
+                            self.play_sound('menu_select')
+                    elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                        if self.chapter_index < len(self.chapter_options) - 1:
+                            self.chapter_index += 1
+                            self.play_sound('menu_select')
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        chapter = self.chapter_options[self.chapter_index]
+                        if chapter.get('unlocked', False):
+                            self.selected_chapter = chapter
+                            self.start_chapter_flow()
+                            self.play_sound('menu_select')
+                        else:
+                            self.play_sound('menu_error')
+                    elif event.key == pygame.K_1:
+                        self.chapter_index = 0
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_2:
+                        self.chapter_index = min(1, len(self.chapter_options) - 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_3:
+                        self.chapter_index = min(2, len(self.chapter_options) - 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_4:
+                        self.chapter_index = min(3, len(self.chapter_options) - 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_5:
+                        self.chapter_index = min(4, len(self.chapter_options) - 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_o:
+                        self.state = 'settings'
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
+
                 elif self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.state = 'difficulty'  # Difficulty first
@@ -2601,7 +2827,7 @@ class Game:
                     elif event.key == pygame.K_4:
                         self.set_difficulty('nightmare')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = 'menu'  # Back to main menu
+                        self.state = 'chapter_select'  # Back to chapter selection
                         self.play_sound('menu_select')
 
                 elif self.state == 'faction_select':
@@ -2621,6 +2847,25 @@ class Game:
                         self.state = 'difficulty'  # Back to difficulty
                         self.play_sound('menu_select')
 
+                elif self.state == 'filament_select':
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                        self.selected_filament = (self.selected_filament - 1) % len(self.abyssal_filaments)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                        self.selected_filament = (self.selected_filament + 1) % len(self.abyssal_filaments)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_UP or event.key == pygame.K_w:
+                        self.selected_tier = max(0, self.selected_tier - 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                        self.selected_tier = min(len(self.abyssal_tiers) - 1, self.selected_tier + 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        self._start_abyssal_run()
+                    elif event.key == pygame.K_ESCAPE:
+                        self.state = 'ship_select'  # Back to ship selection
+                        self.play_sound('menu_select')
+
                 elif self.state == 'mode_select':
                     if event.key == pygame.K_1:
                         self.start_game('campaign')
@@ -2628,6 +2873,10 @@ class Game:
                         self.start_game('endless')
                     elif event.key == pygame.K_3:
                         self.start_game('boss_rush')
+                    elif event.key == pygame.K_4:
+                        # Abyssal mode goes to filament selection
+                        self.state = 'filament_select'
+                        self.play_sound('menu_select')
                     elif event.key == pygame.K_ESCAPE:
                         self.state = 'ship_select'  # Back to ship selection
                         self.play_sound('menu_select')
@@ -3167,11 +3416,51 @@ class Game:
         except IOError:
             pass  # Silently fail if can't save
 
+    def start_chapter_flow(self):
+        """Start the appropriate flow for the selected chapter"""
+        chapter = self.selected_chapter
+        chapter_id = chapter['id']
+
+        # Each chapter has its own flow
+        if chapter_id == 'minmatar_rebellion':
+            # Minmatar Rebellion: Difficulty → Empire Select → Faction → Ship → Mode → Play
+            self.faction_options = ['minmatar', 'amarr']  # Reset to default
+            self.state = 'difficulty'
+        elif chapter_id == 'the_last_stand':
+            # The Last Stand: Faction Select (Caldari vs Gallente) → Difficulty → Ship → Play
+            # Set up faction options for this chapter
+            self.faction_options = ['caldari', 'gallente']
+            self.faction_index = 0
+            self.state = 'faction_select'
+        elif chapter_id == 'abyssal_depths':
+            # Abyssal Depths: Filament Select → Ship → Play
+            self.game_mode = 'abyssal'
+            self.state = 'filament_select'
+        elif chapter_id == 'sansha_incursion':
+            # Sansha Incursion: Difficulty → Ship → Play
+            self.enemy_faction = 'sansha'
+            self.state = 'difficulty'
+        elif chapter_id == 'elder_fleet':
+            # Elder Fleet: Difficulty → Ship → Play
+            self.enemy_faction = 'jove'
+            self.state = 'difficulty'
+        else:
+            # Default: go to difficulty
+            self.state = 'difficulty'
+
     def set_difficulty(self, difficulty):
-        """Set game difficulty and go to empire selection"""
+        """Set game difficulty and continue chapter flow"""
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
-        self.state = 'empire_select'  # Go to empire selection after difficulty
+
+        # Determine next state based on current chapter
+        chapter_id = self.selected_chapter.get('id', 'minmatar_rebellion')
+        if chapter_id == 'minmatar_rebellion':
+            self.state = 'empire_select'  # Empire selection for Minmatar
+        elif chapter_id == 'the_last_stand':
+            self.state = 'ship_select'  # Ship selection for Last Stand
+        else:
+            self.state = 'ship_select'  # Default to ship selection
         self.play_sound('menu_select')
 
     def set_empire(self, empire_index):
@@ -3186,18 +3475,40 @@ class Game:
     def set_faction(self, faction):
         """Set player faction and load appropriate campaign stages"""
         self.selected_faction = faction
-        faction_data = FACTIONS[faction]
+        faction_data = FACTIONS.get(faction, {})
 
-        # Load faction-specific campaign stages
+        # Get chapter for ship filtering
+        chapter_id = self.selected_chapter.get('id', 'minmatar_rebellion')
+
+        # Load faction-specific campaign stages and ships from roster
         if faction == 'minmatar':
             self.active_stages = STAGES_MINMATAR
-            self.ship_options = ['rifter', 'wolf', 'jaguar']
             # Use selected empire's enemy faction
             enemy_faction = self.selected_empire.get('enemy_faction', 'amarr')
+        elif faction == 'caldari':
+            self.active_stages = STAGES_MINMATAR  # TODO: Add Caldari stages
+            enemy_faction = 'gallente'
+        elif faction == 'gallente':
+            self.active_stages = STAGES_MINMATAR  # TODO: Add Gallente stages
+            enemy_faction = 'caldari'
         else:
             self.active_stages = STAGES_AMARR
-            self.ship_options = ['executioner', 'crusader', 'malediction']
             enemy_faction = 'minmatar'
+
+        # Load ships from roster based on faction and chapter
+        self.ship_options = self.ship_roster.get_ship_options(faction, chapter_id)
+        if not self.ship_options:
+            # Fallback to hardcoded options
+            if faction == 'minmatar':
+                self.ship_options = ['rifter', 'wolf', 'jaguar']
+            elif faction == 'amarr':
+                self.ship_options = ['executioner', 'crusader', 'malediction']
+            elif faction == 'caldari':
+                self.ship_options = ['kestrel', 'hawk', 'harpy']
+            elif faction == 'gallente':
+                self.ship_options = ['tristan', 'enyo', 'ishkur']
+            else:
+                self.ship_options = ['rifter']
 
         # Store enemy faction for use in gameplay
         self.enemy_faction = enemy_faction
@@ -3305,6 +3616,123 @@ class Game:
         self.show_message(f"BOSS RUSH COMPLETE! Time: {final_time}s", 180)
         self.play_sound('victory')
         self._save_settings()
+
+    def _start_abyssal_run(self):
+        """Start an Abyssal Depths run with selected filament and tier."""
+        filament = self.abyssal_filaments[self.selected_filament]
+        tier = self.abyssal_tiers[self.selected_tier]
+
+        # Initialize the Abyssal mode with selected settings
+        self.abyssal.start_run(filament['id'], tier['tier'])
+
+        # Apply filament modifiers to player
+        if 'player_bonus' in filament:
+            bonus = filament['player_bonus']
+            if 'damage_mult' in bonus:
+                self.player.damage_mult = bonus['damage_mult']
+            if 'speed_mult' in bonus:
+                self.player.speed_mult = bonus.get('speed_mult', 1.0)
+
+        # Apply filament penalties
+        if 'player_penalty' in filament:
+            penalty = filament['player_penalty']
+            if 'resist_mult' in penalty:
+                self.player.resist_mult = penalty.get('resist_mult', 1.0)
+
+        # Set up game state for abyssal mode
+        self.abyssal_room = 1
+        self.abyssal_timer = tier.get('timer_frames', 60 * 60 * 20)  # Default 20 min at 60fps
+
+        # Clear existing enemies and bullets
+        self.enemies.empty()
+        self.bullets.empty()
+        self.enemy_bullets.empty()
+        self.collectibles.empty()
+
+        self.show_message(f"ENTERING THE ABYSS", 180,
+                         subtitle=f"{filament['name']} - Tier {tier['tier']}")
+
+        self.state = 'playing'
+        self.play_sound('wave_start')
+        if self.music_enabled:
+            self.music_manager.start_music(stage='abyssal')
+
+    def _update_abyssal(self):
+        """Update Abyssal Depths mode each frame."""
+        if not self.abyssal.state:
+            return
+
+        dt = 1.0 / 60.0  # Delta time in seconds
+        player_x = self.player.rect.centerx
+        player_y = self.player.rect.centery
+
+        # Handle extraction channeling (A button or E key when in range of gate)
+        if self.abyssal.extraction_gate and self.abyssal.extraction_gate.active:
+            in_range = self.abyssal.extraction_gate.is_in_range(player_x, player_y)
+            if in_range:
+                # Check for channel input (keyboard E or controller A held)
+                keys = pygame.key.get_pressed()
+                controller_channel = False
+                if self.controller and self.controller.is_connected():
+                    controller_channel = self.controller.is_button_pressed(XboxButton.A)
+
+                if keys[pygame.K_e] or controller_channel:
+                    self.abyssal.start_extraction_channel()
+                else:
+                    self.abyssal.stop_extraction_channel()
+            else:
+                self.abyssal.stop_extraction_channel()
+
+        # Update abyssal state and get events
+        events = self.abyssal.update(dt, player_x, player_y)
+
+        # Handle events
+        if events.get('spawn_enemy'):
+            trig_enemy = self.abyssal.spawn_enemy()
+            if trig_enemy:
+                # Create a game Enemy from Triglavian config
+                enemy = Enemy(
+                    'damavik',  # Use damavik as base sprite
+                    int(trig_enemy.x),
+                    int(trig_enemy.y),
+                    self.difficulty_settings
+                )
+                # Override stats with Triglavian stats
+                enemy.hp = trig_enemy.hp
+                enemy.max_hp = trig_enemy.max_hp
+                enemy.speed = trig_enemy.speed / 60.0  # Convert to pixels per frame
+                enemy.trig_enemy = trig_enemy  # Store reference for damage ramping
+                self.enemies.add(enemy)
+
+        if events.get('hazard_damage'):
+            damage = events['hazard_damage']
+            self.player.take_damage(damage)
+            self.play_sound('hit')
+
+        if events.get('time_out'):
+            # Player ran out of time - death in the abyss
+            self.player.hp = 0
+            self.show_message("TIME EXPIRED", 180, subtitle="Lost in the Abyss...")
+            self.state = 'game_over'
+            self.play_sound('explosion')
+            self._save_settings()
+
+        if events.get('extracted'):
+            # Successful extraction!
+            self.show_message("EXTRACTION COMPLETE!", 180,
+                            subtitle=f"Loot: {self.abyssal.state.total_loot}")
+            self.state = 'victory'
+            self.play_sound('victory')
+            self._save_settings()
+
+        if events.get('room_transition'):
+            room = events['room_transition']
+            room_names = ['POCKETS', 'ESCALATION', 'EXTRACTION']
+            self.show_message(f"ROOM {room}", 120, subtitle=room_names[room - 1])
+            self.play_sound('wave_start')
+            # Clear bullets for new room
+            self.bullets.empty()
+            self.enemy_bullets.empty()
 
     def handle_shop_input(self, key):
         """Handle shop menu input"""
@@ -3447,7 +3875,7 @@ class Game:
         if self.state == 'splash':
             self.splash_screen.update()
             if self.splash_screen.done:
-                self.state = 'menu'
+                self.state = 'chapter_select'
             return
 
         # Always update parallax and stars for visual movement
@@ -3538,10 +3966,9 @@ class Game:
 
             # R3 = Toggle fire mode (Spread/Focus)
             if input_state.toggle_fire_mode_pressed:
-                current_pattern = getattr(self.player, 'fire_pattern', 'focused')
-                self.player.fire_pattern = 'spread' if current_pattern == 'focused' else 'focused'
+                new_mode = self.player.toggle_fire_mode()
                 self.play_sound('ammo_switch')
-                self.show_message(f"{'SPREAD' if self.player.fire_pattern == 'spread' else 'FOCUSED'}", 30)
+                self.show_message(f"FIRE: {new_mode.upper()}", 45)
 
             # LT = Brake (emergency escape with invincibility)
             if input_state.brake_pressed:
@@ -3561,6 +3988,9 @@ class Game:
         else:
             controller_fire = False
             aim_x, aim_y = 0.0, -1.0  # Default forward
+
+        # Store aim direction for wingmen to use
+        self._player_aim_direction = (aim_x, aim_y)
 
         # Keyboard/mouse fire (always Standard behavior)
         kb_mouse_fire = keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0]
@@ -3697,9 +4127,11 @@ class Game:
             )
 
         # Update wingmen and have them shoot
+        # Pass player's aim direction so wingmen track with player's fire
+        player_aim = getattr(self, '_player_aim_direction', (0, -1))
         for wingman in self.wingmen:
             wingman.update()
-            bullet = wingman.shoot()
+            bullet = wingman.shoot(aim_direction=player_aim)
             if bullet:
                 self.player_bullets.add(bullet)
                 self.all_sprites.add(bullet)
@@ -4201,6 +4633,11 @@ class Game:
             self._update_boss_rush()
             return
 
+        # Abyssal Depths mode
+        if self.game_mode == 'abyssal':
+            self._update_abyssal()
+            return
+
         stage = self.active_stages[self.current_stage]
 
         # Wave delay
@@ -4492,6 +4929,8 @@ class Game:
 
         if self.state == 'splash':
             self.splash_screen.draw(self.render_surface)
+        elif self.state == 'chapter_select':
+            self.draw_chapter_select()
         elif self.state == 'menu':
             self.draw_menu()
         elif self.state == 'ship_select':
@@ -4502,6 +4941,8 @@ class Game:
             self.draw_empire_select()
         elif self.state == 'faction_select':
             self.draw_faction_select()
+        elif self.state == 'filament_select':
+            self.draw_filament_select()
         elif self.state == 'mode_select':
             self.draw_mode_select()
         elif self.state == 'playing':
@@ -4921,6 +5362,114 @@ class Game:
         hint_rect = hint_text.get_rect(center=(cx, hint_y))
         self.render_surface.blit(hint_text, hint_rect)
 
+    def draw_filament_select(self):
+        """Draw Abyssal filament and tier selection screen."""
+        cx = SCREEN_WIDTH // 2
+        cy = SCREEN_HEIGHT // 2
+
+        # Title
+        title_font = pygame.font.Font(None, 48)
+        title = title_font.render("ENTER THE ABYSS", True, (200, 50, 80))
+        rect = title.get_rect(center=(cx, 50))
+        self.render_surface.blit(title, rect)
+
+        sub_font = pygame.font.Font(None, 24)
+        subtitle = sub_font.render("Select Filament Type and Tier", True, (150, 150, 150))
+        sub_rect = subtitle.get_rect(center=(cx, 80))
+        self.render_surface.blit(subtitle, sub_rect)
+
+        # Filament selection (horizontal)
+        filament_y = 150
+        filament_width = 120
+        filament_spacing = 15
+        total_width = len(self.abyssal_filaments) * (filament_width + filament_spacing) - filament_spacing
+        start_x = cx - total_width // 2
+
+        for i, filament in enumerate(self.abyssal_filaments):
+            x = start_x + i * (filament_width + filament_spacing)
+            is_selected = (i == self.selected_filament)
+
+            # Card background
+            card_surf = pygame.Surface((filament_width, 80), pygame.SRCALPHA)
+            if is_selected:
+                card_surf.fill((40, 20, 30, 220))
+            else:
+                card_surf.fill((25, 20, 25, 180))
+
+            # Border
+            color = filament['color']
+            pygame.draw.rect(card_surf, color if is_selected else (80, 80, 90),
+                           (0, 0, filament_width, 80), 2 if is_selected else 1, border_radius=6)
+
+            self.render_surface.blit(card_surf, (x, filament_y))
+
+            # Filament name
+            name_color = color if is_selected else (120, 120, 130)
+            name_text = self.font_small.render(filament['name'], True, name_color)
+            name_rect = name_text.get_rect(center=(x + filament_width // 2, filament_y + 25))
+            self.render_surface.blit(name_text, name_rect)
+
+            # Effect hint
+            effect = filament.get('description', '')[:20] + '...' if len(filament.get('description', '')) > 20 else filament.get('description', 'Stable')
+            effect_text = self.font_small.render(effect[:15], True, (100, 100, 110))
+            effect_rect = effect_text.get_rect(center=(x + filament_width // 2, filament_y + 55))
+            self.render_surface.blit(effect_text, effect_rect)
+
+        # Tier selection (vertical)
+        tier_y = 260
+        tier_height = 50
+        tier_spacing = 10
+
+        tier_label = pygame.font.Font(None, 28).render("TIER", True, (150, 100, 100))
+        self.render_surface.blit(tier_label, tier_label.get_rect(center=(cx, tier_y - 20)))
+
+        for i, tier in enumerate(self.abyssal_tiers[:5]):  # Show first 5 tiers
+            y = tier_y + i * (tier_height + tier_spacing)
+            is_selected = (i == self.selected_tier)
+
+            # Tier bar
+            bar_width = 400
+            bar_x = cx - bar_width // 2
+
+            bar_surf = pygame.Surface((bar_width, tier_height), pygame.SRCALPHA)
+            if is_selected:
+                bar_surf.fill((40, 30, 35, 220))
+            else:
+                bar_surf.fill((25, 25, 30, 160))
+
+            color = tier['color']
+            pygame.draw.rect(bar_surf, color if is_selected else (60, 60, 70),
+                           (0, 0, bar_width, tier_height), 2 if is_selected else 1, border_radius=4)
+
+            self.render_surface.blit(bar_surf, (bar_x, y))
+
+            # Tier number and name
+            tier_num = self.font_small.render(f"T{i+1}", True, color)
+            self.render_surface.blit(tier_num, (bar_x + 15, y + 15))
+
+            tier_name = pygame.font.Font(None, 28).render(tier['name'], True,
+                                                         (255, 255, 255) if is_selected else (150, 150, 150))
+            self.render_surface.blit(tier_name, (bar_x + 60, y + 13))
+
+            # Timer hint
+            timer_mins = 20 - i * 2  # Approximate timer per tier
+            timer_text = self.font_small.render(f"{timer_mins}min", True, (100, 100, 110))
+            self.render_surface.blit(timer_text, (bar_x + bar_width - 60, y + 15))
+
+        # Navigation hints
+        hint_y = SCREEN_HEIGHT - 60
+        if self.controller and self.controller.connected:
+            hint = "[D-Pad] Navigate    [A] Enter Abyss    [B] Back"
+        else:
+            hint = "[Arrow Keys] Navigate    [Enter] Enter Abyss    [ESC] Back"
+        hint_text = self.font_small.render(hint, True, (100, 100, 100))
+        self.render_surface.blit(hint_text, hint_text.get_rect(center=(cx, hint_y)))
+
+        # Warning
+        warning = "Warning: Death in the Abyss means losing your ship!"
+        warning_text = self.font_small.render(warning, True, (200, 100, 100))
+        self.render_surface.blit(warning_text, warning_text.get_rect(center=(cx, SCREEN_HEIGHT - 30)))
+
     def draw_mode_select(self):
         """Draw polished game mode selection screen"""
         cx = SCREEN_WIDTH // 2
@@ -5054,6 +5603,10 @@ class Game:
         # Draw environmental hazards (behind most sprites)
         if self.state == 'playing':
             self.hazards.draw(self.render_surface)
+
+            # Draw abyssal-specific elements (hazards, gates)
+            if self.game_mode == 'abyssal':
+                self._draw_abyssal_elements()
 
         """Draw gameplay elements"""
         # Draw rocket trails BEFORE sprites (so trails appear behind rockets)
@@ -5628,6 +6181,9 @@ class Game:
             wave_color = (255, 150, 100) if self.endless_wave % 10 == 0 else (200, 180, 150)
             text = self.font_small.render(f"Wave {self.endless_wave}", True, wave_color)
             self.render_surface.blit(text, (x, y))
+        elif self.game_mode == 'abyssal':
+            # Abyssal-specific HUD
+            self._draw_abyssal_hud()
         elif self.current_stage < len(self.active_stages):
             text = self.font_small.render(f"Wave {self.current_wave}/{self.active_stages[self.current_stage]['waves']}", True, (180, 180, 180))
             self.render_surface.blit(text, (x, y))
@@ -6477,6 +7033,289 @@ class Game:
         pct_text = self.font_small.render(f"{int(fill_pct * 100)}", True, fill_color if fill_pct > 0.3 else (180, 180, 180))
         surface.blit(pct_text, (x + width + 4, y - 2))
 
+    def _draw_abyssal_hud(self):
+        """Draw Abyssal Depths-specific HUD elements: timer, room, extraction."""
+        if not self.abyssal.state:
+            return
+
+        hud_data = self.abyssal.get_hud_data()
+        if not hud_data:
+            return
+
+        # Top center - ABYSSAL TIMER (big, critical when low)
+        timer = hud_data.get('timer', '00:00')
+        timer_critical = hud_data.get('timer_critical', False)
+
+        # Timer background panel
+        timer_panel_width = 140
+        timer_panel_height = 50
+        timer_x = SCREEN_WIDTH // 2 - timer_panel_width // 2
+        timer_y = 10
+
+        # Dark Triglavian-styled panel
+        pygame.draw.rect(self.render_surface, (25, 15, 30),
+                        (timer_x, timer_y, timer_panel_width, timer_panel_height), border_radius=5)
+        pygame.draw.rect(self.render_surface, (120, 50, 80),
+                        (timer_x, timer_y, timer_panel_width, timer_panel_height), 2, border_radius=5)
+
+        # Timer text (large, centered)
+        if timer_critical:
+            # Pulsing red when critical
+            pulse = int(180 + 75 * math.sin(pygame.time.get_ticks() * 0.01))
+            timer_color = (255, pulse, pulse)
+        else:
+            timer_color = (220, 200, 180)
+
+        timer_text = self.font_large.render(timer, True, timer_color)
+        timer_rect = timer_text.get_rect(center=(SCREEN_WIDTH // 2, timer_y + 25))
+        self.render_surface.blit(timer_text, timer_rect)
+
+        # "ABYSSAL" label above timer
+        label_text = self.font_small.render("ABYSSAL", True, (150, 100, 130))
+        label_rect = label_text.get_rect(center=(SCREEN_WIDTH // 2, timer_y + timer_panel_height + 10))
+        self.render_surface.blit(label_text, label_rect)
+
+        # Room indicator (left side)
+        room = hud_data.get('room', 1)
+        room_name = hud_data.get('room_name', 'POCKETS')
+        room_progress = hud_data.get('room_progress', 0.0)
+
+        room_x = 10
+        room_y = 10
+
+        # Room number and name
+        room_color = (180, 100, 140)
+        room_text = self.font.render(f"ROOM {room}/3", True, room_color)
+        self.render_surface.blit(room_text, (room_x, room_y))
+
+        room_name_text = self.font_small.render(room_name, True, (140, 80, 100))
+        self.render_surface.blit(room_name_text, (room_x, room_y + 20))
+
+        # Room progress bar
+        progress_width = 100
+        progress_height = 8
+        progress_y = room_y + 38
+
+        pygame.draw.rect(self.render_surface, (30, 20, 25),
+                        (room_x, progress_y, progress_width, progress_height), border_radius=2)
+        if room_progress > 0:
+            fill_width = int(progress_width * room_progress)
+            pygame.draw.rect(self.render_surface, (200, 80, 120),
+                            (room_x, progress_y, fill_width, progress_height), border_radius=2)
+        pygame.draw.rect(self.render_surface, (100, 60, 80),
+                        (room_x, progress_y, progress_width, progress_height), 1, border_radius=2)
+
+        # Gate indicator (when gate is active)
+        gate_active = hud_data.get('gate_active', False)
+        extraction_progress = hud_data.get('extraction_progress', 0.0)
+
+        if gate_active or extraction_progress > 0:
+            gate_y = room_y + 55
+            gate_text = self.font_small.render("GATE ACTIVE", True, (100, 255, 180))
+            self.render_surface.blit(gate_text, (room_x, gate_y))
+
+            # Extraction progress bar (if room 3)
+            if room == 3 and extraction_progress > 0:
+                ext_y = gate_y + 15
+                ext_width = 100
+                ext_height = 10
+
+                pygame.draw.rect(self.render_surface, (20, 40, 30),
+                                (room_x, ext_y, ext_width, ext_height), border_radius=3)
+                fill_w = int(ext_width * extraction_progress)
+                pygame.draw.rect(self.render_surface, (80, 255, 160),
+                                (room_x, ext_y, fill_w, ext_height), border_radius=3)
+                pygame.draw.rect(self.render_surface, (60, 180, 120),
+                                (room_x, ext_y, ext_width, ext_height), 1, border_radius=3)
+
+                ext_label = self.font_small.render("EXTRACTING...", True, (80, 255, 160))
+                self.render_surface.blit(ext_label, (room_x, ext_y + 12))
+
+        # Filament and tier indicator (top right)
+        filament = hud_data.get('filament', 'EXOTIC')
+        tier = hud_data.get('tier', 1)
+
+        info_x = SCREEN_WIDTH - 120
+        info_y = 10
+
+        filament_text = self.font_small.render(f"{filament} T{tier}", True, (160, 120, 140))
+        self.render_surface.blit(filament_text, (info_x, info_y))
+
+        # Room intro overlay
+        if hud_data.get('showing_intro', False):
+            self._draw_room_intro_overlay(room, room_name)
+
+    def _draw_room_intro_overlay(self, room_num, room_name):
+        """Draw dramatic room introduction overlay."""
+        # Semi-transparent overlay
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((15, 10, 20, 150))
+        self.render_surface.blit(overlay, (0, 0))
+
+        # Room number (large)
+        room_text = self.font_large.render(f"ROOM {room_num}", True, (255, 120, 160))
+        room_rect = room_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 30))
+        self.render_surface.blit(room_text, room_rect)
+
+        # Room name (subtitle)
+        name_text = self.font.render(room_name, True, (200, 140, 170))
+        name_rect = name_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20))
+        self.render_surface.blit(name_text, name_rect)
+
+        # Flavor text
+        flavor_texts = {
+            'POCKETS': "Clear the perimeter...",
+            'ESCALATION': "Hostiles inbound!",
+            'EXTRACTION': "Reach the gate to escape!"
+        }
+        flavor = flavor_texts.get(room_name, "")
+        if flavor:
+            flavor_text = self.font_small.render(flavor, True, (150, 100, 130))
+            flavor_rect = flavor_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 60))
+            self.render_surface.blit(flavor_text, flavor_rect)
+
+    def _draw_abyssal_elements(self):
+        """Draw Abyssal hazards and extraction gate."""
+        if not self.abyssal:
+            return
+
+        now = pygame.time.get_ticks()
+
+        # Draw hazards
+        for hazard in self.abyssal.hazards:
+            if not hazard.active:
+                continue
+
+            x, y = int(hazard.x), int(hazard.y)
+            radius = int(hazard.radius)
+
+            # Hazard colors by type
+            hazard_colors = {
+                'deviant_automata': (255, 80, 80),      # Red - damage pulses
+                'tachyon_cloud': (100, 180, 255),       # Blue - slow
+                'ephialtes_cloud': (200, 150, 255),     # Purple - tracking disruption
+            }
+            color = hazard_colors.get(hazard.hazard_type, (180, 100, 140))
+
+            # Outer glow (semi-transparent)
+            glow_surf = pygame.Surface((radius * 3, radius * 3), pygame.SRCALPHA)
+            pygame.draw.circle(glow_surf, (*color, 40), (radius * 1.5, radius * 1.5), radius * 1.5)
+            self.render_surface.blit(glow_surf, (x - radius * 1.5, y - radius * 1.5))
+
+            # Inner circle with rotation effect
+            rotation_offset = math.sin(now * 0.002 + hazard.rotation * 0.1) * 10
+
+            # Hazard ring
+            pygame.draw.circle(self.render_surface, color, (x, y), radius, 3)
+
+            # Pulsing inner circle when about to damage
+            if hazard.pulse_flash > 0:
+                flash_radius = int(radius * (0.5 + hazard.pulse_flash * 0.5))
+                flash_alpha = int(200 * hazard.pulse_flash)
+                flash_surf = pygame.Surface((flash_radius * 2, flash_radius * 2), pygame.SRCALPHA)
+                pygame.draw.circle(flash_surf, (*color, flash_alpha),
+                                  (flash_radius, flash_radius), flash_radius)
+                self.render_surface.blit(flash_surf, (x - flash_radius, y - flash_radius))
+
+            # Hazard symbol in center
+            symbol = {'deviant_automata': '!', 'tachyon_cloud': '~', 'ephialtes_cloud': '?'}
+            sym = symbol.get(hazard.hazard_type, '*')
+            sym_text = self.font.render(sym, True, color)
+            sym_rect = sym_text.get_rect(center=(x, y))
+            self.render_surface.blit(sym_text, sym_rect)
+
+        # Draw room transition gate (rooms 1-2)
+        if self.abyssal.room_state and self.abyssal.room_state.gate_active:
+            if self.abyssal.room_state.room_number < 3:
+                gate_x = SCREEN_WIDTH // 2
+                gate_y = 50
+                gate_radius = 40
+
+                # Pulsing gate effect
+                pulse = 0.8 + 0.2 * math.sin(now * 0.005)
+                gate_color = (100, 255, 180)
+
+                # Gate glow
+                glow_surf = pygame.Surface((gate_radius * 4, gate_radius * 4), pygame.SRCALPHA)
+                pygame.draw.circle(glow_surf, (*gate_color, 60),
+                                  (gate_radius * 2, gate_radius * 2), int(gate_radius * 2 * pulse))
+                self.render_surface.blit(glow_surf, (gate_x - gate_radius * 2, gate_y - gate_radius * 2))
+
+                # Gate ring
+                pygame.draw.circle(self.render_surface, gate_color, (gate_x, gate_y),
+                                  int(gate_radius * pulse), 3)
+
+                # Inner portal effect
+                inner_radius = int(gate_radius * 0.6 * pulse)
+                pygame.draw.circle(self.render_surface, (50, 200, 140), (gate_x, gate_y), inner_radius)
+
+                # "ENTER" text
+                enter_text = self.font_small.render("ENTER", True, gate_color)
+                enter_rect = enter_text.get_rect(center=(gate_x, gate_y + gate_radius + 15))
+                self.render_surface.blit(enter_text, enter_rect)
+
+        # Draw extraction gate (room 3)
+        if self.abyssal.extraction_gate:
+            gate = self.abyssal.extraction_gate
+            gate_x, gate_y = int(gate.x), int(gate.y)
+            gate_radius = int(gate.radius)
+
+            if gate.active:
+                # Active extraction gate - bright and pulsing
+                pulse = 0.8 + 0.2 * math.sin(now * 0.008)
+                gate_color = (80, 255, 160)
+
+                # Large glow when active
+                glow_surf = pygame.Surface((gate_radius * 5, gate_radius * 5), pygame.SRCALPHA)
+                pygame.draw.circle(glow_surf, (*gate_color, 80),
+                                  (gate_radius * 2.5, gate_radius * 2.5), int(gate_radius * 2.5 * pulse))
+                self.render_surface.blit(glow_surf,
+                                        (gate_x - gate_radius * 2.5, gate_y - gate_radius * 2.5))
+
+                # Gate rings
+                for i in range(3):
+                    r = int((gate_radius - i * 8) * pulse)
+                    alpha = 255 - i * 60
+                    ring_color = (80, 255, 160) if not gate.channeling else (160, 255, 200)
+                    pygame.draw.circle(self.render_surface, ring_color, (gate_x, gate_y), r, 2)
+
+                # Channeling effect
+                if gate.channeling:
+                    # Channel progress spiral
+                    progress = gate.channel_progress
+                    angle = progress * math.pi * 4  # 2 full rotations
+                    spiral_x = gate_x + math.cos(angle) * gate_radius * 0.7
+                    spiral_y = gate_y + math.sin(angle) * gate_radius * 0.7
+                    pygame.draw.circle(self.render_surface, (255, 255, 255),
+                                      (int(spiral_x), int(spiral_y)), 5)
+
+                    # Progress bar below gate
+                    bar_width = 80
+                    bar_height = 8
+                    bar_x = gate_x - bar_width // 2
+                    bar_y = gate_y + gate_radius + 10
+
+                    pygame.draw.rect(self.render_surface, (20, 60, 40),
+                                    (bar_x, bar_y, bar_width, bar_height), border_radius=3)
+                    pygame.draw.rect(self.render_surface, (100, 255, 180),
+                                    (bar_x, bar_y, int(bar_width * progress), bar_height), border_radius=3)
+
+                    # "EXTRACTING" text
+                    ext_text = self.font_small.render("EXTRACTING...", True, (150, 255, 200))
+                    ext_rect = ext_text.get_rect(center=(gate_x, bar_y + 20))
+                    self.render_surface.blit(ext_text, ext_rect)
+                else:
+                    # "HOLD [E] / [A]" prompt
+                    prompt_text = self.font_small.render("HOLD [E] TO EXTRACT", True, gate_color)
+                    prompt_rect = prompt_text.get_rect(center=(gate_x, gate_y + gate_radius + 15))
+                    self.render_surface.blit(prompt_text, prompt_rect)
+            else:
+                # Inactive gate - dimmed
+                pygame.draw.circle(self.render_surface, (60, 80, 70), (gate_x, gate_y), gate_radius, 2)
+                inactive_text = self.font_small.render("CLEAR ROOM", True, (80, 100, 90))
+                inactive_rect = inactive_text.get_rect(center=(gate_x, gate_y + gate_radius + 15))
+                self.render_surface.blit(inactive_text, inactive_rect)
+
     def _draw_heat_warning_symbol(self, cx, cy, heat_pct):
         """Draw heat warning flame symbol above HUD when overheating"""
         now = pygame.time.get_ticks()
@@ -6916,6 +7755,184 @@ class Game:
             if info:
                 self.achievement_display.append(info)
 
+    def draw_chapter_select(self):
+        """Draw chapter selection screen - horizontal scroll layout"""
+        cx = SCREEN_WIDTH // 2
+        cy = SCREEN_HEIGHT // 2
+
+        # Animate timer for effects
+        if not hasattr(self, 'chapter_timer'):
+            self.chapter_timer = 0
+        self.chapter_timer += 1
+
+        # === TITLE ===
+        title_font = pygame.font.Font(None, 42)
+        title = title_font.render("SELECT CHAPTER", True, (200, 200, 200))
+        rect = title.get_rect(center=(cx, 50))
+        self.render_surface.blit(title, rect)
+
+        # Subtitle with animated glow
+        sub_font = pygame.font.Font(None, 28)
+        pulse = int(20 * math.sin(self.chapter_timer * 0.03))
+        subtitle = sub_font.render("EVE REBELLION", True, (150 + pulse, 100, 80))
+        rect = subtitle.get_rect(center=(cx, 80))
+        self.render_surface.blit(subtitle, rect)
+
+        # Decorative line
+        pygame.draw.line(self.render_surface, (100, 80, 70), (cx - 200, 100), (cx + 200, 100), 2)
+
+        # === CHAPTER CARDS ===
+        card_width = 180
+        card_height = 280
+        card_spacing = 20
+        total_width = len(self.chapter_options) * (card_width + card_spacing) - card_spacing
+        start_x = cx - total_width // 2
+
+        for i, chapter in enumerate(self.chapter_options):
+            card_x = start_x + i * (card_width + card_spacing)
+            card_y = cy - card_height // 2 + 20
+
+            is_selected = (i == self.chapter_index)
+            is_unlocked = chapter.get('unlocked', False)
+
+            # Selection bounce effect
+            if is_selected:
+                bounce = int(5 * math.sin(self.chapter_timer * 0.1))
+                card_y -= bounce
+
+            # Card background
+            card_surf = pygame.Surface((card_width, card_height), pygame.SRCALPHA)
+
+            if is_unlocked:
+                if is_selected:
+                    card_surf.fill((40, 35, 45, 230))
+                else:
+                    card_surf.fill((25, 25, 35, 200))
+            else:
+                card_surf.fill((20, 20, 25, 180))  # Darker for locked
+
+            # Border
+            color = chapter['color']
+            if is_selected and is_unlocked:
+                # Glowing border for selected
+                glow_rect = pygame.Rect(card_x - 4, card_y - 4, card_width + 8, card_height + 8)
+                pygame.draw.rect(self.render_surface, (*color, 100), glow_rect, 4, border_radius=10)
+                pygame.draw.rect(card_surf, color, (0, 0, card_width, card_height), 3, border_radius=8)
+            elif is_unlocked:
+                pygame.draw.rect(card_surf, (*color[:3],), (0, 0, card_width, card_height), 2, border_radius=8)
+            else:
+                pygame.draw.rect(card_surf, (60, 60, 70), (0, 0, card_width, card_height), 2, border_radius=8)
+
+            self.render_surface.blit(card_surf, (card_x, card_y))
+
+            # Chapter number
+            num_font = pygame.font.Font(None, 24)
+            num_color = color if is_unlocked else (80, 80, 90)
+            num_text = num_font.render(f"CHAPTER {i + 1}", True, num_color)
+            num_rect = num_text.get_rect(center=(card_x + card_width // 2, card_y + 25))
+            self.render_surface.blit(num_text, num_rect)
+
+            # Chapter name (split into lines if needed)
+            name_font = pygame.font.Font(None, 28)
+            name_color = (255, 255, 255) if is_unlocked else (100, 100, 110)
+            name_words = chapter['name'].split()
+            if len(name_words) > 1:
+                line1 = name_font.render(name_words[0], True, name_color)
+                line2 = name_font.render(' '.join(name_words[1:]), True, name_color)
+                self.render_surface.blit(line1, line1.get_rect(center=(card_x + card_width // 2, card_y + 55)))
+                self.render_surface.blit(line2, line2.get_rect(center=(card_x + card_width // 2, card_y + 78)))
+            else:
+                name_text = name_font.render(chapter['name'], True, name_color)
+                name_rect = name_text.get_rect(center=(card_x + card_width // 2, card_y + 65))
+                self.render_surface.blit(name_text, name_rect)
+
+            # Subtitle
+            sub_color = color if is_unlocked else (70, 70, 80)
+            sub_text = self.font_small.render(chapter['subtitle'], True, sub_color)
+            sub_rect = sub_text.get_rect(center=(card_x + card_width // 2, card_y + 105))
+            self.render_surface.blit(sub_text, sub_rect)
+
+            # Divider line
+            div_y = card_y + 125
+            pygame.draw.line(self.render_surface, (*color[:3], 100) if is_unlocked else (50, 50, 60),
+                           (card_x + 20, div_y), (card_x + card_width - 20, div_y), 1)
+
+            # Icon placeholder (faction symbol area)
+            icon_y = card_y + 155
+            icon_size = 60
+            icon_color = color if is_unlocked else (50, 50, 60)
+            pygame.draw.circle(self.render_surface, (*icon_color[:3], 60),
+                             (card_x + card_width // 2, icon_y), icon_size // 2)
+            pygame.draw.circle(self.render_surface, icon_color,
+                             (card_x + card_width // 2, icon_y), icon_size // 2, 2)
+
+            # Lock icon if not unlocked
+            if not is_unlocked:
+                lock_font = pygame.font.Font(None, 32)
+                lock_text = lock_font.render("🔒", True, (80, 80, 90))
+                lock_rect = lock_text.get_rect(center=(card_x + card_width // 2, icon_y))
+                self.render_surface.blit(lock_text, lock_rect)
+
+            # Description (at bottom)
+            if is_selected:
+                desc_y = card_y + card_height - 35
+                desc_lines = self._wrap_text(chapter['description'], self.font_small, card_width - 20)
+                for j, line in enumerate(desc_lines[:2]):  # Max 2 lines
+                    desc_color = (180, 180, 180) if is_unlocked else (100, 100, 110)
+                    desc_text = self.font_small.render(line, True, desc_color)
+                    desc_rect = desc_text.get_rect(center=(card_x + card_width // 2, desc_y + j * 16))
+                    self.render_surface.blit(desc_text, desc_rect)
+
+        # === NAVIGATION HINTS ===
+        hint_y = SCREEN_HEIGHT - 80
+
+        # Controller or keyboard hints
+        if self.controller and self.controller.connected:
+            hint_font = self.font_small
+            hints = [
+                ("←", "D-Pad", (100, 100, 100)),
+                ("→", "", (100, 100, 100)),
+                ("A", "Select", (100, 200, 100)),
+                ("B", "Back", (200, 100, 100)),
+            ]
+            hint_x = cx - 120
+            for btn, label, color in hints:
+                self._draw_controller_button(hint_x, hint_y, btn, 24)
+                if label:
+                    lbl_text = hint_font.render(label, True, (120, 120, 120))
+                    self.render_surface.blit(lbl_text, (hint_x + 28, hint_y + 4))
+                hint_x += 80
+        else:
+            hint_font = self.font_small
+            hint_text = hint_font.render("← → Navigate   ENTER Select   ESC Back", True, (120, 120, 120))
+            hint_rect = hint_text.get_rect(center=(cx, hint_y))
+            self.render_surface.blit(hint_text, hint_rect)
+
+        # Settings shortcut hint
+        settings_hint = self.font_small.render("[O] Settings   [Q] Quit", True, (80, 80, 80))
+        settings_rect = settings_hint.get_rect(center=(cx, SCREEN_HEIGHT - 40))
+        self.render_surface.blit(settings_hint, settings_rect)
+
+    def _wrap_text(self, text, font, max_width):
+        """Wrap text to fit within max_width"""
+        words = text.split()
+        lines = []
+        current_line = ""
+
+        for word in words:
+            test_line = current_line + " " + word if current_line else word
+            if font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+
+        if current_line:
+            lines.append(current_line)
+
+        return lines
+
     def draw_menu(self):
         """Draw sleek main menu"""
         cx = SCREEN_WIDTH // 2
@@ -7343,6 +8360,26 @@ class Game:
                 'color': (70, 130, 180),
                 'icon_color': (70, 130, 180)
             },
+            'hawk': {
+                'name': 'HAWK',
+                'type_id': 11192,
+                'class': 'T2 Assault Frigate',
+                'desc': 'Assault missile platform with enhanced shields.',
+                'desc_locked': 'Complete campaign to unlock T2 ships.',
+                'speed': 105, 'armor': 110, 'firepower': 130,
+                'color': (100, 160, 200),
+                'icon_color': (100, 160, 200)
+            },
+            'harpy': {
+                'name': 'HARPY',
+                'type_id': 11194,
+                'class': 'T2 Assault Frigate',
+                'desc': 'Hybrid blaster assault ship with optimal range bonuses.',
+                'desc_locked': 'Complete campaign to unlock T2 ships.',
+                'speed': 100, 'armor': 120, 'firepower': 140,
+                'color': (80, 140, 180),
+                'icon_color': (80, 140, 180)
+            },
             # === GALLENTE ===
             'tristan': {
                 'name': 'TRISTAN',
@@ -7361,6 +8398,72 @@ class Game:
                 'speed': 120, 'armor': 75, 'firepower': 100,
                 'color': (107, 142, 35),
                 'icon_color': (107, 142, 35)
+            },
+            'enyo': {
+                'name': 'ENYO',
+                'type_id': 11198,
+                'class': 'T2 Assault Frigate',
+                'desc': 'Blaster beast. Close range devastation.',
+                'desc_locked': 'Complete campaign to unlock T2 ships.',
+                'speed': 95, 'armor': 140, 'firepower': 160,
+                'color': (130, 160, 70),
+                'icon_color': (130, 160, 70)
+            },
+            'ishkur': {
+                'name': 'ISHKUR',
+                'type_id': 11200,
+                'class': 'T2 Assault Frigate',
+                'desc': 'Drone assault ship with armor bonuses.',
+                'desc_locked': 'Complete campaign to unlock T2 ships.',
+                'speed': 100, 'armor': 150, 'firepower': 130,
+                'color': (100, 140, 60),
+                'icon_color': (100, 140, 60)
+            },
+            # === MORE MINMATAR ===
+            'breacher': {
+                'name': 'BREACHER',
+                'type_id': 598,
+                'class': 'T1 Frigate',
+                'desc': 'Missile frigate. Shield-tanked and deadly.',
+                'speed': 105, 'armor': 85, 'firepower': 100,
+                'color': COLOR_MINMATAR_ACCENT,
+                'icon_color': (180, 100, 50)
+            },
+            'slasher': {
+                'name': 'SLASHER',
+                'type_id': 585,
+                'class': 'T1 Frigate',
+                'desc': 'Speed-focused tackler. Hit and run specialist.',
+                'speed': 130, 'armor': 70, 'firepower': 80,
+                'color': COLOR_MINMATAR_ACCENT,
+                'icon_color': (180, 100, 50)
+            },
+            'burst': {
+                'name': 'BURST',
+                'type_id': 599,
+                'class': 'T1 Frigate',
+                'desc': 'Logistics frigate. Support your allies.',
+                'speed': 90, 'armor': 100, 'firepower': 60,
+                'color': COLOR_MINMATAR_ACCENT,
+                'icon_color': (180, 100, 50)
+            },
+            'probe': {
+                'name': 'PROBE',
+                'type_id': 584,
+                'class': 'T1 Frigate',
+                'desc': 'Exploration frigate. Fast and agile.',
+                'speed': 115, 'armor': 60, 'firepower': 70,
+                'color': COLOR_MINMATAR_ACCENT,
+                'icon_color': (180, 100, 50)
+            },
+            'vigil': {
+                'name': 'VIGIL',
+                'type_id': 588,
+                'class': 'T1 Frigate',
+                'desc': 'EWAR frigate. Target painting specialist.',
+                'speed': 110, 'armor': 75, 'firepower': 75,
+                'color': COLOR_MINMATAR_ACCENT,
+                'icon_color': (180, 100, 50)
             }
         }
 

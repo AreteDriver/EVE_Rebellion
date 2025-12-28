@@ -546,6 +546,13 @@ class Player(pygame.sprite.Sprite):
         self.is_overheated = False
         self.heat_warning = False  # True when heat >= 75%
 
+        # Formation/Fire mode toggle (R3)
+        # 'spread' = wide angle for multiple targets
+        # 'focused' = tight grouping for single target damage
+        self.fire_mode = 'spread'
+        self.fire_mode_spread_angle = 15  # Degrees spread in spread mode
+        self.fire_mode_focused_angle = 3  # Degrees spread in focused mode
+
         # Score/Progress
         self.refugees = 0
         self.total_refugees = 0
@@ -1805,7 +1812,17 @@ class Player(pygame.sprite.Sprite):
             # Apply damage bonus from abilities
             rocket.damage = int(ROCKET_DAMAGE * self.get_damage_bonus())
             return rocket
-    
+
+    def toggle_fire_mode(self):
+        """Toggle between spread and focused fire modes (R3)."""
+        if self.fire_mode == 'spread':
+            self.fire_mode = 'focused'
+            self.fire_pattern = 'focused'
+        else:
+            self.fire_mode = 'spread'
+            self.fire_pattern = 'spread'
+        return self.fire_mode
+
     def take_damage(self, amount):
         """Apply damage through shields -> armor -> hull"""
         # Check invulnerability
@@ -2025,16 +2042,35 @@ class Wingman(pygame.sprite.Sprite):
         now = pygame.time.get_ticks()
         return now - self.last_shot > self.fire_rate
 
-    def shoot(self):
-        """Fire autocannon, returns bullet or None"""
+    def shoot(self, aim_direction=None):
+        """Fire autocannon in aim direction, returns bullet or None
+
+        Args:
+            aim_direction: Tuple (aim_x, aim_y) for 360° aiming, or None for straight up
+        """
         if not self.can_shoot():
             return None
 
         self.last_shot = pygame.time.get_ticks()
+
+        # Calculate bullet velocity based on aim direction
+        if aim_direction and (aim_direction[0] != 0 or aim_direction[1] != 0):
+            # Normalize and apply bullet speed
+            aim_x, aim_y = aim_direction
+            magnitude = math.sqrt(aim_x ** 2 + aim_y ** 2)
+            if magnitude > 0:
+                dx = (aim_x / magnitude) * BULLET_SPEED
+                dy = (aim_y / magnitude) * BULLET_SPEED
+            else:
+                dx, dy = 0, -BULLET_SPEED
+        else:
+            # Default: straight up
+            dx, dy = 0, -BULLET_SPEED
+
         bullet = Bullet(
             self.rect.centerx,
             self.rect.top,
-            0, -BULLET_SPEED,
+            dx, dy,
             (200, 150, 100),  # Minmatar tracer color
             self.damage,
             1.0, 1.0
@@ -3275,7 +3311,8 @@ class Enemy(pygame.sprite.Sprite):
     
     def _update_facing_angle(self, dx, dy):
         """Update sprite rotation to face direction of travel"""
-        if abs(dx) > 0.1 or abs(dy) > 0.1:
+        # Lower threshold for more responsive rotation
+        if abs(dx) > 0.01 or abs(dy) > 0.01:
             # Calculate angle from velocity (0 = down, 90 = right, etc.)
             target_angle = math.degrees(math.atan2(dx, dy))
 
@@ -3287,11 +3324,13 @@ class Enemy(pygame.sprite.Sprite):
             while angle_diff < -180:
                 angle_diff += 360
 
-            # Rotate smoothly (faster for formation patterns)
+            # Rotate smoothly - faster rotation for snappier movement feel
             if self.pattern == self.PATTERN_FORMATION or self.pattern == self.PATTERN_DIAGONAL:
-                self.angle += angle_diff * 0.15
+                self.angle += angle_diff * 0.2
+            elif self.pattern == self.PATTERN_SWARM or self.pattern == self.PATTERN_ATTACK_RUN:
+                self.angle += angle_diff * 0.25  # Fast rotation for aggressive patterns
             else:
-                self.angle += angle_diff * 0.08
+                self.angle += angle_diff * 0.12  # Faster base rotation
 
             # Rotate the sprite
             center = self.rect.center
