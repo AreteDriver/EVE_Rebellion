@@ -8278,208 +8278,129 @@ class Game:
         # Decorative line
         pygame.draw.line(self.render_surface, (*faction_color[:3], 150), (cx - 180, 95), (cx + 180, 95), 2)
 
-        # Ship data - includes both Minmatar and Amarr ships
-        # type_id is the CCP EVE Online type ID for image server
-        ship_data = {
-            # === MINMATAR ===
-            'rifter': {
-                'name': 'RIFTER',
-                'type_id': 587,
-                'class': 'T1 Frigate',
-                'desc': 'The iconic rust bucket. Reliable but basic.',
-                'speed': 100, 'armor': 100, 'firepower': 100,
-                'color': COLOR_MINMATAR_ACCENT,
-                'icon_color': (180, 100, 50)
-            },
-            'wolf': {
-                'name': 'WOLF',
-                'type_id': 11396,
-                'class': 'T2 Assault Frigate',
-                'desc': 'Autocannon barrage specialist. Fast armor regen + seeker missiles.',
-                'desc_locked': 'Complete campaign to unlock T2 ships.',
-                'speed': 110, 'armor': 160, 'firepower': 140,
-                'color': (200, 150, 100),
-                'icon_color': (200, 150, 80)
-            },
-            'jaguar': {
-                'name': 'JAGUAR',
-                'type_id': 11196,
-                'class': 'T2 Assault Frigate',
-                'desc': 'Speed demon. Frontal shield + seeking rocket streams.',
-                'desc_locked': 'Complete campaign to unlock T2 ships.',
-                'speed': 140, 'armor': 100, 'firepower': 100,
-                'color': (100, 180, 220),
-                'icon_color': (80, 160, 200)
-            },
-            # === AMARR ===
-            'executioner': {
-                'name': 'EXECUTIONER',
-                'type_id': 589,
-                'class': 'T1 Frigate',
-                'desc': 'Swift and elegant. Pulse lasers deliver divine judgment.',
-                'speed': 110, 'armor': 90, 'firepower': 100,
-                'color': COLOR_AMARR_ACCENT,
-                'icon_color': (200, 180, 80)
-            },
-            'crusader': {
-                'name': 'CRUSADER',
-                'type_id': 11184,
-                'class': 'T2 Interceptor',
-                'desc': 'Holy blade. High speed + enhanced shields for rapid strikes.',
-                'desc_locked': 'Complete campaign to unlock T2 ships.',
-                'speed': 135, 'armor': 100, 'firepower': 120,
-                'color': (255, 215, 100),
-                'icon_color': (220, 190, 80)
-            },
-            'malediction': {
-                'name': 'MALEDICTION',
-                'type_id': 11186,
-                'class': 'T2 Interceptor',
-                'desc': 'Fastest ship in the fleet. Tackle specialist with armor bonuses.',
-                'desc_locked': 'Complete campaign to unlock T2 ships.',
-                'speed': 150, 'armor': 130, 'firepower': 90,
-                'color': (200, 150, 100),
-                'icon_color': (180, 140, 80)
-            },
-            # === CALDARI ===
-            'merlin': {
-                'name': 'MERLIN',
-                'type_id': 603,
-                'class': 'T1 Frigate',
-                'desc': 'Shield-tanked hybrid turret platform.',
-                'speed': 95, 'armor': 80, 'firepower': 110,
-                'color': (70, 130, 180),
-                'icon_color': (70, 130, 180)
-            },
-            'kestrel': {
-                'name': 'KESTREL',
-                'type_id': 602,
-                'class': 'T1 Frigate',
-                'desc': 'Missile platform. Death from a distance.',
-                'speed': 100, 'armor': 85, 'firepower': 105,
-                'color': (70, 130, 180),
-                'icon_color': (70, 130, 180)
-            },
-            'hawk': {
-                'name': 'HAWK',
-                'type_id': 11192,
-                'class': 'T2 Assault Frigate',
-                'desc': 'Assault missile platform with enhanced shields.',
-                'desc_locked': 'Complete campaign to unlock T2 ships.',
-                'speed': 105, 'armor': 110, 'firepower': 130,
-                'color': (100, 160, 200),
-                'icon_color': (100, 160, 200)
-            },
-            'harpy': {
-                'name': 'HARPY',
-                'type_id': 11194,
-                'class': 'T2 Assault Frigate',
-                'desc': 'Hybrid blaster assault ship with optimal range bonuses.',
-                'desc_locked': 'Complete campaign to unlock T2 ships.',
-                'speed': 100, 'armor': 120, 'firepower': 140,
-                'color': (80, 140, 180),
-                'icon_color': (80, 140, 180)
-            },
-            # === GALLENTE ===
-            'tristan': {
-                'name': 'TRISTAN',
-                'type_id': 593,
-                'class': 'T1 Frigate',
-                'desc': 'Drone boat. Let the swarm do the work.',
-                'speed': 105, 'armor': 90, 'firepower': 95,
-                'color': (107, 142, 35),
-                'icon_color': (107, 142, 35)
-            },
-            'atron': {
-                'name': 'ATRON',
-                'type_id': 608,
-                'class': 'T1 Frigate',
-                'desc': 'Fast and agile. Blaster brawler.',
-                'speed': 120, 'armor': 75, 'firepower': 100,
-                'color': (107, 142, 35),
-                'icon_color': (107, 142, 35)
-            },
-            'enyo': {
-                'name': 'ENYO',
-                'type_id': 11198,
-                'class': 'T2 Assault Frigate',
-                'desc': 'Blaster beast. Close range devastation.',
-                'desc_locked': 'Complete campaign to unlock T2 ships.',
-                'speed': 95, 'armor': 140, 'firepower': 160,
-                'color': (130, 160, 70),
-                'icon_color': (130, 160, 70)
-            },
-            'ishkur': {
-                'name': 'ISHKUR',
-                'type_id': 11200,
-                'class': 'T2 Assault Frigate',
-                'desc': 'Drone assault ship with armor bonuses.',
-                'desc_locked': 'Complete campaign to unlock T2 ships.',
-                'speed': 100, 'armor': 150, 'firepower': 130,
-                'color': (100, 140, 60),
-                'icon_color': (100, 140, 60)
-            },
-            # === MORE MINMATAR ===
-            'breacher': {
-                'name': 'BREACHER',
-                'type_id': 598,
-                'class': 'T1 Frigate',
-                'desc': 'Missile frigate. Shield-tanked and deadly.',
-                'speed': 105, 'armor': 85, 'firepower': 100,
-                'color': COLOR_MINMATAR_ACCENT,
-                'icon_color': (180, 100, 50)
-            },
-            'slasher': {
-                'name': 'SLASHER',
-                'type_id': 585,
-                'class': 'T1 Frigate',
-                'desc': 'Speed-focused tackler. Hit and run specialist.',
-                'speed': 130, 'armor': 70, 'firepower': 80,
-                'color': COLOR_MINMATAR_ACCENT,
-                'icon_color': (180, 100, 50)
-            },
-            'burst': {
-                'name': 'BURST',
-                'type_id': 599,
-                'class': 'T1 Frigate',
-                'desc': 'Logistics frigate. Support your allies.',
-                'speed': 90, 'armor': 100, 'firepower': 60,
-                'color': COLOR_MINMATAR_ACCENT,
-                'icon_color': (180, 100, 50)
-            },
-            'probe': {
-                'name': 'PROBE',
-                'type_id': 584,
-                'class': 'T1 Frigate',
-                'desc': 'Exploration frigate. Fast and agile.',
-                'speed': 115, 'armor': 60, 'firepower': 70,
-                'color': COLOR_MINMATAR_ACCENT,
-                'icon_color': (180, 100, 50)
-            },
-            'vigil': {
-                'name': 'VIGIL',
-                'type_id': 588,
-                'class': 'T1 Frigate',
-                'desc': 'EWAR frigate. Target painting specialist.',
-                'speed': 110, 'armor': 75, 'firepower': 75,
-                'color': COLOR_MINMATAR_ACCENT,
-                'icon_color': (180, 100, 50)
-            }
-        }
+        # Helper to get ship display data from roster
+        def get_ship_info(ship_key):
+            """Get ship info from roster, with fallback display values."""
+            data = self.ship_roster.get_ship_display_data(ship_key)
+            stats = data.get('stats', {})
+            tier = data.get('tier', 't1')
 
-        # Draw ship cards
-        card_width = 160
-        card_height = 200
+            # Map tier to display class
+            tier_class_map = {
+                't1': 'T1 Frigate',
+                't2': 'T2 Assault Frigate',
+                't3': 'T3 Tactical',
+                'capital': 'Capital Ship',
+                'titan': 'Titan'
+            }
+
+            # Normalize stats to 0-150 scale for display bars
+            hull = stats.get('hull', 100)
+            shield = stats.get('shield', 80)
+            speed = stats.get('speed', 350)
+            damage = stats.get('damage', 1.0)
+
+            # Scale to visual bar range (0-150)
+            speed_bar = min(150, int(speed / 4))  # 350 speed -> ~87
+            armor_bar = min(150, hull + int(shield * 0.5))  # Combined tankiness
+            power_bar = min(150, int(damage * 100))  # 1.0 -> 100, 1.5 -> 150
+
+            return {
+                'name': data.get('name', ship_key.upper()).upper(),
+                'type_id': data.get('type_id'),
+                'class': tier_class_map.get(tier, 'T1 Frigate'),
+                'tier': tier,
+                'catchphrase': data.get('catchphrase', ''),
+                'desc': data.get('catchphrase', '') or f"A reliable {tier.upper()} ship.",
+                'desc_locked': f"Unlock: {data.get('unlock', 'Complete campaign')}",
+                'speed': speed_bar,
+                'armor': armor_bar,
+                'firepower': power_bar,
+                'color': faction_color,
+                'icon_color': faction_color,
+                'locked': data.get('locked', False)
+            }
+
+        # ========================================
+        # LARGE SHIP PREVIEW (Selected Ship)
+        # ========================================
+        selected_key = self.ship_options[self.ship_select_index]
+        selected_info = get_ship_info(selected_key)
+        is_selected_locked = selected_info['locked'] and not self.t2_ships_unlocked
+
+        # Preview area - centered above card row
+        preview_y = 110
+        preview_size = 180
+
+        # Try to load high-res render for preview
+        from sprites import load_ship_sprite
+        preview_sprite = None
+        for sprite_name in [f"{selected_key}_render_256", f"{selected_key}_render_512", selected_key]:
+            preview_sprite = load_ship_sprite(sprite_name, (preview_size, preview_size))
+            if preview_sprite:
+                break
+
+        if preview_sprite:
+            # Glow effect behind selected ship
+            if not is_selected_locked:
+                glow_surf = pygame.Surface((preview_size + 60, preview_size + 60), pygame.SRCALPHA)
+                pulse = int(20 + 10 * math.sin(pygame.time.get_ticks() * 0.003))
+                for r in range(30, 0, -3):
+                    alpha = pulse * r // 30
+                    pygame.draw.circle(glow_surf, (*faction_color[:3], alpha),
+                                      (preview_size // 2 + 30, preview_size // 2 + 30), preview_size // 2 + r)
+                self.render_surface.blit(glow_surf, (cx - preview_size // 2 - 30, preview_y - 10))
+
+            # Ship sprite
+            if is_selected_locked:
+                dark_surf = preview_sprite.copy()
+                dark_surf.fill((60, 60, 80, 200), special_flags=pygame.BLEND_RGBA_MULT)
+                sprite_rect = dark_surf.get_rect(center=(cx, preview_y + preview_size // 2))
+                self.render_surface.blit(dark_surf, sprite_rect)
+            else:
+                sprite_rect = preview_sprite.get_rect(center=(cx, preview_y + preview_size // 2))
+                self.render_surface.blit(preview_sprite, sprite_rect)
+
+        # Ship name (large)
+        name_y = preview_y + preview_size + 10
+        name_font = pygame.font.Font(None, 42)
+        name_color = (80, 80, 90) if is_selected_locked else faction_color
+        name_text = name_font.render(selected_info['name'], True, name_color)
+        name_rect = name_text.get_rect(center=(cx, name_y))
+        self.render_surface.blit(name_text, name_rect)
+
+        # Catchphrase
+        if selected_info['catchphrase'] and not is_selected_locked:
+            catch_font = pygame.font.Font(None, 22)
+            catch_text = catch_font.render(f'"{selected_info["catchphrase"]}"', True, (180, 160, 140))
+            catch_rect = catch_text.get_rect(center=(cx, name_y + 25))
+            self.render_surface.blit(catch_text, catch_rect)
+
+        # Ship class badge
+        class_y = name_y + 48
+        class_color = (100, 80, 60) if is_selected_locked else (140, 140, 140)
+        class_text = self.font_small.render(selected_info['class'], True, class_color)
+        class_rect = class_text.get_rect(center=(cx, class_y))
+        self.render_surface.blit(class_text, class_rect)
+
+        # ========================================
+        # SHIP THUMBNAIL CARDS (Row below preview)
+        # ========================================
+        card_y_start = 365
+
+        # Draw ship cards (compact thumbnails - details shown in preview above)
+        card_width = 100
+        card_height = 120
         spacing = 20
         total_width = len(self.ship_options) * card_width + (len(self.ship_options) - 1) * spacing
         start_x = cx - total_width // 2
 
         for i, ship_key in enumerate(self.ship_options):
-            ship = ship_data[ship_key]
+            ship = get_ship_info(ship_key)
             is_selected = i == self.ship_select_index
-            is_locked = ship_key in ['wolf', 'jaguar', 'crusader', 'malediction'] and not self.t2_ships_unlocked
+            is_locked = ship['locked'] and not self.t2_ships_unlocked
             card_x = start_x + i * (card_width + spacing)
-            card_y = 120
+            card_y = card_y_start
 
             # Card background
             card_rect = pygame.Rect(card_x, card_y, card_width, card_height)
@@ -8502,121 +8423,91 @@ class Game:
 
             self.render_surface.blit(card_surf, card_rect)
 
-            # Ship sprite preview
+            # Ship sprite thumbnail (compact card)
             icon_cx = card_x + card_width // 2
-            icon_cy = card_y + 50
-            sprite_size = 60
+            icon_cy = card_y + 45
+            sprite_size = 50
 
             try:
-                from sprites import load_ship_sprite
                 ship_sprite = load_ship_sprite(ship_key, (sprite_size, sprite_size))
                 if ship_sprite:
                     if is_locked:
-                        # Darken locked ships
-                        dark_surf = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-                        dark_surf.blit(ship_sprite, (0, 0))
+                        dark_surf = ship_sprite.copy()
                         dark_surf.fill((30, 30, 40, 180), special_flags=pygame.BLEND_RGBA_MULT)
                         sprite_rect = dark_surf.get_rect(center=(icon_cx, icon_cy))
                         self.render_surface.blit(dark_surf, sprite_rect)
                     else:
                         sprite_rect = ship_sprite.get_rect(center=(icon_cx, icon_cy))
                         self.render_surface.blit(ship_sprite, sprite_rect)
-                        if is_selected:
-                            # Add glow around selected ship
-                            glow_surf = pygame.Surface((sprite_size + 20, sprite_size + 20), pygame.SRCALPHA)
-                            for r in range(10, 0, -2):
-                                alpha = int(30 * r / 10)
-                                pygame.draw.circle(glow_surf, (*ship['color'][:3], alpha),
-                                                 (sprite_size // 2 + 10, sprite_size // 2 + 10), sprite_size // 2 + r)
-                            self.render_surface.blit(glow_surf, (icon_cx - sprite_size // 2 - 10, icon_cy - sprite_size // 2 - 10))
-                            self.render_surface.blit(ship_sprite, sprite_rect)
                 else:
                     raise Exception("No sprite")
             except:
                 # Fallback to geometric ship
-                if is_locked:
-                    icon_color = (40, 40, 50)
-                else:
-                    icon_color = ship['icon_color'] if is_selected else (80, 80, 90)
+                icon_color = (40, 40, 50) if is_locked else ((80, 80, 90) if not is_selected else ship['icon_color'])
                 ship_points = [
-                    (icon_cx, icon_cy - 25),
-                    (icon_cx + 20, icon_cy + 20),
-                    (icon_cx, icon_cy + 10),
-                    (icon_cx - 20, icon_cy + 20)
+                    (icon_cx, icon_cy - 20),
+                    (icon_cx + 15, icon_cy + 15),
+                    (icon_cx, icon_cy + 8),
+                    (icon_cx - 15, icon_cy + 15)
                 ]
                 pygame.draw.polygon(self.render_surface, icon_color, ship_points)
-                pygame.draw.polygon(self.render_surface, (255, 255, 255, 100) if is_selected and not is_locked else (100, 100, 100), ship_points, 2)
 
             # Lock icon for locked ships
             if is_locked:
-                lock_y = icon_cy - 5
-                # Lock body
-                pygame.draw.rect(self.render_surface, (80, 60, 40), (icon_cx - 8, lock_y, 16, 12), border_radius=2)
-                # Lock shackle
-                pygame.draw.arc(self.render_surface, (80, 60, 40), (icon_cx - 6, lock_y - 8, 12, 12), 0, 3.14, 2)
+                lock_y = icon_cy
+                pygame.draw.rect(self.render_surface, (80, 60, 40), (icon_cx - 6, lock_y, 12, 10), border_radius=2)
+                pygame.draw.arc(self.render_surface, (80, 60, 40), (icon_cx - 5, lock_y - 6, 10, 10), 0, 3.14, 2)
 
-            # Ship name
-            if is_locked:
-                name_color = (80, 80, 90)
-            else:
-                name_color = (255, 220, 180) if is_selected else (150, 150, 150)
-            name_text = self.font.render(ship['name'], True, name_color)
-            name_rect = name_text.get_rect(center=(card_x + card_width // 2, card_y + 95))
+            # Ship name (compact)
+            name_color = (80, 80, 90) if is_locked else ((255, 220, 180) if is_selected else (150, 150, 150))
+            name_font = pygame.font.Font(None, 20)
+            name_text = name_font.render(ship['name'], True, name_color)
+            name_rect = name_text.get_rect(center=(card_x + card_width // 2, card_y + 90))
             self.render_surface.blit(name_text, name_rect)
 
-            # Ship class
-            if is_locked:
-                class_color = (60, 60, 70)
-                class_text = self.font_small.render("LOCKED", True, (120, 80, 60))
-            else:
-                class_color = (140, 140, 140) if is_selected else (100, 100, 100)
-                class_text = self.font_small.render(ship['class'], True, class_color)
-            class_rect = class_text.get_rect(center=(card_x + card_width // 2, card_y + 115))
-            self.render_surface.blit(class_text, class_rect)
+            # Tier badge
+            tier_text = "LOCKED" if is_locked else ship['tier'].upper()
+            tier_color = (120, 80, 60) if is_locked else ((200, 180, 100) if ship['tier'] == 't2' else (120, 120, 120))
+            tier_label = self.font_small.render(tier_text, True, tier_color)
+            tier_rect = tier_label.get_rect(center=(card_x + card_width // 2, card_y + 108))
+            self.render_surface.blit(tier_label, tier_rect)
 
-            # Stat bars
-            bar_y = card_y + 140
-            bar_width = card_width - 30
-            bar_height = 8
-            stats = [
-                ('SPD', ship['speed'], (100, 200, 100)),
-                ('ARM', ship['armor'], (100, 150, 255)),
-                ('PWR', ship['firepower'], (255, 150, 100))
-            ]
-            for stat_name, stat_val, stat_color in stats:
-                # Label
-                label_color = (50, 50, 60) if is_locked else (100, 100, 100)
-                label = self.font_small.render(stat_name, True, label_color)
-                self.render_surface.blit(label, (card_x + 10, bar_y - 2))
-                # Bar background
-                bar_rect = pygame.Rect(card_x + 45, bar_y, bar_width - 35, bar_height)
-                pygame.draw.rect(self.render_surface, (30, 30, 40) if is_locked else (40, 40, 50), bar_rect, border_radius=2)
-                # Bar fill (hidden for locked ships)
-                if not is_locked:
-                    fill_width = int((bar_width - 35) * stat_val / 150)
-                    if fill_width > 0:
-                        fill_color = stat_color if is_selected else tuple(c // 2 for c in stat_color)
-                        pygame.draw.rect(self.render_surface, fill_color,
-                                       (card_x + 45, bar_y, fill_width, bar_height), border_radius=2)
-                bar_y += 16
+        # Selected ship stats panel (below cards)
+        desc_y = card_y_start + card_height + 20
+        stats_panel = pygame.Surface((SCREEN_WIDTH - 80, 70), pygame.SRCALPHA)
+        stats_panel.fill((20, 20, 30, 160))
+        pygame.draw.rect(stats_panel, (60, 50, 45), (0, 0, SCREEN_WIDTH - 80, 70), 1, border_radius=4)
+        self.render_surface.blit(stats_panel, (40, desc_y))
 
-        # Selected ship description panel
-        selected_ship = ship_data[self.ship_options[self.ship_select_index]]
-        selected_key = self.ship_options[self.ship_select_index]
-        is_selected_locked = selected_key in ['wolf', 'jaguar', 'crusader', 'malediction'] and not self.t2_ships_unlocked
-
-        desc_y = 340
-        desc_panel = pygame.Surface((SCREEN_WIDTH - 80, 60), pygame.SRCALPHA)
-        desc_panel.fill((20, 20, 30, 160))
-        pygame.draw.rect(desc_panel, (60, 50, 45), (0, 0, SCREEN_WIDTH - 80, 60), 1, border_radius=4)
-        self.render_surface.blit(desc_panel, (40, desc_y))
-
+        # Show stats or unlock info
         if is_selected_locked:
-            desc_text = self.font.render(selected_ship.get('desc_locked', 'Complete campaign to unlock.'), True, (150, 100, 80))
+            desc_text = self.font.render(selected_info['desc_locked'], True, (150, 100, 80))
+            desc_rect = desc_text.get_rect(center=(cx, desc_y + 35))
+            self.render_surface.blit(desc_text, desc_rect)
         else:
-            desc_text = self.font.render(selected_ship['desc'], True, (200, 200, 200))
-        desc_rect = desc_text.get_rect(center=(cx, desc_y + 30))
-        self.render_surface.blit(desc_text, desc_rect)
+            # Stat bars in panel
+            stat_y = desc_y + 15
+            stat_bar_width = 120
+            stat_spacing = 180
+            start_stat_x = cx - stat_spacing
+            stats_display = [
+                ('HULL', selected_info['armor'], (100, 150, 255)),
+                ('SPEED', selected_info['speed'], (100, 200, 100)),
+                ('POWER', selected_info['firepower'], (255, 150, 100))
+            ]
+            for j, (stat_name, stat_val, stat_color) in enumerate(stats_display):
+                sx = start_stat_x + j * stat_spacing
+                # Label
+                label = self.font_small.render(stat_name, True, (120, 120, 120))
+                self.render_surface.blit(label, (sx - stat_bar_width // 2, stat_y))
+                # Bar background
+                bar_rect = pygame.Rect(sx - stat_bar_width // 2, stat_y + 18, stat_bar_width, 10)
+                pygame.draw.rect(self.render_surface, (40, 40, 50), bar_rect, border_radius=3)
+                # Bar fill
+                fill_width = int(stat_bar_width * stat_val / 150)
+                if fill_width > 0:
+                    pygame.draw.rect(self.render_surface, stat_color,
+                                   (sx - stat_bar_width // 2, stat_y + 18, fill_width, 10), border_radius=3)
 
         # Controls hint
         hint_y = SCREEN_HEIGHT - 50
