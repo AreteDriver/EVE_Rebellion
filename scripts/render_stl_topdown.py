@@ -29,8 +29,13 @@ def import_stl(filepath):
     return obj
 
 
-def setup_object(obj):
-    """Center and orient the object for top-down view."""
+def setup_object(obj, rotate_180=False):
+    """Center and orient the object for top-down view.
+
+    Args:
+        obj: Blender object to setup
+        rotate_180: If True, rotate 180 degrees to flip ship direction
+    """
     # Select and make active
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
@@ -48,16 +53,22 @@ def setup_object(obj):
     dims = obj.dimensions
     width, depth, height = dims.x, dims.y, dims.z
 
+    # Determine rotation based on which axis is longest
     # For top-down shooter, we want the ship pointing "up" (positive Y in 2D)
-    # EVE ships are typically oriented with front along one axis
-    # Rotate to get best top-down view - ship nose pointing up
+
     if height > width and height > depth:
         # Ship is standing up (Z is longest), rotate to lay flat
         # Rotate 90 degrees around X to make Z become Y
         obj.rotation_euler = (math.pi/2, 0, 0)
-        # After rotation: old Z -> new Y, old Y -> new -Z
-        # For camera: we look down -Z, so we see X-Y plane
-        # The ship's "length" (old Z) is now along Y (pointing up in render)
+    elif width > depth and width > height:
+        # Ship is along X axis, rotate to point along Y
+        obj.rotation_euler = (0, 0, math.pi/2)  # Rotate 90 around Z
+    # else: depth (Y) is longest, which is what we want - no rotation needed
+
+    # Apply the 180 degree flip if requested (for models that render nose-down)
+    if rotate_180:
+        obj.rotation_euler = (obj.rotation_euler[0], obj.rotation_euler[1],
+                              obj.rotation_euler[2] + math.pi)
 
     # Apply rotation to get accurate dimensions
     bpy.context.view_layer.update()
@@ -186,9 +197,16 @@ def setup_render(output_path, size=256):
         bg.inputs[0].default_value = (0.01, 0.01, 0.02, 1.0)
 
 
-def render_stl(input_path, output_path, size=256):
-    """Main function to render an STL as a top-down sprite."""
-    print(f"Rendering {input_path} -> {output_path} at {size}px")
+def render_stl(input_path, output_path, size=256, rotate_180=False):
+    """Main function to render an STL as a top-down sprite.
+
+    Args:
+        input_path: Path to STL file
+        output_path: Path for output PNG
+        size: Render resolution (square)
+        rotate_180: If True, rotate ship 180 degrees (for nose-down models)
+    """
+    print(f"Rendering {input_path} -> {output_path} at {size}px (flip={rotate_180})")
 
     # Clear existing scene
     clear_scene()
@@ -197,7 +215,7 @@ def render_stl(input_path, output_path, size=256):
     obj = import_stl(input_path)
 
     # Setup object orientation
-    obj_size = setup_object(obj)
+    obj_size = setup_object(obj, rotate_180=rotate_180)
 
     # Apply material
     mat = create_material()
@@ -221,18 +239,27 @@ def main():
     if '--' in argv:
         argv = argv[argv.index('--') + 1:]
     else:
-        print("Usage: blender --background --python render_stl_topdown.py -- input.stl output.png [size]")
+        print("Usage: blender --background --python render_stl_topdown.py -- input.stl output.png [size] [--flip]")
         sys.exit(1)
 
     if len(argv) < 2:
-        print("Usage: blender --background --python render_stl_topdown.py -- input.stl output.png [size]")
+        print("Usage: blender --background --python render_stl_topdown.py -- input.stl output.png [size] [--flip]")
         sys.exit(1)
 
     input_path = argv[0]
     output_path = argv[1]
-    size = int(argv[2]) if len(argv) > 2 else 256
 
-    render_stl(input_path, output_path, size)
+    # Parse optional size and flip flag
+    size = 256
+    rotate_180 = False
+
+    for arg in argv[2:]:
+        if arg == '--flip':
+            rotate_180 = True
+        elif arg.isdigit():
+            size = int(arg)
+
+    render_stl(input_path, output_path, size, rotate_180)
 
 
 if __name__ == "__main__":

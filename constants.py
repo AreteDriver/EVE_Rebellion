@@ -1,9 +1,9 @@
-"""Game constants and configuration for Minmatar Rebellion"""
+"""Game constants and configuration for EVE Rebellion"""
 import pygame
 
-# Display - Widescreen desktop (3x original width for immersive experience)
+# Display - Wide arcade window
 SCREEN_WIDTH = 1800
-SCREEN_HEIGHT = 1000
+SCREEN_HEIGHT = 800
 FPS = 60
 
 # Screen shake
@@ -100,6 +100,30 @@ FACTIONS = {
         'enemy_faction': 'minmatar',
         'story_intro': "The Minmatar rebels threaten the divine order of the Empire. As a loyal servant of the Empress, you will crush this insurrection and restore peace through strength.",
         'victory_text': "The rebellion is crushed. Order is restored. The Empire endures eternal. Glory to Amarr.",
+    },
+    'caldari': {
+        'name': 'Caldari State',
+        'tagline': 'The State Provides',
+        'color_primary': (70, 130, 180),  # Steel blue
+        'color_secondary': (30, 58, 95),  # Dark blue
+        'engine_color': (100, 200, 255),  # Cyan engines
+        'weapon_type': 'missile',  # Missiles
+        'player_ships': ['kestrel', 'hawk', 'harpy'],
+        'enemy_faction': 'gallente',
+        'story_intro': "The Gallente Federation encroaches on State interests. Corporate profits demand action. You are the blade of the megacorporations.",
+        'victory_text': "Gallente forces are scattered. The trade lanes are secure. The State prospers.",
+    },
+    'gallente': {
+        'name': 'Gallente Federation',
+        'tagline': 'Liberty or Death',
+        'color_primary': (107, 142, 35),  # Olive green
+        'color_secondary': (46, 93, 46),  # Dark green
+        'engine_color': (150, 255, 150),  # Green engines
+        'weapon_type': 'hybrid',  # Hybrid turrets
+        'player_ships': ['tristan', 'enyo', 'ishkur'],
+        'enemy_faction': 'caldari',
+        'story_intro': "The Caldari State oppresses its workers and threatens Federation sovereignty. Fight for liberty against corporate tyranny.",
+        'victory_text': "The Caldari fleet retreats. Freedom rings across the stars. Vive la Federation!",
     }
 }
 
