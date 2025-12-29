@@ -2551,7 +2551,13 @@ class Game:
                         self._mode_controller_moved = False
 
                     if self.controller.is_button_just_pressed(XboxButton.A):
-                        self.start_game(self.mode_options[self.mode_index])
+                        selected_mode = self.mode_options[self.mode_index]
+                        if selected_mode == 'abyssal':
+                            # Abyssal requires filament/tier selection first
+                            self.state = 'filament_select'
+                            self.play_sound('menu_select')
+                        else:
+                            self.start_game(selected_mode)
                     elif self.controller.is_button_just_pressed(XboxButton.B):
                         self.state = 'ship_select'  # Back to ship selection
                         self.play_sound('menu_select')
@@ -2581,7 +2587,7 @@ class Game:
                         self._start_abyssal_run()
                         self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.B):
-                        self.state = 'ship_select'  # Back to ship selection
+                        self.state = 'mode_select'  # Back to mode selection
                         self.play_sound('menu_select')
                 elif self.state == 'playing':
                     if self.controller.is_button_just_pressed(XboxButton.START):
@@ -2863,7 +2869,7 @@ class Game:
                     elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self._start_abyssal_run()
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = 'ship_select'  # Back to ship selection
+                        self.state = 'mode_select'  # Back to mode selection
                         self.play_sound('menu_select')
 
                 elif self.state == 'mode_select':
