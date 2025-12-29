@@ -2532,6 +2532,7 @@ class Enemy(pygame.sprite.Sprite):
     PATTERN_WOLFPACK = 14   # Coordinated frigate swarm - attack in waves
     PATTERN_DESTROYER = 15  # Destroyer attack runs - strafe and retreat
     PATTERN_AI_BEHAVIOR = 16  # Uses ai_behaviors module for movement
+    PATTERN_WAVE_SPAWN = 17   # Uses velocity from wave pattern system
 
     def __init__(self, enemy_type, x, y, difficulty=None):
         super().__init__()
@@ -2604,6 +2605,11 @@ class Enemy(pygame.sprite.Sprite):
         self.ai = None
         self.use_ai_behavior = False
         self.ai_shoot_request = False  # AI requests to shoot
+
+        # Wave pattern system (set by game.py when spawning from patterns)
+        self.from_wave_pattern = False
+        self.pattern_vx = 0.0
+        self.pattern_vy = 2.0
 
         # Pattern state variables
         self.pattern_timer = random.uniform(0, math.pi * 2)
@@ -3287,6 +3293,8 @@ class Enemy(pygame.sprite.Sprite):
             self._move_destroyer(player_rect)
         elif self.pattern == self.PATTERN_AI_BEHAVIOR:
             self._move_ai_behavior(player_rect)
+        elif self.pattern == self.PATTERN_WAVE_SPAWN:
+            self._move_wave_spawn(player_rect)
 
         # Boss phase changes
         if self.is_boss:
@@ -4037,6 +4045,34 @@ class Enemy(pygame.sprite.Sprite):
         self.pattern = self.PATTERN_AI_BEHAVIOR
         self.use_ai_behavior = True
         self.ai = create_ai_behavior(self)
+
+    def _move_wave_spawn(self, player_rect):
+        """Move using velocity assigned from wave pattern system."""
+        # Use the assigned pattern velocity
+        self.rect.x += self.pattern_vx
+        self.rect.y += self.pattern_vy
+
+        # Gradual homing toward player (subtle tracking)
+        if player_rect and self.rect.centery > 50:
+            dx = player_rect.centerx - self.rect.centerx
+            if abs(dx) > 30:
+                self.pattern_vx += 0.02 * (1 if dx > 0 else -1)
+                self.pattern_vx = max(-3, min(3, self.pattern_vx))
+
+        # Keep in bounds (horizontal)
+        if self.rect.left < 10:
+            self.rect.left = 10
+            self.pattern_vx = abs(self.pattern_vx)
+        elif self.rect.right > SCREEN_WIDTH - 10:
+            self.rect.right = SCREEN_WIDTH - 10
+            self.pattern_vx = -abs(self.pattern_vx)
+
+        # Respawn if off screen
+        if self.rect.top > SCREEN_HEIGHT + 50:
+            self.rect.bottom = -30
+            self.rect.centerx = random.randint(100, SCREEN_WIDTH - 100)
+            self.pattern_vy = random.uniform(2.0, 3.0)
+            self.pattern_vx = random.uniform(-1, 1)
 
     def _init_boss_signature(self):
         """Initialize boss-specific signature attacks based on ship type"""

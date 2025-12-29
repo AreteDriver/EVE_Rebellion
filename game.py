@@ -915,7 +915,11 @@ class Game:
             self.wave_enemies += 1
 
         # Use wave patterns for varied enemy spawn formations
-        if random.random() < 0.4:  # 40% chance to use pattern-based spawning
+        # Higher chance in later waves/stages for more tactical variety
+        pattern_chance = 0.5 + (self.current_wave * 0.05) + (self.current_stage * 0.1)
+        pattern_chance = min(pattern_chance, 0.85)  # Cap at 85%
+
+        if random.random() < pattern_chance:
             pattern_name = self.wave_patterns.get_pattern_for_wave(
                 self.current_wave, self.current_stage
             )
@@ -1109,10 +1113,13 @@ class Game:
                 enemy_type = spawn_point.enemy_type or 'executioner'
                 enemy = Enemy(enemy_type, spawn_point.x, spawn_point.y, self.difficulty_settings)
 
-                # Apply custom velocity from pattern
-                if hasattr(enemy, 'rect'):
-                    enemy.vx = spawn_point.vx
-                    enemy.vy = spawn_point.vy
+                # Apply custom velocity from pattern and use wave spawn movement
+                enemy.vx = spawn_point.vx
+                enemy.vy = spawn_point.vy
+                enemy.from_wave_pattern = True
+                enemy.pattern_vx = spawn_point.vx
+                enemy.pattern_vy = spawn_point.vy
+                enemy.pattern = Enemy.PATTERN_WAVE_SPAWN  # Use wave pattern movement
 
                 self.enemies.add(enemy)
                 self.all_sprites.add(enemy)
