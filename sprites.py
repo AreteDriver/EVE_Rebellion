@@ -6,6 +6,7 @@ import os
 from constants import *
 from visual_enhancements import add_ship_glow, add_colored_tint, add_outline, add_strong_outline
 from visual_effects import get_muzzle_flash_manager
+from ai_behaviors import create_ai_behavior, get_ai_for_enemy
 
 # Import ship assets module for EVE renders
 try:
@@ -2530,7 +2531,8 @@ class Enemy(pygame.sprite.Sprite):
     PATTERN_ARTILLERY = 13  # Stay at range, track player slowly
     PATTERN_WOLFPACK = 14   # Coordinated frigate swarm - attack in waves
     PATTERN_DESTROYER = 15  # Destroyer attack runs - strafe and retreat
-    
+    PATTERN_AI_BEHAVIOR = 16  # Uses ai_behaviors module for movement
+
     def __init__(self, enemy_type, x, y, difficulty=None):
         super().__init__()
         self.enemy_type = enemy_type
@@ -2597,7 +2599,12 @@ class Enemy(pygame.sprite.Sprite):
 
         # Movement pattern selection based on enemy type
         self._select_movement_pattern()
-        
+
+        # AI behavior system (optional, used when pattern == PATTERN_AI_BEHAVIOR)
+        self.ai = None
+        self.use_ai_behavior = False
+        self.ai_shoot_request = False  # AI requests to shoot
+
         # Pattern state variables
         self.pattern_timer = random.uniform(0, math.pi * 2)
         self.target_y = self._get_target_y()
@@ -2658,6 +2665,20 @@ class Enemy(pygame.sprite.Sprite):
     def _select_movement_pattern(self):
         """Select movement pattern based on enemy type and tactical situation"""
         behavior = self.stats.get('behavior', None)
+
+        # Use AI behavior system for Gallente and Caldari enemies
+        ai_behavior_enemies = [
+            # Gallente
+            'tristan', 'atron', 'incursus', 'catalyst', 'thorax',
+            'vexor', 'brutix', 'myrmidon', 'dominix', 'megathron',
+            # Caldari
+            'kestrel', 'merlin', 'condor', 'cormorant', 'caracal',
+            'moa', 'drake', 'ferox', 'raven', 'rokh'
+        ]
+        if self.enemy_type in ai_behavior_enemies:
+            self.pattern = self.PATTERN_AI_BEHAVIOR
+            self.use_ai_behavior = True
+            return
 
         # Check if this is a flanking spawn - override pattern
         if self.is_flanking:
@@ -3264,6 +3285,8 @@ class Enemy(pygame.sprite.Sprite):
             self._move_wolfpack(player_rect)
         elif self.pattern == self.PATTERN_DESTROYER:
             self._move_destroyer(player_rect)
+        elif self.pattern == self.PATTERN_AI_BEHAVIOR:
+            self._move_ai_behavior(player_rect)
 
         # Boss phase changes
         if self.is_boss:
@@ -3972,6 +3995,48 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.bottom = -random.randint(50, 100)
             self.rect.centerx = random.randint(100, SCREEN_WIDTH - 100)
             self.destroyer_state = 'approach'
+
+    def _move_ai_behavior(self, player_rect):
+        """Use ai_behaviors module for movement and shooting decisions."""
+        # Initialize AI if not already done
+        if self.ai is None:
+            self.ai = create_ai_behavior(self)
+
+        # Get player position
+        if player_rect:
+            player_pos = (player_rect.centerx, player_rect.centery)
+        else:
+            player_pos = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 100)
+
+        # Update AI and get movement/shoot decision
+        # dt = 1/60 assuming 60 FPS
+        vx, vy, should_shoot = self.ai.update(player_pos, None, 1/60)
+
+        # Apply movement
+        self.rect.x += vx
+        self.rect.y += vy
+
+        # Store shoot request for game.py to check
+        self.ai_shoot_request = should_shoot
+
+        # Keep in bounds (horizontal)
+        if self.rect.left < 10:
+            self.rect.left = 10
+        elif self.rect.right > SCREEN_WIDTH - 10:
+            self.rect.right = SCREEN_WIDTH - 10
+
+        # Respawn if off bottom of screen
+        if self.rect.top > SCREEN_HEIGHT + 50:
+            self.rect.bottom = -30
+            self.rect.centerx = random.randint(100, SCREEN_WIDTH - 100)
+            # Reset AI state
+            self.ai = create_ai_behavior(self)
+
+    def enable_ai_behavior(self):
+        """Switch this enemy to use AI behavior system."""
+        self.pattern = self.PATTERN_AI_BEHAVIOR
+        self.use_ai_behavior = True
+        self.ai = create_ai_behavior(self)
 
     def _init_boss_signature(self):
         """Initialize boss-specific signature attacks based on ship type"""

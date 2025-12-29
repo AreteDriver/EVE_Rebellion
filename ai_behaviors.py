@@ -377,26 +377,64 @@ def get_ai_for_enemy(enemy_type: str) -> str:
     """Get the appropriate AI behavior type for an enemy type."""
     # Map enemy types to AI behaviors
     ai_mapping = {
-        # Fast, aggressive frigates
+        # === AMARR ===
         'executioner': AI_BASIC,
         'punisher': AI_TANK,
         'tormentor': AI_SNIPER,
         'crucifier': AI_WEAVER,
-
-        # Drones are kamikaze
-        'drone': AI_KAMIKAZE,
-
-        # Destroyers
         'coercer': AI_TANK,
-
-        # Cruisers
         'omen': AI_SNIPER,
         'maller': AI_TANK,
-
-        # Battlecruisers
         'harbinger': AI_SPAWNER,
+        'prophecy': AI_TANK,
+        'apocalypse': AI_TANK,
+        'abaddon': AI_SNIPER,
 
-        # Triglavian
+        # === MINMATAR ===
+        'rifter': AI_BASIC,
+        'slasher': AI_WEAVER,
+        'breacher': AI_BASIC,
+        'burst': AI_BASIC,
+        'thrasher': AI_BASIC,
+        'stabber': AI_WEAVER,
+        'rupture': AI_TANK,
+        'bellicose': AI_SNIPER,
+        'hurricane': AI_TANK,
+        'cyclone': AI_SPAWNER,
+        'tempest': AI_SNIPER,
+        'typhoon': AI_SPAWNER,
+        'maelstrom': AI_TANK,
+
+        # === GALLENTE ===
+        'tristan': AI_SPAWNER,  # Drone boat
+        'atron': AI_WEAVER,
+        'incursus': AI_TANK,
+        'catalyst': AI_BASIC,
+        'thorax': AI_TANK,
+        'vexor': AI_SPAWNER,  # Drone boat
+        'brutix': AI_TANK,
+        'myrmidon': AI_SPAWNER,  # Drone boat
+        'dominix': AI_SPAWNER,  # Drone boat
+        'megathron': AI_SNIPER,
+
+        # === CALDARI ===
+        'kestrel': AI_SNIPER,  # Missiles
+        'merlin': AI_TANK,
+        'condor': AI_WEAVER,
+        'cormorant': AI_SNIPER,
+        'caracal': AI_SNIPER,  # Missiles
+        'moa': AI_TANK,
+        'drake': AI_TANK,  # Famous shield tank
+        'ferox': AI_SNIPER,
+        'raven': AI_SNIPER,  # Missiles
+        'rokh': AI_SNIPER,
+
+        # === SPECIAL ===
+        'drone': AI_KAMIKAZE,
+        'interceptor': AI_KAMIKAZE,
+        'bomber': AI_SNIPER,
+
+        # === TRIGLAVIAN ===
         'vedmak': AI_WEAVER,
         'leshak': AI_SNIPER,
     }
