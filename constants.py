@@ -604,6 +604,119 @@ ENEMY_STATS = {
         'size': (500, 680),
         'faction': 'gallente',
         'boss': True
+    },
+    # === CALDARI SHIPS ===
+    'kestrel': {
+        'name': 'Kestrel',
+        'shields': 60,
+        'armor': 20,
+        'hull': 20,
+        'speed': 2.5,
+        'fire_rate': 1200,
+        'score': 100,
+        'size': (60, 80),
+        'faction': 'caldari'
+    },
+    'merlin': {
+        'name': 'Merlin',
+        'shields': 70,
+        'armor': 25,
+        'hull': 20,
+        'speed': 2.2,
+        'fire_rate': 1400,
+        'score': 110,
+        'size': (55, 75),
+        'faction': 'caldari'
+    },
+    'condor': {
+        'name': 'Condor',
+        'shields': 45,
+        'armor': 15,
+        'hull': 15,
+        'speed': 3.2,
+        'fire_rate': 1000,
+        'score': 80,
+        'size': (50, 65),
+        'faction': 'caldari'
+    },
+    'cormorant': {
+        'name': 'Cormorant',
+        'shields': 100,
+        'armor': 40,
+        'hull': 35,
+        'speed': 1.9,
+        'fire_rate': 700,
+        'score': 200,
+        'size': (85, 115),
+        'faction': 'caldari'
+    },
+    'caracal': {
+        'name': 'Caracal',
+        'shields': 180,
+        'armor': 60,
+        'hull': 50,
+        'speed': 1.3,
+        'fire_rate': 1100,
+        'score': 500,
+        'size': (240, 320),
+        'faction': 'caldari'
+    },
+    'moa': {
+        'name': 'Moa',
+        'shields': 200,
+        'armor': 80,
+        'hull': 60,
+        'speed': 1.1,
+        'fire_rate': 1300,
+        'score': 550,
+        'size': (250, 330),
+        'faction': 'caldari'
+    },
+    'drake': {
+        'name': 'Drake',
+        'shields': 400,
+        'armor': 150,
+        'hull': 120,
+        'speed': 0.7,
+        'fire_rate': 900,
+        'score': 1200,
+        'size': (380, 500),
+        'faction': 'caldari'
+    },
+    'ferox': {
+        'name': 'Ferox',
+        'shields': 350,
+        'armor': 180,
+        'hull': 140,
+        'speed': 0.75,
+        'fire_rate': 800,
+        'score': 1100,
+        'size': (360, 480),
+        'faction': 'caldari'
+    },
+    'raven': {
+        'name': 'Raven',
+        'shields': 600,
+        'armor': 200,
+        'hull': 180,
+        'speed': 0.4,
+        'fire_rate': 1500,
+        'score': 4000,
+        'size': (480, 650),
+        'faction': 'caldari',
+        'boss': True
+    },
+    'rokh': {
+        'name': 'Rokh',
+        'shields': 700,
+        'armor': 250,
+        'hull': 200,
+        'speed': 0.35,
+        'fire_rate': 800,
+        'score': 5000,
+        'size': (500, 680),
+        'faction': 'caldari',
+        'boss': True
     }
 }
 
@@ -784,6 +897,50 @@ STAGES_CALDARI = [
         'enemies': ['brutix', 'myrmidon', 'dominix', 'bomber'],
         'industrial_chance': 0.25,
         'boss': 'megathron'
+    }
+]
+
+# Gallente Campaign - Fighting Caldari State
+STAGES_GALLENTE = [
+    {
+        'name': 'Caldari Patrol Interdiction',
+        'story': "Caldari patrols threaten Federation shipping lanes. Clear the sector.",
+        'waves': 5,
+        'enemies': ['kestrel', 'condor', 'drone'],
+        'industrial_chance': 0.1,
+        'boss': None
+    },
+    {
+        'name': 'Corporate Outpost Raid',
+        'story': "Strike at a Caldari megacorp outpost. Expect heavy missile fire.",
+        'waves': 7,
+        'enemies': ['kestrel', 'merlin', 'condor', 'cormorant'],
+        'industrial_chance': 0.15,
+        'boss': 'caracal'
+    },
+    {
+        'name': 'Missile Barrage',
+        'story': "Caldari cruiser wing incoming. Their missiles will blot out the stars.",
+        'waves': 8,
+        'enemies': ['caracal', 'moa', 'cormorant', 'interceptor'],
+        'industrial_chance': 0.1,
+        'boss': None
+    },
+    {
+        'name': 'Drake Wall Assault',
+        'story': "Break through the infamous Caldari Drake wall formation.",
+        'waves': 10,
+        'enemies': ['caracal', 'moa', 'drake', 'ferox', 'bomber'],
+        'industrial_chance': 0.2,
+        'boss': 'drake'
+    },
+    {
+        'name': 'State Flagship',
+        'story': "The Caldari Raven-class battleship commands their fleet. End this war.",
+        'waves': 12,
+        'enemies': ['drake', 'ferox', 'raven', 'bomber'],
+        'industrial_chance': 0.25,
+        'boss': 'rokh'
     }
 ]
 

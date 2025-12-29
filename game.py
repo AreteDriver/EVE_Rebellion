@@ -3495,7 +3495,7 @@ class Game:
             self.active_stages = STAGES_CALDARI
             enemy_faction = 'gallente'
         elif faction == 'gallente':
-            self.active_stages = STAGES_MINMATAR  # TODO: Add Gallente stages
+            self.active_stages = STAGES_GALLENTE
             enemy_faction = 'caldari'
         else:
             self.active_stages = STAGES_AMARR
