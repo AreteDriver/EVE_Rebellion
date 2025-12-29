@@ -490,6 +490,120 @@ ENEMY_STATS = {
         'size': (520, 700),  # Battleship - final boss
         'faction': 'minmatar',
         'boss': True
+    },
+    # === GALLENTE SHIPS ===
+    'tristan': {
+        'name': 'Tristan',
+        'shields': 50,
+        'armor': 30,
+        'hull': 20,
+        'speed': 2.3,
+        'fire_rate': 1400,
+        'score': 100,
+        'size': (65, 85),
+        'faction': 'gallente'
+    },
+    'atron': {
+        'name': 'Atron',
+        'shields': 40,
+        'armor': 20,
+        'hull': 15,
+        'speed': 3.0,
+        'fire_rate': 1200,
+        'score': 90,
+        'size': (55, 70),
+        'faction': 'gallente'
+    },
+    'incursus': {
+        'name': 'Incursus',
+        'shields': 45,
+        'armor': 50,
+        'hull': 25,
+        'speed': 2.0,
+        'fire_rate': 1600,
+        'score': 120,
+        'size': (60, 78),
+        'faction': 'gallente'
+    },
+    'catalyst': {
+        'name': 'Catalyst',
+        'shields': 80,
+        'armor': 60,
+        'hull': 40,
+        'speed': 1.8,
+        'fire_rate': 800,
+        'score': 200,
+        'size': (90, 120),
+        'faction': 'gallente'
+    },
+    'thorax': {
+        'name': 'Thorax',
+        'shields': 150,
+        'armor': 180,
+        'hull': 100,
+        'speed': 1.0,
+        'fire_rate': 1300,
+        'score': 700,
+        'size': (280, 360),
+        'faction': 'gallente',
+        'boss': True
+    },
+    'vexor': {
+        'name': 'Vexor',
+        'shields': 120,
+        'armor': 160,
+        'hull': 80,
+        'speed': 1.2,
+        'fire_rate': 1500,
+        'score': 600,
+        'size': (260, 340),
+        'faction': 'gallente'
+    },
+    'brutix': {
+        'name': 'Brutix',
+        'shields': 300,
+        'armor': 400,
+        'hull': 200,
+        'speed': 0.7,
+        'fire_rate': 1100,
+        'score': 1200,
+        'size': (380, 500),
+        'faction': 'gallente'
+    },
+    'myrmidon': {
+        'name': 'Myrmidon',
+        'shields': 350,
+        'armor': 450,
+        'hull': 250,
+        'speed': 0.6,
+        'fire_rate': 1400,
+        'score': 1500,
+        'size': (400, 520),
+        'faction': 'gallente',
+        'boss': True
+    },
+    'dominix': {
+        'name': 'Dominix',
+        'shields': 500,
+        'armor': 700,
+        'hull': 400,
+        'speed': 0.4,
+        'fire_rate': 1600,
+        'score': 3000,
+        'size': (450, 600),
+        'faction': 'gallente'
+    },
+    'megathron': {
+        'name': 'Megathron',
+        'shields': 600,
+        'armor': 900,
+        'hull': 500,
+        'speed': 0.35,
+        'fire_rate': 1000,
+        'score': 5000,
+        'size': (500, 680),
+        'faction': 'gallente',
+        'boss': True
     }
 }
 
@@ -626,6 +740,50 @@ STAGES_AMARR = [
         'enemies': ['thrasher', 'stabber', 'rupture', 'hurricane', 'interceptor', 'bomber'],
         'industrial_chance': 0.2,
         'boss': 'maelstrom'
+    }
+]
+
+# Caldari Campaign - Fighting Gallente Federation
+STAGES_CALDARI = [
+    {
+        'name': 'Gallente Border Incursion',
+        'story': "Gallente raiders have crossed into State territory. Defend the homeland.",
+        'waves': 5,
+        'enemies': ['tristan', 'atron', 'drone'],
+        'industrial_chance': 0.1,
+        'boss': None
+    },
+    {
+        'name': 'Trade Lane Defense',
+        'story': "Protect the corporate convoy from Gallente pirates threatening vital supply lines.",
+        'waves': 7,
+        'enemies': ['tristan', 'atron', 'incursus', 'catalyst'],
+        'industrial_chance': 0.15,
+        'boss': 'thorax'
+    },
+    {
+        'name': 'Rogue Drone Infestation',
+        'story': "A rogue drone hive threatens the State outpost. Purge the infestation.",
+        'waves': 8,
+        'enemies': ['drone', 'interceptor', 'vexor'],
+        'industrial_chance': 0.1,
+        'boss': None
+    },
+    {
+        'name': 'Outer Ring Assault',
+        'story': "Push into Gallente-held space. Break through their battlecruiser screen.",
+        'waves': 10,
+        'enemies': ['vexor', 'thorax', 'brutix', 'bomber'],
+        'industrial_chance': 0.2,
+        'boss': 'myrmidon'
+    },
+    {
+        'name': 'Federation Dreadnought',
+        'story': "The Gallente command ship blocks our advance. Destroy the Megathron and claim victory.",
+        'waves': 12,
+        'enemies': ['brutix', 'myrmidon', 'dominix', 'bomber'],
+        'industrial_chance': 0.25,
+        'boss': 'megathron'
     }
 ]
 

@@ -3492,7 +3492,7 @@ class Game:
             # Use selected empire's enemy faction
             enemy_faction = self.selected_empire.get('enemy_faction', 'amarr')
         elif faction == 'caldari':
-            self.active_stages = STAGES_MINMATAR  # TODO: Add Caldari stages
+            self.active_stages = STAGES_CALDARI
             enemy_faction = 'gallente'
         elif faction == 'gallente':
             self.active_stages = STAGES_MINMATAR  # TODO: Add Gallente stages
