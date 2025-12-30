@@ -22,6 +22,10 @@ except ImportError:
 _ship_sprite_cache = {}
 _SPRITE_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'ship_sprites')
 _EVE_SPRITE_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'ships', 'processed')
+_EFFECTS_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'ships', 'effects')
+
+# Thrust frame cache
+_thrust_frame_cache = {}
 
 # EVE Type ID mapping for ships
 EVE_TYPE_IDS = {
@@ -151,6 +155,46 @@ def get_ship_scale(ship_name):
     return SHIP_SCALE_RATIOS.get(ship_class, 1.0)
 
 
+def load_thrust_frames(ship_name, target_size=None):
+    """Load pre-rendered thrust animation frames for a ship.
+
+    Args:
+        ship_name: Name of the ship (e.g., 'rifter', 'executioner')
+        target_size: Optional (width, height) tuple to scale frames to
+
+    Returns:
+        List of 6 pygame.Surface frames, or None if not found
+    """
+    cache_key = (ship_name.lower(), target_size)
+    if cache_key in _thrust_frame_cache:
+        return [f.copy() for f in _thrust_frame_cache[cache_key]]
+
+    ship_name_lower = ship_name.lower()
+    frames = []
+
+    for i in range(6):
+        frame_path = os.path.join(
+            _EFFECTS_DIR,
+            f"{ship_name_lower}_topdown_thrust_{i}.png"
+        )
+        if os.path.exists(frame_path):
+            try:
+                frame = pygame.image.load(frame_path).convert_alpha()
+                if target_size:
+                    frame = pygame.transform.smoothscale(frame, target_size)
+                frames.append(frame)
+            except pygame.error:
+                return None
+        else:
+            return None
+
+    if len(frames) == 6:
+        _thrust_frame_cache[cache_key] = frames
+        return [f.copy() for f in frames]
+
+    return None
+
+
 class ShipRenderer:
     """Handles ship rendering with effects, damage states, and animations."""
 
@@ -189,12 +233,26 @@ class ShipRenderer:
         self.shield_hit_timer = 0
 
         # Determine faction for engine color
-        if self.ship_name in ['rifter', 'wolf', 'jaguar']:
+        minmatar_ships = ['rifter', 'wolf', 'jaguar', 'hurricane', 'tempest']
+        caldari_ships = ['condor', 'raven', 'rokh']
+        gallente_ships = ['tristan', 'dominix', 'megathron']
+
+        if self.ship_name in minmatar_ships:
             self.engine_color = self.MINMATAR_ENGINE
             self.faction = 'minmatar'
+        elif self.ship_name in caldari_ships:
+            self.engine_color = (100, 180, 255)  # Blue/white
+            self.faction = 'caldari'
+        elif self.ship_name in gallente_ships:
+            self.engine_color = (50, 255, 150)  # Green/teal
+            self.faction = 'gallente'
         else:
             self.engine_color = self.AMARR_ENGINE
             self.faction = 'amarr'
+
+        # Load pre-rendered thrust frames if available
+        self.thrust_frames = load_thrust_frames(ship_name)
+        self.use_thrust_frames = self.thrust_frames is not None
 
     def update(self, health_percent=1.0, is_moving=False, shield_active=False):
         """Update animation states."""
@@ -273,8 +331,13 @@ class ShipRenderer:
         if self.base_sprite is None:
             return
 
-        # Start with base sprite
-        ship_img = self.base_sprite.copy()
+        # Use pre-rendered thrust frames if available
+        if self.use_thrust_frames and self.thrust_frames:
+            frame_idx = self.engine_frame % len(self.thrust_frames)
+            ship_img = self.thrust_frames[frame_idx].copy()
+        else:
+            # Fall back to base sprite
+            ship_img = self.base_sprite.copy()
 
         # Apply damage tint
         if self.damage_level > 0:
@@ -306,8 +369,9 @@ class ShipRenderer:
             surface.blit(fire_surf, (x + p['x'] - p['size'], y + p['y'] - p['size']),
                         special_flags=pygame.BLEND_RGBA_ADD)
 
-        # Draw engine glow
-        self._draw_engine_glow(surface, x, y, angle)
+        # Draw engine glow (only if not using pre-rendered thrust)
+        if not self.use_thrust_frames:
+            self._draw_engine_glow(surface, x, y, angle)
 
         # Draw shield effect if active
         if self.shield_hit_timer > 0:
