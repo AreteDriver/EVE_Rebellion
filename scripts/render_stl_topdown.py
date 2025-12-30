@@ -5,9 +5,7 @@ Run with: blender --background --python render_stl_topdown.py -- input.stl outpu
 
 import bpy
 import sys
-import os
 import math
-from pathlib import Path
 from mathutils import Vector
 
 

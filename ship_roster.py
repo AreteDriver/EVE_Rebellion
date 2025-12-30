@@ -4,7 +4,6 @@ Loads ships from JSON config, filters by faction/chapter, and manages unlocks.
 """
 
 import json
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 

@@ -11,7 +11,6 @@ Uses orthographic camera from above to create 2D sprites.
 import bpy
 import os
 import math
-import sys
 
 # Configuration
 OUTPUT_DIR = "/home/arete/EVE_Rebellion/assets/ship_sprites"

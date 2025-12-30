@@ -11,13 +11,9 @@ Usage:
 """
 
 import argparse
-import json
-import os
-import shutil
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict
 from enum import Enum
 
 

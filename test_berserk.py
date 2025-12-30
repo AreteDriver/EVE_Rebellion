@@ -4,7 +4,7 @@ Quick test script for Berserk System
 Run this to verify the system works before integrating
 """
 
-from berserk_system import BerserkSystem, DangerIndicator
+from berserk_system import BerserkSystem
 from arcade_effects import EffectManager
 
 def test_berserk_system():
@@ -46,7 +46,7 @@ def test_berserk_system():
     print(f"  Total kills: {stats['total_kills']}")
     print(f"  Average multiplier: {stats['avg_multiplier']:.2f}x")
     print(f"  Extreme kills: {stats['extreme_kills']}")
-    print(f"  Kills by range:")
+    print("  Kills by range:")
     for range_name, count in stats['kills_by_range'].items():
         if count > 0:
             print(f"    {range_name}: {count}")
@@ -74,7 +74,7 @@ def test_effects():
     for i in range(5):
         effects.update()
     
-    print(f"\n✅ After 5 frames of updates:")
+    print("\n✅ After 5 frames of updates:")
     print(f"  - {len(effects.explosions)} explosions remaining")
     print(f"  - {len(effects.shakes)} shakes remaining")
     print(f"  - {len(effects.flashes)} flashes remaining")

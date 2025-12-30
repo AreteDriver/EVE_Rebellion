@@ -14,11 +14,10 @@ Usage:
 import argparse
 import asyncio
 import json
-import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import List
 import httpx
 
 # ============================================================================
@@ -483,7 +482,7 @@ def create_manifest(output_dir: Path):
     
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
-    print(f"✅ Created manifest.json")
+    print("✅ Created manifest.json")
     
     return manifest
 
@@ -502,7 +501,7 @@ def create_readme(output_dir: Path, sizes: List[int]):
     
     readme_path = output_dir / "README.md"
     readme_path.write_text(readme)
-    print(f"✅ Created README.md")
+    print("✅ Created README.md")
 
 
 def create_symlink_structure(output_dir: Path):
@@ -554,7 +553,7 @@ def create_symlink_structure(output_dir: Path):
             except:
                 pass
     
-    print(f"✅ Created symlink structure")
+    print("✅ Created symlink structure")
 
 
 def create_gitignore(output_dir: Path):
@@ -577,7 +576,7 @@ __pycache__/
 *.bak
 """
     (output_dir / ".gitignore").write_text(gitignore)
-    print(f"✅ Created .gitignore")
+    print("✅ Created .gitignore")
 
 
 async def rebuild_repository(
@@ -621,7 +620,7 @@ async def rebuild_repository(
     print("\n" + "=" * 60)
     print("  ✅ REBUILD COMPLETE")
     print("=" * 60)
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"   Ships: {manifest['total_ships']}")
     print(f"   Classes: {len(SHIP_DATABASE)}")
     print(f"   Factions: {len(manifest['by_faction'])}")

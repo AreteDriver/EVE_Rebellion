@@ -6,10 +6,10 @@ import json
 import os
 import sys
 from constants import *
-from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, Wingman,
+from sprites import (Player, Enemy, Wingman,
                      RefugeePod, Powerup, Explosion, Star, ParallaxBackground)
-from sounds import get_sound_manager, get_music_manager, play_sound
-from controller_input import ControllerInput, XboxButton, InputState
+from sounds import get_sound_manager, get_music_manager
+from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground, AmarrArchon
 from parallax_background import ParallaxBackground as StageParallaxBackground
 from visual_effects import (ShipDamageEffects, EnhancedExplosion,
@@ -3805,7 +3805,7 @@ class Game:
         self.enemy_bullets.empty()
         self.collectibles.empty()
 
-        self.show_message(f"ENTERING THE ABYSS", 180,
+        self.show_message("ENTERING THE ABYSS", 180,
                          subtitle=f"{filament['name']} - Tier {tier['tier']}")
 
         self.state = 'playing'
@@ -4765,7 +4765,7 @@ class Game:
         elif ptype == 'shield_boost':
             self.player.shield_boost_until = now + timed_duration
             self.player.shields = min(self.player.shields + 30, self.player.max_shields)
-            self.show_message(f"Shields Boosted!", 60)
+            self.show_message("Shields Boosted!", 60)
             self.play_sound('powerup_shield', 0.7)
         elif ptype == 'double_damage':
             self.player.upgrade_weapon()
@@ -6261,7 +6261,7 @@ class Game:
 
             # Label with icon
             label_color = (220, 180, 100) if progress > 0.5 else (150, 130, 90)
-            wingman_label = self.font_small.render(f"WINGMAN", True, label_color)
+            wingman_label = self.font_small.render("WINGMAN", True, label_color)
             self.render_surface.blit(wingman_label, (ammo_x, ammo_y - 14))
             # Kill count on right
             count_label = self.font_small.render(f"{self.kill_counter}/{self.kills_per_wingman}", True, label_color)

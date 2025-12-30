@@ -4,9 +4,8 @@ import math
 import random
 import os
 from constants import *
-from visual_enhancements import add_ship_glow, add_colored_tint, add_outline, add_strong_outline
 from visual_effects import get_muzzle_flash_manager
-from ai_behaviors import create_ai_behavior, get_ai_for_enemy
+from ai_behaviors import create_ai_behavior
 
 # Import ship assets module for EVE renders
 try:

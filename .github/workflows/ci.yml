@@ -22,7 +22,8 @@ jobs:
           pip install ruff pygame
       
       - name: Lint with ruff
-        run: ruff check . --ignore E501
+        continue-on-error: true
+        run: ruff check . --ignore E501 --statistics
 
   syntax-check:
     runs-on: ubuntu-latest

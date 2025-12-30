@@ -4,8 +4,7 @@ Handles story sequences, tribal identity, and narrative moments
 """
 
 import pygame
-import time
-from typing import Dict, List, Tuple, Optional
+from typing import Optional
 from enum import Enum
 
 class TribeType(Enum):
@@ -343,7 +342,6 @@ class CinematicManager:
             tribe: Player's tribe
             performance: "excellent", "good", "survival", or "difficult"
         """
-        import random
         
         messages = self.tribes[tribe]["thanks_messages"]
         

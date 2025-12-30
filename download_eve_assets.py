@@ -124,7 +124,7 @@ def main():
     os.makedirs(renders_dir, exist_ok=True)
     os.makedirs(icons_dir, exist_ok=True)
 
-    print(f"\nOutput directories:")
+    print("\nOutput directories:")
     print(f"  Renders: {renders_dir}")
     print(f"  Icons: {icons_dir}")
 
@@ -154,10 +154,10 @@ def main():
     total = len(SHIP_TYPE_IDS) + len(CAPITAL_TYPE_IDS)
     print(f"\n{'=' * 60}")
     print(f"Download complete: {success_count}/{total} ships")
-    print(f"\nAssets saved to:")
+    print("\nAssets saved to:")
     print(f"  {renders_dir}")
-    print(f"\nNote: These are official CCP assets for fan projects.")
-    print(f"See: https://developers.eveonline.com/license-agreement")
+    print("\nNote: These are official CCP assets for fan projects.")
+    print("See: https://developers.eveonline.com/license-agreement")
     print("=" * 60)
 
 if __name__ == "__main__":

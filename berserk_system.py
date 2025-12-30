@@ -16,7 +16,7 @@ Integration with EVE theme:
 
 import pygame
 import math
-from typing import Optional, Tuple
+from typing import Tuple
 
 class BerserkSystem:
     """

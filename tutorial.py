@@ -4,7 +4,7 @@ Teaches new players the game mechanics step by step
 """
 
 import pygame
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_MINMATAR_ACCENT, COLOR_TEXT
+from constants import SCREEN_WIDTH, COLOR_MINMATAR_ACCENT, COLOR_TEXT
 
 
 class TutorialStep:

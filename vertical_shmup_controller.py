@@ -12,7 +12,6 @@ Features:
 import pygame
 from enum import IntEnum
 from typing import Optional, Tuple
-import math
 
 
 class XboxButton(IntEnum):
@@ -109,7 +108,7 @@ class VerticalShmupController:
             self.joystick.init()
             self.connected = True
             print(f"Controller connected: {self.joystick.get_name()}")
-            print(f"Control scheme: Vertical Shmup (Arcade style)")
+            print("Control scheme: Vertical Shmup (Arcade style)")
         else:
             print("No controller detected")
     

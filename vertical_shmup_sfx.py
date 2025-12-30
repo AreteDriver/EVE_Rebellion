@@ -13,7 +13,7 @@ Procedurally generated sound effects for:
 
 import pygame
 import numpy as np
-from typing import Dict, Optional
+from typing import Dict
 
 
 class VerticalShmupSFX:
@@ -600,7 +600,7 @@ class VerticalShmupSFX:
 
 if __name__ == "__main__":
     print("=== VERTICAL SHMUP SOUND EFFECTS ===")
-    print(f"Total sounds: 30+")
+    print("Total sounds: 30+")
     print()
     print("Categories:")
     print("  Weapons: autocannon, missile, laser, rocket")

@@ -1,7 +1,6 @@
 """SVG ship loader for Minmatar Rebellion"""
 import pygame
 import os
-import xml.etree.ElementTree as ET
 from io import BytesIO
 
 

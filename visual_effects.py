@@ -6,7 +6,7 @@ Screen-space effects, particle systems, and post-processing.
 import pygame
 import math
 import random
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 try:
     import numpy as np

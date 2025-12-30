@@ -19,7 +19,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
-import subprocess
 
 
 class ProjectType(Enum):
@@ -500,18 +499,18 @@ def print_audit_report(audits: List[ProjectAudit]):
                 if check.fix:
                     print(f"         → {check.fix}")
         else:
-            print(f"\n   ✅ All compliance checks passed!")
+            print("\n   ✅ All compliance checks passed!")
         
         # Opportunities
         if audit.opportunities:
-            print(f"\n   🎯 Integration Opportunities:")
+            print("\n   🎯 Integration Opportunities:")
             for opp in audit.opportunities[:3]:
                 print(f"      • {opp.feature} [{opp.difficulty}/{opp.value}]")
                 print(f"        {opp.description}")
         
         # Priority actions
         if audit.priority_actions:
-            print(f"\n   📋 Priority Actions:")
+            print("\n   📋 Priority Actions:")
             for i, action in enumerate(audit.priority_actions[:5], 1):
                 print(f"      {i}. {action}")
     

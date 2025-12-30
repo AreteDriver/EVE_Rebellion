@@ -15,7 +15,7 @@ Visual effects for:
 import pygame
 import math
 import random
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from dataclasses import dataclass
 
 

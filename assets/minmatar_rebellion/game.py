@@ -1,11 +1,9 @@
 """Main game logic for Minmatar Rebellion"""
 import pygame
 import random
-import math
 from constants import *
-from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
-                     RefugeePod, Powerup, Explosion, Star)
-from sounds import get_sound_manager, get_music_manager, play_sound
+from sprites import (Player, Enemy, RefugeePod, Powerup, Explosion, Star)
+from sounds import get_sound_manager, get_music_manager
 from controller import Controller
 
 
