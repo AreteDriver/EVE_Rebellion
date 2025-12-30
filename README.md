@@ -1,6 +1,6 @@
 # Minmatar Rebellion
 
-**A top-down arcade shooter where you pilot a Rifter against the Amarr Empire.**
+**A top-down arcade shooter set in the EVE Online universe. Fight for freedom across 4 faction campaigns.**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -45,11 +45,17 @@ In a Rifter-class frigate armed with autocannons and rockets, you'll tear throug
 - **Autocannons + Rockets** - Primary and secondary weapons
 - **Berserk System** - Get closer for higher score multipliers (0.5x to 5.0x)
 
+### Campaigns
+- **Minmatar Rebellion** - Escape slavery, liberate your people from the Amarr Empire
+- **Amarr Crusade** - Purge the heretics threatening the Empire's holy borders
+- **Caldari Defense** - Protect the State from Gallente aggression
+- **Gallente Liberation** - Free the oppressed from Caldari corporate tyranny
+
 ### Progression
-- **Refugee Economy** - Destroy slave transports, collect escape pods, spend lives on upgrades
+- **Refugee Economy** - Destroy transports, collect escape pods, spend lives on upgrades
 - **Ship Upgrades** - Gyrostabilizers, armor plates, tracking enhancers
-- **Unlock the Wolf** - Upgrade to a T2 Assault Frigate with bonuses
-- **8 Stages** - From asteroid belts to capital ship assaults
+- **Unlock T2 Ships** - Upgrade to faction Assault Frigates with bonuses
+- **32 Stages** - 8 stages per faction campaign
 
 ### Technical
 - **Procedural Audio** - All sounds synthesized in real-time (no audio files needed)
@@ -75,7 +81,7 @@ In a Rifter-class frigate armed with autocannons and rockets, you'll tear throug
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/EVE_Rebellion.git
+git clone https://github.com/AreteDriver/EVE_Rebellion.git
 cd EVE_Rebellion
 
 # Install dependencies
@@ -373,7 +379,7 @@ This is a community project. Contributions welcome!
 ### Development Setup
 
 ```bash
-git clone https://github.com/yourusername/EVE_Rebellion.git
+git clone https://github.com/AreteDriver/EVE_Rebellion.git
 cd EVE_Rebellion
 pip install pygame numpy cairosvg
 python main.py
