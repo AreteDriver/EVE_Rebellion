@@ -7,7 +7,7 @@ import os
 import sys
 from constants import *
 from sprites import (Player, Enemy, Wingman,
-                     RefugeePod, Powerup, Explosion, Star, ParallaxBackground)
+                     RefugeePod, Powerup, PowerupPickupEffect, Explosion, Star, ParallaxBackground)
 from sounds import get_sound_manager, get_music_manager
 from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground, AmarrArchon
@@ -4678,6 +4678,15 @@ class Game:
         # Collect powerups
         hits = pygame.sprite.spritecollide(self.player, self.powerups, True)
         for powerup in hits:
+            # Spawn pickup effect at powerup location
+            effect = PowerupPickupEffect(
+                powerup.rect.centerx,
+                powerup.rect.centery,
+                powerup.color,
+                powerup.powerup_type
+            )
+            self.effects.add(effect)
+            self.all_sprites.add(effect)
             self.apply_powerup(powerup)
         
         # Wave/Stage logic
@@ -4853,6 +4862,20 @@ class Game:
                 self.show_message("STAGE COMPLETE!", 120)
                 self.play_sound('stage_complete')
                 # Start warp transition effect
+                self.warp_transition.start(90)
+
+        # Fallback: ensure stage completes if all waves done and no enemies remain
+        # This handles edge cases where wave_enemies might be 0 prematurely
+        if (not self.stage_complete and
+            len(self.enemies) == 0 and
+            self.current_wave >= stage['waves'] and
+            not hasattr(self, 'shop_transition_timer')):
+            self.stage_complete = True
+            self.wave_delay = 120
+            self.shop_transition_timer = 120
+            self.show_message("STAGE COMPLETE!", 120)
+            self.play_sound('stage_complete')
+            if hasattr(self, 'warp_transition'):
                 self.warp_transition.start(90)
 
         # Check for shop transition using timer

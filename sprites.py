@@ -1699,17 +1699,34 @@ class Player(pygame.sprite.Sprite):
             return rockets  # Return rockets instead of bullets
 
         else:
-            # Rifter: 2-4 autocannons based on upgrades
-            num_shots = 2 + self.spread_bonus
+            # Rifter: 2-4+ autocannons based on upgrades + extra streams
+            num_shots = 2 + self.spread_bonus + self.extra_streams
+
+            # Upgrade bullet color based on weapon level for visual feedback
+            weapon_level = getattr(self, 'weapon_level', 0)
+            if weapon_level >= 3:
+                # Level 3: Hot white-blue core
+                bullet_color = (200, 220, 255)
+            elif weapon_level >= 2:
+                # Level 2: Brighter yellow
+                bullet_color = (255, 230, 150)
+            elif weapon_level >= 1:
+                # Level 1: Slightly brighter orange
+                bullet_color = (255, 200, 120)
+            # else: default (255, 180, 100)
 
             if fire_pattern == 'spread':
-                # 45-degree arc: front-focused fan
+                # Dynamic spread based on bullet count
                 if num_shots == 2:
                     angles = [-22, 22]
                 elif num_shots == 3:
                     angles = [-22, 0, 22]
-                else:  # 4+
+                elif num_shots == 4:
                     angles = [-22, -8, 8, 22]
+                elif num_shots == 5:
+                    angles = [-30, -15, 0, 15, 30]
+                else:  # 6+
+                    angles = [-35, -21, -7, 7, 21, 35]
             else:
                 # Focused: all weapons forward only
                 angles = [0] * num_shots
@@ -5351,6 +5368,116 @@ class Powerup(pygame.sprite.Sprite):
             pygame.draw.line(self.image, (*self.color, 80), (cx, cy), (int(rx), int(ry)), 1)
 
         self.rect = self.image.get_rect(center=(self.rect.centerx, self.rect.centery + self.bob_offset))
+
+
+class PowerupPickupEffect(pygame.sprite.Sprite):
+    """Visual burst effect when a powerup is collected"""
+
+    def __init__(self, x, y, color, powerup_type=None):
+        super().__init__()
+        self.x = x
+        self.y = y
+        self.color = color
+        self.powerup_type = powerup_type
+        self.frame = 0
+        self.max_frames = 25
+
+        # Particles radiating outward
+        self.particles = []
+        num_particles = 12
+        for i in range(num_particles):
+            angle = i * (2 * math.pi / num_particles) + random.uniform(-0.2, 0.2)
+            speed = random.uniform(3, 6)
+            self.particles.append({
+                'x': 0, 'y': 0,
+                'vx': math.cos(angle) * speed,
+                'vy': math.sin(angle) * speed,
+                'size': random.randint(3, 6),
+                'life': random.randint(15, 25),
+            })
+
+        # Rising sparkles
+        self.sparkles = []
+        for _ in range(8):
+            self.sparkles.append({
+                'x': random.uniform(-10, 10),
+                'y': random.uniform(-5, 5),
+                'vy': random.uniform(-2, -4),
+                'size': random.randint(2, 4),
+                'life': random.randint(12, 20),
+            })
+
+        self._update_image()
+
+    def _update_image(self):
+        progress = self.frame / self.max_frames
+        size = 60
+        self.image = pygame.Surface((size, size), pygame.SRCALPHA)
+        cx, cy = size // 2, size // 2
+
+        # Expanding ring
+        if progress < 0.6:
+            ring_progress = progress / 0.6
+            ring_radius = int(5 + 25 * ring_progress)
+            ring_alpha = int(200 * (1 - ring_progress))
+            ring_width = max(1, int(4 * (1 - ring_progress)))
+            pygame.draw.circle(self.image, (*self.color, ring_alpha),
+                               (cx, cy), ring_radius, ring_width)
+
+        # Central flash
+        if progress < 0.3:
+            flash_progress = progress / 0.3
+            flash_size = int(15 * (1 - flash_progress))
+            flash_alpha = int(255 * (1 - flash_progress))
+            pygame.draw.circle(self.image, (255, 255, 255, flash_alpha),
+                               (cx, cy), flash_size)
+            pygame.draw.circle(self.image, (*self.color, flash_alpha),
+                               (cx, cy), flash_size + 3)
+
+        # Draw particles
+        for p in self.particles:
+            if p['life'] > 0:
+                px = cx + p['x']
+                py = cy + p['y']
+                alpha = int(255 * (p['life'] / 25))
+                # Particle glow
+                pygame.draw.circle(self.image, (*self.color, alpha // 2),
+                                   (int(px), int(py)), p['size'] + 2)
+                # Particle core
+                pygame.draw.circle(self.image, (255, 255, 255, alpha),
+                                   (int(px), int(py)), p['size'])
+
+        # Draw rising sparkles
+        for s in self.sparkles:
+            if s['life'] > 0:
+                sx = cx + s['x']
+                sy = cy + s['y']
+                alpha = int(255 * (s['life'] / 20))
+                pygame.draw.circle(self.image, (255, 255, 255, alpha),
+                                   (int(sx), int(sy)), s['size'])
+
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+
+    def update(self):
+        self.frame += 1
+        if self.frame >= self.max_frames:
+            self.kill()
+            return
+
+        # Update particles
+        for p in self.particles:
+            p['x'] += p['vx']
+            p['y'] += p['vy']
+            p['vx'] *= 0.95  # Slow down
+            p['vy'] *= 0.95
+            p['life'] -= 1
+
+        # Update sparkles (rise and fade)
+        for s in self.sparkles:
+            s['y'] += s['vy']
+            s['life'] -= 1
+
+        self._update_image()
 
 
 class Explosion(pygame.sprite.Sprite):
