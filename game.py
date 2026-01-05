@@ -547,7 +547,7 @@ class Game:
         self.selected_ship = 'rifter'  # Default ship
         self.ship_options = self.ship_roster.get_ship_options('minmatar', 'minmatar_rebellion')
         if not self.ship_options:
-            self.ship_options = ['rifter', 'wolf', 'jaguar']  # Fallback
+            self.ship_options = ['rifter', 'breacher', 'wolf', 'jaguar']  # Fallback
         self.ship_select_index = 0
         self.t2_ships_unlocked = True  # TESTING: Wolf and Jaguar unlocked
 
@@ -677,7 +677,7 @@ class Game:
                 'color': (180, 100, 50),  # Minmatar rust
                 'icon': 'rifter',
                 'unlocked': True,
-                'flow': ['empire_select', 'tribe_select', 'difficulty', 'ship_select', 'mode_select']
+                'flow': ['difficulty', 'ship_select']  # Simplified: Difficulty → Ship
             },
             {
                 'id': 'the_last_stand',
@@ -2474,10 +2474,10 @@ class Game:
                             self.play_sound('menu_error')  # Can't select locked ship
                         else:
                             self.selected_ship = selected_key
-                            self.state = 'mode_select'  # Go to mode select after ship
+                            self.start_game()  # Start game directly after ship select
                             self.play_sound('menu_select')
                     elif self.controller.is_button_just_pressed(XboxButton.B):
-                        self.state = 'empire_select'  # Back to faction selection
+                        self.state = 'difficulty'  # Back to difficulty selection
                         self.play_sound('menu_select')
                 elif self.state == 'empire_select':
                     # 2x2 grid navigation for faction selection (4 options)
@@ -2865,10 +2865,10 @@ class Game:
                             self.play_sound('menu_error')  # Can't select locked ship
                         else:
                             self.selected_ship = selected_key
-                            self.state = 'mode_select'  # Go to mode select after ship
+                            self.start_game()  # Start game directly
                             self.play_sound('menu_select')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = 'empire_select'  # Back to faction selection
+                        self.state = 'difficulty'  # Back to difficulty selection
                         self.play_sound('menu_select')
 
                 elif self.state == 'difficulty':
@@ -3607,7 +3607,7 @@ class Game:
         if not self.ship_options:
             # Fallback to hardcoded options
             if player_faction == 'minmatar':
-                self.ship_options = ['rifter', 'wolf', 'jaguar']
+                self.ship_options = ['rifter', 'breacher', 'wolf', 'jaguar']
             elif player_faction == 'amarr':
                 self.ship_options = ['executioner', 'crusader', 'malediction']
             elif player_faction == 'caldari':
@@ -3656,7 +3656,7 @@ class Game:
         if not self.ship_options:
             # Fallback to hardcoded options
             if faction == 'minmatar':
-                self.ship_options = ['rifter', 'wolf', 'jaguar']
+                self.ship_options = ['rifter', 'breacher', 'wolf', 'jaguar']
             elif faction == 'amarr':
                 self.ship_options = ['executioner', 'crusader', 'malediction']
             elif faction == 'caldari':

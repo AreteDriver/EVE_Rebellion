@@ -56,9 +56,13 @@ class InputState:
     aim_y: float = -1.0  # Default aim up
     aim_magnitude: float = 0.0  # Current stick deflection (0.0-1.0)
 
-    # Fire state (RT)
+    # Fire state (Right Stick - twin-stick style)
     fire_held: bool = False
     fire_pressure: float = 0.0
+
+    # Special ability (RT - rockets, shield boost, etc.)
+    special_ability: bool = False
+    special_pressure: float = 0.0
 
     # Actions
     thrust_held: bool = False  # LB or RB
@@ -337,8 +341,10 @@ class ControllerInput:
         return (self.aim_offset_x, self.aim_offset_y)
     
     def is_firing(self) -> bool:
-        """Check if primary fire is active"""
-        return self.primary_fire
+        """Check if primary fire is active (twin-stick: right stick deflection)"""
+        # Twin-stick shooter style: fire when aiming with right stick
+        # Fire threshold is slightly above deadzone for intentional firing
+        return self.aim_magnitude > 0.3
     
     def is_alternate_fire(self) -> bool:
         """Check if alternate fire (rockets) is active"""
@@ -361,12 +367,12 @@ class ControllerInput:
         """
         Get unified input state using the single controller schema.
 
-        Mapping (default, no modes/toggles):
+        Mapping (twin-stick shooter):
             - Left Stick: Movement
-            - LB or RB: Thrust (uses movement direction)
+            - Right Stick: Aim direction + Fire (twin-stick style)
+            - RT: Special ability (rockets/shield boost) - RESERVED
             - LT: Brake/Drop-down (invincible until landing)
-            - Right Stick: 360° aiming with persistence
-            - RT: Fire primary weapons
+            - LB or RB: Thrust (uses movement direction)
             - R3: Toggle Spread/Focus
 
         Returns:
@@ -388,9 +394,14 @@ class ControllerInput:
             state.aim_y = self.persistent_aim_y
         state.aim_magnitude = self.aim_magnitude
 
-        # RT = Fire
-        state.fire_held = self.primary_fire
-        state.fire_pressure = self.primary_pressure
+        # Twin-stick: fire when right stick is deflected (handled in is_firing())
+        # RT is now reserved for special ability
+        state.fire_held = self.is_firing()
+        state.fire_pressure = self.aim_magnitude  # Use stick deflection as "pressure"
+
+        # RT = Special ability (rockets, shield boost, etc.) - available for future use
+        state.special_ability = self.primary_fire  # RT now triggers special
+        state.special_pressure = self.primary_pressure
 
         # LB or RB = Thrust (either bumper works)
         state.thrust_held = (

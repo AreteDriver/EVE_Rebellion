@@ -65,16 +65,17 @@ EVE_TYPE_IDS = {
     'sacrilege': 624,
 }
 
-# Ship class scale ratios (base size is 48px for frigates)
+# Ship class scale ratios (base size is 72px for player frigate)
+# Player frigate is 72x90, other classes scale from there
 SHIP_SCALE_RATIOS = {
     'frigate': 1.0,
-    'destroyer': 1.2,
-    'cruiser': 1.5,
-    'battlecruiser': 1.8,
-    'battleship': 2.5,
-    'industrial': 1.2,
-    'capital': 3.0,
-    'titan': 4.0,
+    'destroyer': 1.15,
+    'cruiser': 1.4,
+    'battlecruiser': 1.7,
+    'battleship': 2.2,
+    'industrial': 1.3,
+    'capital': 2.8,
+    'titan': 3.5,
 }
 
 # Map ship names to their class
@@ -100,18 +101,58 @@ def get_ship_asset_manager():
         _ship_asset_manager = ShipAssetManager()
     return _ship_asset_manager
 
-def load_ship_sprite(ship_name, target_size=None, use_eve_assets=False):
+# Sprite orientation corrections (degrees to rotate clockwise to face UP)
+# Ships rendered facing wrong direction need correction here
+# NOTE: Perspective renders (from EVE API) don't need rotation - they look correct as-is
+SPRITE_ORIENTATION_FIX = {
+    # Minmatar ships - using perspective renders, no rotation needed
+    'rifter': 0,
+    'breacher': 0,
+    'jaguar': 0,
+    'wolf': 0,
+    'vigil': 90,        # Facing right
+    'probe': 180,       # Facing down
+    'slasher': 180,     # Facing down
+    'burst': 180,       # Facing down
+    'firetail': 180,    # Facing down
+    'stabber': 90,      # Facing right
+    'rupture': 90,      # Facing right
+    'bellicose': 90,    # Facing right
+    'scythe': 90,       # Facing right
+    'hurricane': 180,   # Facing down
+    'tornado': 90,      # Facing right
+    'tempest': 90,      # Facing right
+    'typhoon': 180,     # Facing down
+    'maelstrom': 90,    # Facing right
+    # Amarr ships
+    'executioner': 180, # Facing down
+    'punisher': 180,    # Facing down
+    'tormentor': 180,   # Facing down
+    'omen': 180,        # Facing down
+    'maller': 180,      # Facing down
+    'augoror': 180,     # Facing down
+    'harbinger': 180,   # Facing down
+    'oracle': 180,      # Facing down
+    'apocalypse': 180,  # Facing down
+    'abaddon': 180,     # Facing down
+    'bestower': 180,    # Facing down
+    'sigil': 180,       # Facing down
+}
+
+
+def load_ship_sprite(ship_name, target_size=None, use_eve_assets=False, apply_orientation_fix=True):
     """Load a rendered ship sprite from the ship_sprites directory.
 
     Args:
         ship_name: Name of the ship (e.g., 'rifter', 'executioner')
         target_size: Optional (width, height) tuple to scale the sprite to
         use_eve_assets: If True, try EVE API assets (disabled by default - icons look boxy)
+        apply_orientation_fix: If True, apply rotation corrections for player ships
 
     Returns:
         pygame.Surface with the ship sprite, or None if not found
     """
-    cache_key = (ship_name, target_size, use_eve_assets)
+    cache_key = (ship_name, target_size, use_eve_assets, apply_orientation_fix)
     if cache_key in _ship_sprite_cache:
         return _ship_sprite_cache[cache_key].copy()
 
@@ -141,6 +182,12 @@ def load_ship_sprite(ship_name, target_size=None, use_eve_assets=False):
 
     if sprite is None:
         return None
+
+    # Apply orientation correction if needed (rotate to face UP) - only for player ships
+    if apply_orientation_fix:
+        rotation = SPRITE_ORIENTATION_FIX.get(ship_name_lower, 0)
+        if rotation != 0:
+            sprite = pygame.transform.rotate(sprite, -rotation)  # Negative for CW rotation
 
     if target_size:
         sprite = pygame.transform.smoothscale(sprite, target_size)
@@ -497,8 +544,8 @@ class Player(pygame.sprite.Sprite):
         self.is_jaguar = False  # Minmatar T2 assault frigate
         self.is_crusader = False  # Amarr T2 interceptor
         self.is_malediction = False  # Amarr T2 interceptor
-        self.width = 46
-        self.height = 58
+        self.width = 72
+        self.height = 90
 
         # Ship renderer for advanced effects (initialized after ship selection)
         self.ship_renderer = None
@@ -2948,7 +2995,8 @@ class Enemy(pygame.sprite.Sprite):
 
         # Try to load rendered sprite (EVE assets first, then old sprites)
         if sprite_name:
-            sprite = load_ship_sprite(sprite_name, (self.width, self.height))
+            # Don't apply orientation fix for enemies - they get flipped separately
+            sprite = load_ship_sprite(sprite_name, (self.width, self.height), apply_orientation_fix=False)
             if sprite:
                 # Flip so nose points down (enemy faces player)
                 sprite = pygame.transform.flip(sprite, False, True)
