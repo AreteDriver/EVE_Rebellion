@@ -24,6 +24,23 @@ jobs:
       - name: Lint with ruff
         run: ruff check . --ignore E501 --statistics
 
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install mypy pygame numpy
+
+      - name: Type check with mypy
+        run: mypy . --exclude 'assets/|eve-esi-skill/|eve-project-updater/'
+
   syntax-check:
     runs-on: ubuntu-latest
     steps:
