@@ -1,0 +1,8 @@
+# Default owner for everything
+* @AreteDriver
+
+# Game core
+*.py @AreteDriver
+
+# CI/CD
+.github/ @AreteDriver
