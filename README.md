@@ -382,8 +382,15 @@ This is a community project. Contributions welcome!
 git clone https://github.com/AreteDriver/EVE_Rebellion.git
 cd EVE_Rebellion
 pip install pygame numpy cairosvg
+
+# Optional: Set up pre-commit hooks for code quality
+pip install pre-commit
+pre-commit install
+
 python main.py
 ```
+
+Pre-commit hooks automatically run linting (ruff) before each commit to maintain code quality.
 
 ---
 
