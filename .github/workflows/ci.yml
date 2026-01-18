@@ -11,34 +11,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      
+
       - name: Install dependencies
         run: |
           pip install ruff pygame
-      
+
       - name: Lint with ruff
-        continue-on-error: true
         run: ruff check . --ignore E501 --statistics
 
   syntax-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      
+
       - name: Install dependencies
         run: |
           pip install pygame
-      
+
       - name: Check Python syntax
         run: |
           python -m py_compile *.py
