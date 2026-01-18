@@ -83,7 +83,7 @@ jobs:
         run: pip install bandit
 
       - name: Run security scan
-        run: bandit -r . -x ./tests,./assets,./eve-esi-skill,./eve-project-updater -ll
+        run: bandit -r . -x ./tests,./assets,./eve-esi-skill,./eve-project-updater -lll
 
   syntax-check:
     runs-on: ubuntu-latest
