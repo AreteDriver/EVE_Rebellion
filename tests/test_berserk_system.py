@@ -1,0 +1,100 @@
+"""Tests for the Berserk scoring system"""
+import pytest
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Mock pygame before importing berserk_system
+sys.modules['pygame'] = type(sys)('pygame')
+
+from berserk_system import BerserkSystem
+
+
+class TestBerserkSystem:
+    """Test the BerserkSystem class"""
+
+    def setup_method(self):
+        """Set up test fixtures"""
+        self.berserk = BerserkSystem()
+
+    def test_initial_state(self):
+        """Test initial state of BerserkSystem"""
+        assert self.berserk.total_score == 0
+        assert self.berserk.session_score == 0
+        assert self.berserk.current_multiplier == 1.0
+        assert self.berserk.combo_count == 0
+        assert self.berserk.total_kills == 0
+
+    def test_calculate_multiplier_extreme(self):
+        """Test extreme close range multiplier (0-80 pixels)"""
+        player_pos = (100, 100)
+        enemy_pos = (150, 100)  # 50 pixels away
+        multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
+        assert multiplier == 5.0
+        assert range_name == 'EXTREME'
+
+    def test_calculate_multiplier_close(self):
+        """Test close range multiplier (80-150 pixels)"""
+        player_pos = (100, 100)
+        enemy_pos = (200, 100)  # 100 pixels away
+        multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
+        assert multiplier == 3.0
+        assert range_name == 'CLOSE'
+
+    def test_calculate_multiplier_medium(self):
+        """Test medium range multiplier (150-250 pixels)"""
+        player_pos = (100, 100)
+        enemy_pos = (300, 100)  # 200 pixels away
+        multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
+        assert multiplier == 1.5
+        assert range_name == 'MEDIUM'
+
+    def test_calculate_multiplier_far(self):
+        """Test far range multiplier (250-400 pixels)"""
+        player_pos = (100, 100)
+        enemy_pos = (400, 100)  # 300 pixels away
+        multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
+        assert multiplier == 1.0
+        assert range_name == 'FAR'
+
+    def test_calculate_multiplier_very_far(self):
+        """Test very far range multiplier (400+ pixels)"""
+        player_pos = (100, 100)
+        enemy_pos = (600, 100)  # 500 pixels away
+        multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
+        assert multiplier == 0.5
+        assert range_name == 'VERY_FAR'
+
+    def test_get_combo_bonus_no_combo(self):
+        """Test combo bonus with no kills"""
+        self.berserk.combo_count = 0
+        assert self.berserk.get_combo_bonus() == 1.0
+
+    def test_get_combo_bonus_5_kills(self):
+        """Test combo bonus at 5 kills"""
+        self.berserk.combo_count = 5
+        assert self.berserk.get_combo_bonus() == 1.2
+
+    def test_get_combo_bonus_10_kills(self):
+        """Test combo bonus at 10 kills"""
+        self.berserk.combo_count = 10
+        assert self.berserk.get_combo_bonus() == 1.5
+
+    def test_get_combo_bonus_20_kills(self):
+        """Test combo bonus at 20 kills"""
+        self.berserk.combo_count = 20
+        assert self.berserk.get_combo_bonus() == 2.0
+
+    def test_get_combo_bonus_50_kills(self):
+        """Test combo bonus at 50 kills"""
+        self.berserk.combo_count = 50
+        assert self.berserk.get_combo_bonus() == 3.0
+
+    def test_distance_thresholds(self):
+        """Test that distance thresholds are correctly defined"""
+        assert BerserkSystem.EXTREME_CLOSE == 80
+        assert BerserkSystem.CLOSE == 150
+        assert BerserkSystem.MEDIUM == 250
+        assert BerserkSystem.FAR == 400
