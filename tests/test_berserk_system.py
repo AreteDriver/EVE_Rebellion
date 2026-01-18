@@ -1,15 +1,19 @@
 """Tests for the Berserk scoring system"""
-import pytest
 import sys
 import os
+from unittest.mock import MagicMock
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Mock pygame before importing berserk_system
-sys.modules['pygame'] = type(sys)('pygame')
+pygame_mock = MagicMock()
+pygame_mock.Surface = MagicMock
+pygame_mock.font = MagicMock()
+pygame_mock.font.Font = MagicMock
+sys.modules['pygame'] = pygame_mock
 
-from berserk_system import BerserkSystem
+from berserk_system import BerserkSystem  # noqa: E402
 
 
 class TestBerserkSystem:
