@@ -3,15 +3,20 @@ import pygame
 import math
 import random
 import os
-from constants import *
+from constants import (
+    AMMO_TYPES, BULLET_DAMAGE, BULLET_SPEED, COLOR_AMARR_ACCENT,
+    ENEMY_STATS, PLAYER_BASE_FIRE_RATE, PLAYER_MAX_ROCKETS,
+    PLAYER_ROCKET_COOLDOWN, PLAYER_SPEED, PLAYER_START_ARMOR,
+    PLAYER_START_HULL, PLAYER_START_SHIELDS, POWERUP_TYPES,
+    ROCKET_DAMAGE, ROCKET_SPEED, SCREEN_HEIGHT, SCREEN_WIDTH,
+    WOLF_ARMOR_BONUS, WOLF_HULL_BONUS
+)
 from visual_effects import get_muzzle_flash_manager
 from ai_behaviors import create_ai_behavior
 
 # Import ship assets module for EVE renders
 try:
-    from ship_assets import (
-        ShipAssetManager, PLAYER_SHIPS, ENEMY_SHIPS, INDUSTRIAL, BOSSES, ALL_SHIPS
-    )
+    from ship_assets import ShipAssetManager
     _ship_asset_manager = None
     SHIP_ASSETS_AVAILABLE = True
 except ImportError:
@@ -1803,7 +1808,7 @@ class Player(pygame.sprite.Sprite):
 
         # Add heat when firing - balanced by ship class and ammo type
         now = pygame.time.get_ticks()
-        ammo = AMMO_TYPES[self.current_ammo]
+        AMMO_TYPES[self.current_ammo]
 
         # Base heat from ammo type (higher damage = more heat)
         ammo_heat_mult = {
@@ -2052,7 +2057,7 @@ class Wingman(pygame.sprite.Sprite):
     def _create_fallback_sprite(self):
         """Fallback procedural Rifter sprite if image not available"""
         surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        w, h = self.width, self.height
+        w, _h = self.width, self.height
         cx = w // 2
         s = 0.76  # Scale factor
 
@@ -2060,8 +2065,6 @@ class Wingman(pygame.sprite.Sprite):
         base = (70, 40, 30)
         mid = (110, 60, 40)
         light = (150, 85, 55)
-        highlight = (190, 120, 80)
-        accent = (200, 160, 80)
         engine_color = (255, 120, 40)
         engine_glow = (255, 180, 100)
 
@@ -2278,7 +2281,7 @@ class Rocket(pygame.sprite.Sprite):
 
         # Create polished base image
         self.base_image = pygame.Surface((12, 24), pygame.SRCALPHA)
-        w, h = 12, 24
+        w, _h = 12, 24
         cx = w // 2
 
         if seeking:
@@ -4060,7 +4063,7 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.y += self.speed * 0.5
             return
 
-        player_x, player_y = player_rect.centerx, player_rect.centery
+        _player_x, player_y = player_rect.centerx, player_rect.centery
 
         if self.destroyer_state == 'approach':
             # Move to engagement position
@@ -5034,7 +5037,6 @@ class RefugeePod(pygame.sprite.Sprite):
         hull_dark = (60, 65, 70)
         hull_mid = (100, 105, 115)
         hull_light = (140, 145, 155)
-        hull_highlight = (180, 185, 195)
         emergency_green = (50, 200, 80)
         emergency_glow = (100, 255, 120)
         window_color = (40, 60, 80)
@@ -5093,7 +5095,7 @@ class RefugeePod(pygame.sprite.Sprite):
         # Animate the beacon pulse
         if self.lifetime > 60:
             # Create pulsing effect on the image
-            pulse = 0.7 + 0.3 * math.sin(self.pulse_timer * 3)
+            0.7 + 0.3 * math.sin(self.pulse_timer * 3)
             if int(self.pulse_timer * 10) % 20 < 10:
                 # Beacon flash
                 self.image = self.base_image.copy()

@@ -1348,7 +1348,6 @@ class SpaceBackground:
         # Planet slowly drifts for parallax effect (very far, minimal movement)
         self.planet_drift += 0.005
         # Very subtle movement - planet is massive and distant
-        planet_parallax = 0.05  # Almost stationary due to distance
 
         # Moons update - closer so they move more
         self.moon_timer -= 1

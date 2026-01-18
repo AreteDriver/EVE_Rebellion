@@ -58,10 +58,14 @@ class ComplianceReport:
     @property
     def grade(self) -> str:
         score = self.score
-        if score >= 90: return "A"
-        if score >= 80: return "B"
-        if score >= 70: return "C"
-        if score >= 60: return "D"
+        if score >= 90:
+            return "A"
+        if score >= 80:
+            return "B"
+        if score >= 70:
+            return "C"
+        if score >= 60:
+            return "D"
         return "F"
 
 
@@ -222,7 +226,7 @@ def scan_project(project_path: Path, verbose: bool = False) -> ComplianceReport:
                 
                 try:
                     content = filepath.read_text(encoding='utf-8', errors='ignore')
-                except:
+                except Exception:
                     continue
                 
                 # Detect usage types

@@ -540,7 +540,7 @@ def create_symlink_structure(output_dir: Path):
             target = class_dir / filename
             try:
                 target.symlink_to(source)
-            except:
+            except Exception:
                 pass
             
             # By faction
@@ -550,7 +550,7 @@ def create_symlink_structure(output_dir: Path):
             target = faction_dir / filename
             try:
                 target.symlink_to(source)
-            except:
+            except Exception:
                 pass
     
     print("✅ Created symlink structure")

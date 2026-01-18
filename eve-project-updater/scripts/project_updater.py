@@ -387,7 +387,7 @@ def detect_project_type(project_path: Path) -> str:
                 return 'game'
             if 'fastapi' in content or 'FastAPI' in content:
                 return 'api'
-        except:
+        except Exception:
             pass
     
     if (project_path / 'package.json').exists():
@@ -402,7 +402,6 @@ def detect_project_type(project_path: Path) -> str:
 def plan_updates(project_path: Path, components: List[str] = None) -> List[Dict]:
     """Generate update plan for project."""
     plan = []
-    project_name = project_path.name
     project_type = detect_project_type(project_path)
     
     # Check what already exists

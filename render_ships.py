@@ -247,7 +247,7 @@ def render_ship(ship_name, config):
     stl_path = config['stl']
     color = config['color']
     size = config['size']
-    faction = config['faction']
+    config['faction']
 
     if not os.path.exists(stl_path):
         print(f"  [SKIP] {ship_name}: STL not found at {stl_path}")

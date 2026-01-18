@@ -87,11 +87,16 @@ class ProjectAudit:
     priority_actions: List[str] = field(default_factory=list)
     
     def calculate_grade(self):
-        if self.score >= 90: self.grade = "A"
-        elif self.score >= 80: self.grade = "B"
-        elif self.score >= 70: self.grade = "C"
-        elif self.score >= 60: self.grade = "D"
-        else: self.grade = "F"
+        if self.score >= 90:
+            self.grade = "A"
+        elif self.score >= 80:
+            self.grade = "B"
+        elif self.score >= 70:
+            self.grade = "C"
+        elif self.score >= 60:
+            self.grade = "D"
+        else:
+            self.grade = "F"
 
 
 # Detection patterns
@@ -135,7 +140,7 @@ def detect_project_type(project_path: Path) -> ProjectType:
                 continue
             try:
                 all_content += f.read_text(errors='ignore')
-            except:
+            except Exception:
                 pass
     
     # Check for game frameworks
@@ -180,7 +185,7 @@ def count_files(project_path: Path) -> Tuple[int, int, int, int]:
                 total_lines += len(f.read_text(errors='ignore').split('\n'))
             elif f.suffix == '.json':
                 json_files += 1
-        except:
+        except Exception:
             pass
     
     return py_files, js_files, json_files, total_lines
@@ -199,7 +204,7 @@ def scan_for_patterns(project_path: Path) -> Dict[str, bool]:
                 for name, pattern in PATTERNS.items():
                     if pattern.search(content):
                         results[name] = True
-            except:
+            except Exception:
                 pass
     
     return results

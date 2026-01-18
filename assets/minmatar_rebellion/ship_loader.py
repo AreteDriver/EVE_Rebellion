@@ -173,12 +173,14 @@ def check_svg_support():
     """Check if SVG loading libraries are available"""
     try:
         import cairosvg
-        return True
+        # Verify the module is functional by checking it has the expected attribute
+        return hasattr(cairosvg, 'svg2png')
     except ImportError:
         try:
-            from PIL import Image
-            import cairosvg
-            return True
+            import importlib.util
+            if importlib.util.find_spec("PIL") and importlib.util.find_spec("cairosvg"):
+                return True
+            return False
         except ImportError:
             return False
 

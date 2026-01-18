@@ -83,7 +83,6 @@ class WeaponEffects:
             alpha = max(0, min(255, alpha))
             
             # Create color with alpha
-            color = (*particle.color, alpha)
             
             # Draw particle
             if particle.size > 2:

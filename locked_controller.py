@@ -308,7 +308,7 @@ class LockedControllerInput:
         """Safely read axis value"""
         try:
             return self.joystick.get_axis(axis_id)
-        except:
+        except Exception:
             return 0.0
     
     def _apply_deadzone(self, value: float, deadzone: float) -> float:
@@ -332,7 +332,7 @@ class LockedControllerInput:
             return
         try:
             self.joystick.rumble(intensity, intensity, duration_ms)
-        except:
+        except Exception:
             pass
     
     # === PUBLIC API ===

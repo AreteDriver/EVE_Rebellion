@@ -1099,7 +1099,7 @@ class ShieldImpactRipple:
         # === PARTICLES ===
         for p in self.particles:
             if p['life'] > 0:
-                alpha = int(200 * (p['life'] / 18))
+                int(200 * (p['life'] / 18))
                 size = max(1, p['size'] * p['life'] // 18)
                 pygame.draw.circle(surface, (150, 200, 255),
                                  (int(p['x']), int(p['y'])), size)

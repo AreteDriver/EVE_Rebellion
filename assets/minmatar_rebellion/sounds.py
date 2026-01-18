@@ -337,7 +337,7 @@ class MusicGenerator:
             return
         try:
             pygame.mixer.music.stop()
-        except:
+        except Exception:
             pass
         self.playing = False
     
@@ -346,7 +346,7 @@ class MusicGenerator:
             return
         try:
             pygame.mixer.music.set_volume(volume)
-        except:
+        except Exception:
             pass
 
 

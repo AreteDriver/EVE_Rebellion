@@ -4,6 +4,7 @@ Handles story sequences, tribal identity, and narrative moments
 """
 
 import pygame
+import random
 from typing import Optional
 from enum import Enum
 
@@ -208,7 +209,7 @@ class CinematicManager:
             
         # Screen shake simulation (render offset)
         if intensity > 0.5:
-            shake_amount = int((1.0 - progress) * 10)
+            int((1.0 - progress) * 10)
             # This would be applied to camera in full implementation
             
         # Debris particles (simple version)
@@ -448,7 +449,7 @@ class CinematicManager:
         # Phase 4: Fade out
         else:
             progress = (self.cinematic_timer - PHASE_ELDER_RESPONSE) / (PHASE_TOTAL - PHASE_ELDER_RESPONSE)
-            fade_alpha = int((1.0 - progress) * 255)
+            int((1.0 - progress) * 255)
             # Simple fade to black
             
         if self.cinematic_timer > 1.0:

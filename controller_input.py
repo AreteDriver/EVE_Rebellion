@@ -160,7 +160,7 @@ class ControllerInput:
                 # Stop any startup vibration (some controllers rumble on init)
                 try:
                     self.joystick.rumble(0, 0, 0)
-                except:
+                except Exception:
                     pass
         else:
             print("No controller detected - keyboard/mouse active")
@@ -223,7 +223,7 @@ class ControllerInput:
         try:
             rt_raw = self.joystick.get_axis(5)  # Right trigger
             lt_raw = self.joystick.get_axis(2)  # Left trigger
-        except:
+        except Exception:
             rt_raw = -1.0
             lt_raw = -1.0
 
@@ -260,7 +260,7 @@ class ControllerInput:
         try:
             if self.joystick.get_numhats() > 0:
                 self.dpad_x, self.dpad_y = self.joystick.get_hat(0)
-        except:
+        except Exception:
             self.dpad_x, self.dpad_y = 0, 0
 
         # Generate virtual D-pad button events
@@ -444,7 +444,7 @@ class ControllerInput:
                 self.current_rumble = 0
                 try:
                     self.joystick.rumble(0, 0, 0)
-                except:
+                except Exception:
                     pass
             return
 
@@ -461,7 +461,7 @@ class ControllerInput:
                 self.current_rumble * 0.3,  # High frequency motor
                 100  # Duration in ms
             )
-        except:
+        except Exception:
             pass
     
     def _haptic_spike(self, intensity: float):
@@ -471,7 +471,7 @@ class ControllerInput:
         
         try:
             self.joystick.rumble(intensity, intensity, 200)
-        except:
+        except Exception:
             pass
     
     def trigger_lock_haptic(self):

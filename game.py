@@ -5,7 +5,16 @@ import math
 import json
 import os
 import sys
-from constants import *
+from constants import (
+    AMMO_TYPES, COLOR_AMARR_ACCENT, COLOR_AMARR_DARK, COLOR_ARMOR,
+    COLOR_HULL, COLOR_MINMATAR_ACCENT, COLOR_SHIELD, COLOR_TEXT,
+    DIFFICULTY_SETTINGS, ENEMY_STATS, FACTIONS, FPS,
+    JAGUAR_SHIELD_BONUS, JAGUAR_SPEED_BONUS, ROCKET_DAMAGE,
+    SCREEN_HEIGHT, SCREEN_WIDTH, SHAKE_DECAY, SHAKE_LARGE,
+    SHAKE_MEDIUM, SHAKE_SMALL, STAGES_AMARR, STAGES_CALDARI,
+    STAGES_GALLENTE, STAGES_MINMATAR, UPGRADE_COSTS,
+    WOLF_ARMOR_BONUS, WOLF_HULL_BONUS, WOLF_SPEED_BONUS
+)
 from sprites import (Player, Enemy, Wingman,
                      RefugeePod, Powerup, PowerupPickupEffect, Explosion, Star, ParallaxBackground)
 from sounds import get_sound_manager, get_music_manager
@@ -98,7 +107,7 @@ class SplashScreen:
             padding = 60
             size = max(new_w, new_h) + padding * 2
             final_surf = pygame.Surface((size, size), pygame.SRCALPHA)
-            cx, cy = size // 2, size // 2
+            cx, _cy = size // 2, size // 2
 
             # Center the sprite - that's it, let the actual art speak
             sprite_x = (size - new_w) // 2
@@ -127,14 +136,8 @@ class SplashScreen:
         # Minmatar color palette
         rust_dark = (80, 45, 25)
         rust_mid = (140, 80, 45)
-        rust_light = (180, 110, 60)
-        rust_highlight = (220, 150, 90)
-        metal_dark = (50, 45, 40)
         metal_mid = (90, 85, 75)
-        metal_light = (130, 120, 100)
-        cockpit_color = (40, 60, 90)
         cockpit_glass = (80, 120, 160)
-        engine_orange = (255, 140, 50)
         engine_glow = (255, 200, 100)
 
         cx, cy = size // 2, size // 2
@@ -1831,12 +1834,12 @@ class Game:
         num_cruisers = random.randint(1, 3)
         num_battlecruisers = random.randint(1, 2)
 
-        total = num_frigates + num_destroyers + num_cruisers + num_battlecruisers
+        num_frigates + num_destroyers + num_cruisers + num_battlecruisers
 
         # Entry point: left or right side
         from_left = random.choice([True, False])
         start_x = -100 if from_left else SCREEN_WIDTH + 100
-        end_x = SCREEN_WIDTH + 200 if from_left else -200
+        SCREEN_WIDTH + 200 if from_left else -200
 
         # Entry y range (upper portion of screen)
         start_y = random.randint(-150, 100)
@@ -3631,7 +3634,7 @@ class Game:
     def set_faction(self, faction):
         """Set player faction and load appropriate campaign stages"""
         self.selected_faction = faction
-        faction_data = FACTIONS.get(faction, {})
+        FACTIONS.get(faction, {})
 
         # Get chapter for ship filtering
         chapter_id = self.selected_chapter.get('id', 'minmatar_rebellion')
@@ -5293,7 +5296,7 @@ class Game:
         spacing_y = 20
         # 2x2 grid layout
         grid_w = 2 * card_w + spacing_x
-        grid_h = 2 * card_h + spacing_y
+        2 * card_h + spacing_y
         start_x = cx - grid_w // 2
         start_y = 130
 
@@ -5548,7 +5551,7 @@ class Game:
                         name_text = name_font.render(ship_name.title(), True, (120, 120, 120))
                         name_rect = name_text.get_rect(center=(ship_x + ship_preview_size // 2, ships_y + 32))
                         self.render_surface.blit(name_text, name_rect)
-                except:
+                except Exception:
                     pass
 
         # Controller/keyboard hints
@@ -5563,7 +5566,7 @@ class Game:
     def draw_filament_select(self):
         """Draw Abyssal filament and tier selection screen."""
         cx = SCREEN_WIDTH // 2
-        cy = SCREEN_HEIGHT // 2
+        SCREEN_HEIGHT // 2
 
         # Title
         title_font = pygame.font.Font(None, 48)
@@ -5901,7 +5904,7 @@ class Game:
                     streak_x = cx + random.randint(-25, 25)
                     streak_y = cy + random.randint(15, 50)
                     streak_len = random.randint(20, 40)
-                    streak_alpha = int(100 * flare_intensity)
+                    int(100 * flare_intensity)
                     streak_color = (255, 220, 150)
                     pygame.draw.line(self.render_surface, streak_color,
                                    (streak_x, streak_y), (streak_x, streak_y + streak_len), 2)
@@ -5910,7 +5913,7 @@ class Game:
                     streak_y = cy + random.randint(-20, 20)
                     streak_x = cx - direction * random.randint(10, 40)
                     streak_len = random.randint(15, 30)
-                    streak_alpha = int(100 * flare_intensity)
+                    int(100 * flare_intensity)
                     streak_color = (255, 220, 150) if direction > 0 else (150, 220, 255)
                     end_x = streak_x - direction * streak_len
                     pygame.draw.line(self.render_surface, streak_color,
@@ -6681,7 +6684,7 @@ class Game:
         arc_span = 50  # degrees
         thickness = 3
         start_angle = 90 - arc_span / 2
-        end_angle = 90 + arc_span / 2
+        90 + arc_span / 2
 
         # Background arc
         bg_color = (25, 30, 40)
@@ -7401,7 +7404,7 @@ class Game:
             self.render_surface.blit(glow_surf, (x - radius * 1.5, y - radius * 1.5))
 
             # Inner circle with rotation effect
-            rotation_offset = math.sin(now * 0.002 + hazard.rotation * 0.1) * 10
+            math.sin(now * 0.002 + hazard.rotation * 0.1) * 10
 
             # Hazard ring
             pygame.draw.circle(self.render_surface, color, (x, y), radius, 3)
@@ -7473,7 +7476,7 @@ class Game:
                 # Gate rings
                 for i in range(3):
                     r = int((gate_radius - i * 8) * pulse)
-                    alpha = 255 - i * 60
+                    255 - i * 60
                     ring_color = (80, 255, 160) if not gate.channeling else (160, 255, 200)
                     pygame.draw.circle(self.render_surface, ring_color, (gate_x, gate_y), r, 2)
 
@@ -8647,7 +8650,7 @@ class Game:
                         self.render_surface.blit(ship_sprite, sprite_rect)
                 else:
                     raise Exception("No sprite")
-            except:
+            except Exception:
                 # Fallback to geometric ship
                 icon_color = (40, 40, 50) if is_locked else ((80, 80, 90) if not is_selected else ship['icon_color'])
                 ship_points = [
@@ -9484,7 +9487,7 @@ class Game:
 
         # Draw gradient fade at top and bottom
         for i in range(60):
-            alpha = int(255 * (60 - i) / 60)
+            int(255 * (60 - i) / 60)
             pygame.draw.line(self.render_surface, (5, 5, 15),
                            (0, i), (SCREEN_WIDTH, i), 1)
             pygame.draw.line(self.render_surface, (5, 5, 15),
@@ -9681,7 +9684,7 @@ class Game:
                         icon = pygame.image.load(icon_path).convert_alpha()
                         icon = pygame.transform.scale(icon, (18, 18))
                         self.render_surface.blit(icon, (right_x + 12, y))
-                    except:
+                    except Exception:
                         pygame.draw.circle(self.render_surface, (200, 150, 50),
                                          (right_x + 21, y + 9), 8)
                     # Name and description

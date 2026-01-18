@@ -119,11 +119,8 @@ def _create_procedural_icon(size=256):
     surface = pygame.Surface((size, size), pygame.SRCALPHA)
 
     # Colors - Minmatar rust/industrial theme
-    rust = (180, 100, 50)
     rust_dark = (120, 65, 35)
     rust_light = (220, 140, 80)
-    metal = (100, 90, 80)
-    metal_dark = (60, 55, 50)
     engine_glow = (255, 150, 50)
     engine_core = (255, 220, 150)
 

@@ -377,7 +377,7 @@ class AmbientShip:
         # Subtle edge highlight (top-left lighting)
         highlight = (min(255, color[0] + 40), min(255, color[1] + 40),
                     min(255, color[2] + 35), min(255, color[3]))
-        shadow = (max(0, color[0] - 30), max(0, color[1] - 30),
+        (max(0, color[0] - 30), max(0, color[1] - 30),
                  max(0, color[2] - 25), color[3])
 
         # Draw highlight on upper edges
@@ -805,9 +805,9 @@ class Asteroid:
 
             # Points facing light are brighter
             if angle_diff < math.pi / 2:
-                brightness_mult = 1.0 - (angle_diff / (math.pi / 2)) * 0.4
+                1.0 - (angle_diff / (math.pi / 2)) * 0.4
             else:
-                brightness_mult = 0.6
+                pass
 
         # === SURFACE TEXTURE ===
         # Add rocky texture bumps
@@ -1307,7 +1307,7 @@ class StargateEnvironment:
 
         # Draw energy particles (simple circles)
         for p in self.particles:
-            alpha = int(200 * p['life'] / p['max_life'])
+            int(200 * p['life'] / p['max_life'])
             size = max(1, int(p['size'] * p['life'] / p['max_life']))
             color = (100, 200, 255)
             pygame.draw.circle(surface, color, (int(p['x']), int(p['y'])), size)
