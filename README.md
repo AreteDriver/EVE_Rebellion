@@ -2,9 +2,11 @@
 
 **A top-down arcade shooter set in the EVE Online universe. Fight for freedom across 4 faction campaigns.**
 
+[![CI](https://github.com/AreteDriver/EVE_Rebellion/actions/workflows/ci.yml/badge.svg)](https://github.com/AreteDriver/EVE_Rebellion/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Pygame 2.0+](https://img.shields.io/badge/Pygame-2.0+-red.svg)](https://www.pygame.org/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-orange.svg)]()
 
 ---
