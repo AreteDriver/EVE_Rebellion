@@ -11,15 +11,23 @@
 
 ---
 
-![Minmatar Rebellion Gameplay](docs/screenshot.png)
+## Screenshots
 
-> **Screenshot Instructions:** Capture gameplay showing:
-> 1. The Rifter engaging multiple Amarr ships with autocannon fire
-> 2. Berserk multiplier indicator glowing at close range
-> 3. Escape pods floating from a destroyed Bestower
-> 4. HUD showing shields/armor/hull, ammo type, and refugee count
->
-> For a GIF: Record destroying an industrial, collecting refugees, then using them at the upgrade shop.
+### Chapter Select
+Five campaigns across all four EVE factions.
+![Chapter Select](docs/screenshot-chapters.png)
+
+### Faction Selection
+Choose your faction and learn the lore.
+![Faction Select](docs/screenshot-faction-select.png)
+
+### Ship Selection
+Pick your ship with stats comparison (Hull, Speed, Power).
+![Ship Select](docs/screenshot-ship-select.png)
+
+### Difficulty Levels
+Four difficulty tiers with EVE-themed names.
+![Difficulty](docs/screenshot-difficulty.png)
 
 ---
 

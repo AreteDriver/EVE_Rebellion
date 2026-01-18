@@ -51,3 +51,8 @@ bfg.jar
 # Generated ship assets (regenerate with: python ship_assets.py process)
 assets/ships/
 !assets/ships/effects/
+
+# Environment files
+.env
+.env.*
+.env.local
