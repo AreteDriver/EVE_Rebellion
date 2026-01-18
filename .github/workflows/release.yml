@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pygame numpy pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed --name "EVE_Rebellion" --icon assets/icon.ico main.py 2>$null || pyinstaller --onefile --windowed --name "EVE_Rebellion" main.py
+
+      - name: Package release
+        run: |
+          mkdir release
+          cp dist/EVE_Rebellion.exe release/
+          cp -r data release/data 2>$null || echo "No data folder"
+          cp -r assets release/assets 2>$null || echo "No assets folder"
+          cp README.md release/
+          Compress-Archive -Path release/* -DestinationPath EVE_Rebellion-${{ github.ref_name }}-windows.zip
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: EVE_Rebellion-${{ github.ref_name }}-windows.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libsdl2-ttf-dev
+          pip install pygame numpy pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --name "EVE_Rebellion" main.py
+
+      - name: Package release
+        run: |
+          mkdir -p release
+          cp dist/EVE_Rebellion release/
+          cp -r data release/data 2>/dev/null || echo "No data folder"
+          cp -r assets release/assets 2>/dev/null || echo "No assets folder"
+          cp README.md release/
+          cd release && tar -czvf ../EVE_Rebellion-${{ github.ref_name }}-linux.tar.gz *
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: EVE_Rebellion-${{ github.ref_name }}-linux.tar.gz
