@@ -1,0 +1,16 @@
+[run]
+source = .
+omit =
+    tests/*
+    */__pycache__/*
+    assets/*
+    eve-esi-skill/*
+    eve-project-updater/*
+    setup.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
