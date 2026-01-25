@@ -83,7 +83,8 @@ class ControllerInput:
         # Haptic state
         self.current_rumble = 0.0
         self.heat_level = 0.0  # 0.0 to 1.0
-        
+        self.haptics_enabled = True  # Disable on menus to stop vibration
+
         # Input lock (for death sequence)
         self.input_locked = False
         self.lock_timer = 0
@@ -257,16 +258,25 @@ class ControllerInput:
         """Update continuous haptic feedback based on heat"""
         if not self.connected or not hasattr(self.joystick, 'rumble'):
             return
-        
+
+        # Stop all rumble when haptics disabled (menus)
+        if not self.haptics_enabled:
+            try:
+                self.joystick.rumble(0, 0, 100)
+            except:
+                pass
+            self.current_rumble = 0
+            return
+
         # Rumble intensity scales with heat
         target_rumble = (
             self.config.haptic_heat_base +
             (self.config.haptic_heat_max - self.config.haptic_heat_base) * self.heat_level
         )
-        
+
         # Smooth rumble changes
         self.current_rumble += (target_rumble - self.current_rumble) * 0.1
-        
+
         try:
             # Dual motor rumble (low frequency, high frequency)
             self.joystick.rumble(
@@ -276,12 +286,12 @@ class ControllerInput:
             )
         except:
             pass
-    
+
     def _haptic_spike(self, intensity: float):
         """Trigger sharp haptic spike (lock-on, decision, death)"""
-        if not self.connected or not hasattr(self.joystick, 'rumble'):
+        if not self.haptics_enabled or not self.connected or not hasattr(self.joystick, 'rumble'):
             return
-        
+
         try:
             self.joystick.rumble(intensity, intensity, 200)
         except:
@@ -305,9 +315,13 @@ class ControllerInput:
         self._haptic_spike(self.config.haptic_death)
     
     def reconnect(self):
-        """Attempt to reconnect controller if disconnected"""
-        if not self.connected:
-            self._connect_controller()
+        """Attempt to reconnect controller - reinitializes joystick subsystem"""
+        # Quit and reinit to detect newly connected controllers
+        pygame.joystick.quit()
+        pygame.joystick.init()
+        self.connected = False
+        self.joystick = None
+        self._connect_controller()
 
 
 # Button mapping constants for clarity

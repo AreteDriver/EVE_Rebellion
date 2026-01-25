@@ -207,6 +207,15 @@ class Game:
                         self.state = 'playing'
                         self.play_sound('menu_select')
             elif event.type == pygame.KEYDOWN:
+                # F5 to rescan for controllers (works in any state)
+                if event.key == pygame.K_F5:
+                    if self.controller:
+                        self.controller.reconnect()
+                        if self.controller.connected:
+                            print(f"Controller reconnected: {self.controller.joystick.get_name()}")
+                        else:
+                            print("No controller found")
+
                 if self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.state = 'difficulty'
@@ -369,21 +378,22 @@ class Game:
                 self.play_sound('purchase')
     
     def update(self):
+        """Update game state"""
+        # Controller update - MUST happen before early return so menus work!
+        dt = self.clock.get_time() / 1000.0
+        if self.controller:
+            # Disable haptics entirely on menus (stops Xbox controller vibration)
+            self.controller.haptics_enabled = self.state in ('playing', 'paused')
+            self.controller.update(dt)
+
         # Update scrolling background
         if hasattr(self, "space_background"):
             self.space_background.update(2.0)
 
-        """Update game state"""
         if self.state != 'playing':
             return
-        
-        keys = pygame.key.get_pressed()
-        
 
-        # Controller update (dt in seconds)
-        dt = self.clock.get_time() / 1000.0
-        if self.controller:
-            self.controller.update(dt)
+        keys = pygame.key.get_pressed()
         # Update player
         self.player.update(keys)
         
