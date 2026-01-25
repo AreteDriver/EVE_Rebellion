@@ -158,8 +158,9 @@ class ControllerInput:
             if hasattr(self.joystick, 'rumble'):
                 print("Haptic feedback enabled")
                 # Stop any startup vibration (some controllers rumble on init)
+                # Duration must be non-zero to actually stop rumble on Xbox controllers
                 try:
-                    self.joystick.rumble(0, 0, 0)
+                    self.joystick.rumble(0, 0, 100)
                 except Exception:
                     pass
         else:
@@ -443,7 +444,8 @@ class ControllerInput:
             if self.current_rumble > 0:
                 self.current_rumble = 0
                 try:
-                    self.joystick.rumble(0, 0, 0)
+                    # Duration must be non-zero to actually stop rumble on Xbox controllers
+                    self.joystick.rumble(0, 0, 100)
                 except Exception:
                     pass
             return

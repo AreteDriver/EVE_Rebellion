@@ -4026,7 +4026,32 @@ class Game:
                 self.play_sound('purchase')
     
     def update(self):
-        # Update scrolling background
+        """Update game state"""
+        dt = self.clock.get_time() / 1000.0
+
+        # Controller update - MUST happen before early return so menus work!
+        if self.controller:
+            self.controller.update(dt)
+            # Stop haptics when not actively playing
+            if self.state not in ('playing', 'paused'):
+                self.controller.set_heat_level(0)
+
+        # Handle splash screen
+        if self.state == 'splash':
+            self.splash_screen.update()
+            if self.splash_screen.done:
+                self.state = 'chapter_select'
+            return
+
+        # Always update parallax and stars for visual movement (menus)
+        for star in self.stars:
+            star.update()
+        self.parallax.update()
+
+        if self.state != 'playing':
+            return
+
+        # Only update game backgrounds during gameplay (optimization)
         if hasattr(self, "space_background"):
             self.space_background.update(2.0)
         if hasattr(self, "archon_carrier"):
@@ -4037,27 +4062,6 @@ class Game:
             player_dx = getattr(self, 'player_dx', 0)
             self.stage_background.update(scroll_speed=1.5, player_dx=player_dx)
             self.player_dx = 0  # Reset for next frame
-
-        """Update game state"""
-        # Handle splash screen
-        if self.state == 'splash':
-            self.splash_screen.update()
-            if self.splash_screen.done:
-                self.state = 'chapter_select'
-            return
-
-        # Always update parallax and stars for visual movement
-        for star in self.stars:
-            star.update()
-        self.parallax.update()
-
-        # Controller update - MUST happen before early return so menus work!
-        dt = self.clock.get_time() / 1000.0
-        if self.controller:
-            self.controller.update(dt)
-
-        if self.state != 'playing':
-            return
 
         keys = pygame.key.get_pressed()
 
