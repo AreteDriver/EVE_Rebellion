@@ -2770,6 +2770,15 @@ class Game:
                         self.state = 'menu'
                         self.play_sound('menu_select')
             elif event.type == pygame.KEYDOWN:
+                # F5 to rescan for controllers (works in any state)
+                if event.key == pygame.K_F5:
+                    if self.controller:
+                        self.controller.reconnect()
+                        if self.controller.connected:
+                            print(f"Controller reconnected: {self.controller.joystick.get_name()}")
+                        else:
+                            print("No controller found")
+
                 # Pass events to tutorial if active
                 if self.tutorial.active:
                     self.tutorial.handle_input(event)

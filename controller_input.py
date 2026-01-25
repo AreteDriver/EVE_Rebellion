@@ -492,9 +492,13 @@ class ControllerInput:
         self._haptic_spike(self.config.haptic_death)
     
     def reconnect(self):
-        """Attempt to reconnect controller if disconnected"""
-        if not self.connected:
-            self._connect_controller()
+        """Attempt to reconnect controller - reinitializes joystick subsystem"""
+        # Quit and reinit to detect newly connected controllers
+        pygame.joystick.quit()
+        pygame.joystick.init()
+        self.connected = False
+        self.joystick = None
+        self._connect_controller()
 
 
 # Button mapping constants for clarity
