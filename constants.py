@@ -237,7 +237,7 @@ ENEMY_STATS = {
         'speed': 2.5,
         'fire_rate': 1500,
         'score': 100,
-        'size': (69, 90)  # Frigates
+        'size': (79, 103)  # Frigates
     },
     'punisher': {
         'name': 'Punisher',
@@ -247,7 +247,7 @@ ENEMY_STATS = {
         'speed': 1.5,
         'fire_rate': 2000,
         'score': 150,
-        'size': (76, 99)  # Frigates
+        'size': (87, 113)  # Frigates
     },
     'tormentor': {
         'name': 'Tormentor',
@@ -257,7 +257,7 @@ ENEMY_STATS = {
         'speed': 2.2,
         'fire_rate': 1400,
         'score': 120,
-        'size': (65, 85)  # Frigates - laser boat
+        'size': (74, 97)  # Frigates - laser boat
     },
     'crucifier': {
         'name': 'Crucifier',
@@ -267,7 +267,7 @@ ENEMY_STATS = {
         'speed': 2.8,
         'fire_rate': 1600,
         'score': 110,
-        'size': (60, 80)  # Frigates - fast EWAR
+        'size': (69, 92)  # Frigates - fast EWAR
     },
     'omen': {
         'name': 'Omen',
@@ -277,7 +277,7 @@ ENEMY_STATS = {
         'speed': 0.9,
         'fire_rate': 1200,
         'score': 800,
-        'size': (320, 420),  # MASSIVE cruiser - dwarfs player ships
+        'size': (368, 482),  # MASSIVE cruiser - dwarfs player ships
     },
     'maller': {
         'name': 'Maller',
@@ -287,7 +287,7 @@ ENEMY_STATS = {
         'speed': 0.6,
         'fire_rate': 1800,
         'score': 1000,
-        'size': (350, 460),  # MASSIVE armor cruiser - tank
+        'size': (402, 529),  # MASSIVE armor cruiser - tank
     },
     'bestower': {
         'name': 'Bestower',
@@ -298,7 +298,7 @@ ENEMY_STATS = {
         'fire_rate': 0,  # Non-combat - Amarr industrial
         'score': 200,
         'refugees': 5,
-        'size': (180, 310)  # Industrial - tall hauler
+        'size': (206, 356)  # Industrial - tall hauler
     },
     'apocalypse': {
         'name': 'Apocalypse',
@@ -308,7 +308,7 @@ ENEMY_STATS = {
         'speed': 0.5,
         'fire_rate': 800,
         'score': 2000,
-        'size': (280, 420),  # Battleship - 5x frigate (~1200m)
+        'size': (322, 482),  # Battleship - 5x frigate (~1200m)
         'boss': True
     },
     'abaddon': {
@@ -319,7 +319,7 @@ ENEMY_STATS = {
         'speed': 0.3,
         'fire_rate': 600,
         'score': 5000,
-        'size': (340, 510),  # Battleship boss - massive armored beast
+        'size': (390, 586),  # Battleship boss - massive armored beast
         'boss': True
     },
     'amarr_capital': {
@@ -330,7 +330,7 @@ ENEMY_STATS = {
         'speed': 0.3,
         'fire_rate': 1500,
         'score': 10000,
-        'size': (500, 750),  # Capital ship - truly massive
+        'size': (575, 862),  # Capital ship - truly massive
         'boss': True
     },
     'machariel': {
@@ -341,7 +341,7 @@ ENEMY_STATS = {
         'speed': 1.0,
         'fire_rate': 800,
         'score': 3000,
-        'size': (280, 420),  # Pirate battleship
+        'size': (322, 482),  # Pirate battleship
         'boss': True
     },
     'stratios': {
@@ -352,7 +352,7 @@ ENEMY_STATS = {
         'speed': 1.2,
         'fire_rate': 1000,
         'score': 2000,
-        'size': (200, 280),  # Cruiser-size cloaky hunter
+        'size': (229, 322),  # Cruiser-size cloaky hunter
         'boss': True
     },
     # New enemy types
@@ -364,7 +364,7 @@ ENEMY_STATS = {
         'speed': 4.0,
         'fire_rate': 2500,
         'score': 25,
-        'size': (37, 37),  # Drones
+        'size': (42, 42),  # Drones
         'behavior': 'swarm'
     },
     'bomber': {
@@ -375,7 +375,7 @@ ENEMY_STATS = {
         'speed': 0.8,
         'fire_rate': 3000,
         'score': 300,
-        'size': (86, 121),  # Bombers
+        'size': (98, 139),  # Bombers
         'behavior': 'bomber'
     },
     'interceptor': {
@@ -386,7 +386,7 @@ ENEMY_STATS = {
         'speed': 5.0,
         'fire_rate': 1000,
         'score': 200,
-        'size': (55, 76),  # Interceptors
+        'size': (63, 87),  # Interceptors
         'behavior': 'aggressive'
     },
     'coercer': {
@@ -397,7 +397,7 @@ ENEMY_STATS = {
         'speed': 2.0,
         'fire_rate': 1200,
         'score': 125,
-        'size': (74, 97),  # Destroyers
+        'size': (85, 111),  # Destroyers
         'behavior': 'strafe'
     },
     'harbinger': {
@@ -408,7 +408,7 @@ ENEMY_STATS = {
         'speed': 0.45,
         'fire_rate': 1000,
         'score': 2500,
-        'size': (450, 600),  # MASSIVE battlecruiser - mini-boss sized
+        'size': (517, 690),  # MASSIVE battlecruiser - mini-boss sized
         'behavior': 'artillery',
     },
     'dragoon': {
@@ -419,7 +419,7 @@ ENEMY_STATS = {
         'speed': 1.5,
         'fire_rate': 1800,
         'score': 350,
-        'size': (97, 129),  # Drone carriers
+        'size': (111, 148),  # Drone carriers
         'behavior': 'drone_carrier',
         'drones': 4  # Spawns more drones
     },
@@ -432,7 +432,7 @@ ENEMY_STATS = {
         'speed': 3.0,
         'fire_rate': 1300,
         'score': 100,
-        'size': (69, 90),  # Frigate - fast attack
+        'size': (79, 103),  # Frigate - fast attack
         'faction': 'minmatar'
     },
     'slasher': {
@@ -443,7 +443,7 @@ ENEMY_STATS = {
         'speed': 3.5,
         'fire_rate': 1100,
         'score': 90,
-        'size': (65, 85),  # Frigate - very fast
+        'size': (74, 97),  # Frigate - very fast
         'faction': 'minmatar'
     },
     'thrasher': {
@@ -454,7 +454,7 @@ ENEMY_STATS = {
         'speed': 2.2,
         'fire_rate': 1000,
         'score': 180,
-        'size': (95, 125),  # Destroyer - heavy firepower
+        'size': (109, 143),  # Destroyer - heavy firepower
         'faction': 'minmatar'
     },
     'stabber': {
@@ -465,7 +465,7 @@ ENEMY_STATS = {
         'speed': 1.1,
         'fire_rate': 1100,
         'score': 700,
-        'size': (300, 400),  # Cruiser - fast for its class
+        'size': (345, 459),  # Cruiser - fast for its class
         'faction': 'minmatar'
     },
     'rupture': {
@@ -476,7 +476,7 @@ ENEMY_STATS = {
         'speed': 0.8,
         'fire_rate': 1400,
         'score': 850,
-        'size': (320, 420),  # Cruiser - armor tank
+        'size': (368, 482),  # Cruiser - armor tank
         'faction': 'minmatar'
     },
     'hurricane': {
@@ -487,7 +487,7 @@ ENEMY_STATS = {
         'speed': 0.5,
         'fire_rate': 900,
         'score': 2200,
-        'size': (430, 570),  # Battlecruiser
+        'size': (494, 655),  # Battlecruiser
         'faction': 'minmatar',
         'behavior': 'artillery'
     },
@@ -499,7 +499,7 @@ ENEMY_STATS = {
         'speed': 0.35,
         'fire_rate': 1500,
         'score': 4000,
-        'size': (480, 640),  # Battleship
+        'size': (552, 736),  # Battleship
         'faction': 'minmatar',
         'boss': True
     },
@@ -511,7 +511,7 @@ ENEMY_STATS = {
         'speed': 0.3,
         'fire_rate': 1200,
         'score': 5000,
-        'size': (520, 700),  # Battleship - final boss
+        'size': (598, 804),  # Battleship - final boss
         'faction': 'minmatar',
         'boss': True
     },
@@ -524,7 +524,7 @@ ENEMY_STATS = {
         'speed': 2.3,
         'fire_rate': 1400,
         'score': 100,
-        'size': (65, 85),
+        'size': (74, 97),
         'faction': 'gallente'
     },
     'atron': {
@@ -535,7 +535,7 @@ ENEMY_STATS = {
         'speed': 3.0,
         'fire_rate': 1200,
         'score': 90,
-        'size': (55, 70),
+        'size': (63, 80),
         'faction': 'gallente'
     },
     'incursus': {
@@ -546,7 +546,7 @@ ENEMY_STATS = {
         'speed': 2.0,
         'fire_rate': 1600,
         'score': 120,
-        'size': (60, 78),
+        'size': (69, 89),
         'faction': 'gallente'
     },
     'catalyst': {
@@ -557,7 +557,7 @@ ENEMY_STATS = {
         'speed': 1.8,
         'fire_rate': 800,
         'score': 200,
-        'size': (90, 120),
+        'size': (103, 138),
         'faction': 'gallente'
     },
     'thorax': {
@@ -568,7 +568,7 @@ ENEMY_STATS = {
         'speed': 1.0,
         'fire_rate': 1300,
         'score': 700,
-        'size': (280, 360),
+        'size': (322, 413),
         'faction': 'gallente',
         'boss': True
     },
@@ -580,7 +580,7 @@ ENEMY_STATS = {
         'speed': 1.2,
         'fire_rate': 1500,
         'score': 600,
-        'size': (260, 340),
+        'size': (299, 390),
         'faction': 'gallente'
     },
     'brutix': {
@@ -591,7 +591,7 @@ ENEMY_STATS = {
         'speed': 0.7,
         'fire_rate': 1100,
         'score': 1200,
-        'size': (380, 500),
+        'size': (436, 575),
         'faction': 'gallente'
     },
     'myrmidon': {
@@ -602,7 +602,7 @@ ENEMY_STATS = {
         'speed': 0.6,
         'fire_rate': 1400,
         'score': 1500,
-        'size': (400, 520),
+        'size': (459, 598),
         'faction': 'gallente',
         'boss': True
     },
@@ -614,7 +614,7 @@ ENEMY_STATS = {
         'speed': 0.4,
         'fire_rate': 1600,
         'score': 3000,
-        'size': (450, 600),
+        'size': (517, 690),
         'faction': 'gallente'
     },
     'megathron': {
@@ -625,7 +625,7 @@ ENEMY_STATS = {
         'speed': 0.35,
         'fire_rate': 1000,
         'score': 5000,
-        'size': (500, 680),
+        'size': (575, 781),
         'faction': 'gallente',
         'boss': True
     },
@@ -638,7 +638,7 @@ ENEMY_STATS = {
         'speed': 2.5,
         'fire_rate': 1200,
         'score': 100,
-        'size': (60, 80),
+        'size': (69, 92),
         'faction': 'caldari'
     },
     'merlin': {
@@ -649,7 +649,7 @@ ENEMY_STATS = {
         'speed': 2.2,
         'fire_rate': 1400,
         'score': 110,
-        'size': (55, 75),
+        'size': (63, 86),
         'faction': 'caldari'
     },
     'condor': {
@@ -660,7 +660,7 @@ ENEMY_STATS = {
         'speed': 3.2,
         'fire_rate': 1000,
         'score': 80,
-        'size': (50, 65),
+        'size': (57, 74),
         'faction': 'caldari'
     },
     'cormorant': {
@@ -671,7 +671,7 @@ ENEMY_STATS = {
         'speed': 1.9,
         'fire_rate': 700,
         'score': 200,
-        'size': (85, 115),
+        'size': (97, 132),
         'faction': 'caldari'
     },
     'caracal': {
@@ -682,7 +682,7 @@ ENEMY_STATS = {
         'speed': 1.3,
         'fire_rate': 1100,
         'score': 500,
-        'size': (240, 320),
+        'size': (276, 368),
         'faction': 'caldari'
     },
     'moa': {
@@ -693,7 +693,7 @@ ENEMY_STATS = {
         'speed': 1.1,
         'fire_rate': 1300,
         'score': 550,
-        'size': (250, 330),
+        'size': (287, 379),
         'faction': 'caldari'
     },
     'drake': {
@@ -704,7 +704,7 @@ ENEMY_STATS = {
         'speed': 0.7,
         'fire_rate': 900,
         'score': 1200,
-        'size': (380, 500),
+        'size': (436, 575),
         'faction': 'caldari'
     },
     'ferox': {
@@ -715,7 +715,7 @@ ENEMY_STATS = {
         'speed': 0.75,
         'fire_rate': 800,
         'score': 1100,
-        'size': (360, 480),
+        'size': (413, 552),
         'faction': 'caldari'
     },
     'raven': {
@@ -726,7 +726,7 @@ ENEMY_STATS = {
         'speed': 0.4,
         'fire_rate': 1500,
         'score': 4000,
-        'size': (480, 650),
+        'size': (552, 747),
         'faction': 'caldari',
         'boss': True
     },
@@ -738,7 +738,7 @@ ENEMY_STATS = {
         'speed': 0.35,
         'fire_rate': 800,
         'score': 5000,
-        'size': (500, 680),
+        'size': (575, 781),
         'faction': 'caldari',
         'boss': True
     }
