@@ -475,8 +475,13 @@ class Game:
             self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
         # Player shooting
         controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
+        # Get fire direction from controller (twin-stick) or default up
+        if self.controller and self.controller.connected and self.controller.right_stick_fire:
+            fire_dir = self.controller.get_fire_direction()
+        else:
+            fire_dir = (0, -1)  # Default: fire up
         if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
-            bullets, muzzle_positions = self.player.shoot()
+            bullets, muzzle_positions = self.player.shoot(fire_dir=fire_dir)
             if bullets:
                 self.play_sound('autocannon', 0.3)
                 # Muzzle flash particles

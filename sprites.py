@@ -12,8 +12,8 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.is_wolf = False
-        self.width = 40
-        self.height = 50
+        self.width = 46  # 15% larger
+        self.height = 58
         self.image = self._create_ship_image()
         self.rect = self.image.get_rect()
         self.rect.centerx = SCREEN_WIDTH // 2
@@ -163,8 +163,12 @@ class Player(pygame.sprite.Sprite):
         cooldown = PLAYER_BASE_FIRE_RATE / (ammo['fire_rate'] * self.fire_rate_mult)
         return now - self.last_shot > cooldown
     
-    def shoot(self):
-        """Fire autocannons, returns tuple of (bullets, muzzle_positions)"""
+    def shoot(self, fire_dir=(0, -1)):
+        """Fire autocannons, returns tuple of (bullets, muzzle_positions)
+
+        Args:
+            fire_dir: Normalized (dx, dy) direction for bullets. Default fires up.
+        """
         if not self.can_shoot():
             return [], []
 
@@ -180,15 +184,24 @@ class Player(pygame.sprite.Sprite):
         # Upgrade level based on spread_bonus (0-3)
         upgrade_level = min(3, self.spread_bonus)
 
+        # Calculate bullet velocity from direction
+        dx = fire_dir[0] * BULLET_SPEED
+        dy = fire_dir[1] * BULLET_SPEED
+
+        # Calculate perpendicular spread direction
+        perp_x = -fire_dir[1]  # Perpendicular to fire direction
+        perp_y = fire_dir[0]
+
         for i in range(num_shots):
             offset = (i - (num_shots - 1) / 2) * spread
-            muzzle_x = self.rect.centerx + offset
-            muzzle_y = self.rect.top
+            # Muzzle position offset perpendicular to fire direction
+            muzzle_x = self.rect.centerx + perp_x * offset
+            muzzle_y = self.rect.centery + perp_y * offset
 
             bullet = Bullet(
                 muzzle_x,
                 muzzle_y,
-                0, -BULLET_SPEED,
+                dx, dy,
                 ammo['tracer'],
                 BULLET_DAMAGE,
                 ammo['shield_mult'],
@@ -734,15 +747,7 @@ class RefugeePod(pygame.sprite.Sprite):
 
 
 class Powerup(pygame.sprite.Sprite):
-    """Powerup pickup with pulsing glow and bob animation"""
-
-    # Category glow colors
-    CATEGORY_GLOW = {
-        'health': (100, 200, 255),    # Soft blue
-        'utility': (100, 255, 150),   # Soft green
-        'weapon': (255, 120, 80),     # Orange-red
-        'buff': (255, 220, 100),      # Golden
-    }
+    """Powerup pickup - simple and readable"""
 
     def __init__(self, x, y, powerup_type):
         super().__init__()
@@ -750,52 +755,15 @@ class Powerup(pygame.sprite.Sprite):
         self.data = POWERUP_TYPES[powerup_type]
         self.speed = 2
 
-        # Animation state
-        self.glow_phase = random.uniform(0, math.pi * 2)  # Random start phase
-        self.base_y = float(y)
+        # Simple 20x20 powerup with colored core
+        self.image = pygame.Surface((20, 20), pygame.SRCALPHA)
+        pygame.draw.rect(self.image, self.data['color'], (2, 2, 16, 16))
+        pygame.draw.rect(self.image, (255, 255, 255), (2, 2, 16, 16), 2)
 
-        # Get category for glow style
-        self.category = self.data.get('category', 'utility')
-        self.glow_color = self.CATEGORY_GLOW.get(self.category, (200, 200, 200))
-
-        # Create larger surface for glow (40x40 for core powerup)
-        self.image = pygame.Surface((40, 40), pygame.SRCALPHA)
-        self._render()
         self.rect = self.image.get_rect(center=(x, y))
 
-    def _render(self):
-        """Render powerup with current glow state"""
-        self.image.fill((0, 0, 0, 0))
-
-        # Calculate glow intensity (pulsing)
-        glow_alpha = 80 + int(40 * math.sin(self.glow_phase))
-
-        # Draw outer glow (2 layers for soft effect)
-        glow_color_outer = (*self.glow_color, glow_alpha // 2)
-        glow_color_inner = (*self.glow_color, glow_alpha)
-        pygame.draw.circle(self.image, glow_color_outer, (20, 20), 18)
-        pygame.draw.circle(self.image, glow_color_inner, (20, 20), 14)
-
-        # Draw core (centered in 40x40 surface)
-        core_color = self.data['color']
-        pygame.draw.rect(self.image, core_color, (12, 12, 16, 16))
-        pygame.draw.rect(self.image, (255, 255, 255), (12, 12, 16, 16), 2)
-
     def update(self):
-        # Update animation phase
-        self.glow_phase += 0.08
-
-        # Bob motion (gentle vertical oscillation)
-        bob_offset = math.sin(self.glow_phase * 0.5) * 3
-
-        # Move down + apply bob
-        self.base_y += self.speed
-        self.rect.centery = int(self.base_y + bob_offset)
-
-        # Re-render with new glow state
-        self._render()
-
-        # Remove if off screen
+        self.rect.y += self.speed
         if self.rect.top > SCREEN_HEIGHT:
             self.kill()
 

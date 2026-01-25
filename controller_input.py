@@ -73,6 +73,9 @@ class ControllerInput:
         self.primary_fire = False
         self.alternate_fire = False
         self.primary_pressure = 0.0  # 0.0 to 1.0 for triggers
+        self.right_stick_fire = False  # Right stick firing
+        self.fire_dir_x = 0.0  # Normalized fire direction
+        self.fire_dir_y = -1.0  # Default: up
         
         # Button state (edge detection)
         self.buttons_pressed = set()
@@ -143,8 +146,20 @@ class ControllerInput:
         self.movement_x = self._momentum_curve(left_x) * self.config.movement_sensitivity
         self.movement_y = self._momentum_curve(left_y) * self.config.movement_sensitivity
         
-        # Right stick for precision aim offset (subtle)
-        self.aim_offset_x = right_x * self.config.aim_sensitivity * 30  # pixels
+        # Right stick for directional firing (twin-stick style)
+        right_stick_magnitude = (right_x ** 2 + right_y ** 2) ** 0.5
+        self.right_stick_fire = right_stick_magnitude > 0.3
+
+        # Store normalized fire direction
+        if self.right_stick_fire:
+            self.fire_dir_x = right_x / right_stick_magnitude
+            self.fire_dir_y = right_y / right_stick_magnitude
+        else:
+            self.fire_dir_x = 0.0
+            self.fire_dir_y = -1.0  # Default up when not firing
+
+        # Legacy aim offset (for compatibility)
+        self.aim_offset_x = right_x * self.config.aim_sensitivity * 30
         self.aim_offset_y = right_y * self.config.aim_sensitivity * 30
         
         # Read triggers (axis 2/5 on most controllers, but varies)
@@ -227,9 +242,13 @@ class ControllerInput:
         return (self.aim_offset_x, self.aim_offset_y)
     
     def is_firing(self) -> bool:
-        """Check if primary fire is active"""
-        return self.primary_fire
-    
+        """Check if primary fire is active (RT or right stick)"""
+        return self.primary_fire or self.right_stick_fire
+
+    def get_fire_direction(self) -> Tuple[float, float]:
+        """Get normalized fire direction from right stick (twin-stick style)"""
+        return (self.fire_dir_x, self.fire_dir_y)
+
     def is_alternate_fire(self) -> bool:
         """Check if alternate fire (rockets) is active"""
         return self.alternate_fire
