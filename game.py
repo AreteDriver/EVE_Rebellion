@@ -6,6 +6,7 @@ from sprites import (Player, Enemy, RefugeePod, Powerup, Explosion, Star)
 from sounds import get_sound_manager, get_music_manager
 from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground
+from visual_effects import ParticleSystem
 
 
 class ScreenShake:
@@ -60,12 +61,19 @@ class Game:
         
         # Screen shake
         self.shake = ScreenShake()
-        
+
+        # Particle system for hit effects, muzzle flashes, etc.
+        self.particle_system = ParticleSystem()
+
         # Game state
         self.state = 'menu'  # menu, difficulty, playing, shop, paused, gameover, victory
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
+
+        # Menu navigation for controller
+        self.menu_selection = 0
+        self.menu_cooldown = 0  # Prevent rapid scrolling
         
         # Background stars
         self.stars = [Star() for _ in range(100)]
@@ -104,6 +112,9 @@ class Game:
         # Messages
         self.message = ""
         self.message_timer = 0
+
+        # Clear particle effects on reset
+        self.particle_system.clear()
     
     def show_message(self, text, duration=120):
         """Show a temporary message"""
@@ -189,22 +200,8 @@ class Game:
 
             if event.type == pygame.QUIT:
                 self.running = False
-            
 
-            # Controller button shortcuts (pause/ammo) while playing
-            if self.controller and self.controller.connected:
-                if self.state == 'playing':
-                    if self.controller.is_button_just_pressed(XboxButton.START):
-                        self.state = 'paused'
-                        self.play_sound('menu_select')
-                    if self.controller.is_button_just_pressed(XboxButton.RB):
-                        self.player.cycle_ammo()
-                        self.play_sound('ammo_switch')
-                elif self.state == 'paused':
-                    if self.controller.is_button_just_pressed(XboxButton.START):
-                        self.state = 'playing'
-                        self.play_sound('menu_select')
-            elif event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN:
                 # F5 to rescan for controllers (works in any state)
                 if event.key == pygame.K_F5:
                     if self.controller:
@@ -269,7 +266,77 @@ class Game:
                         self.reset_game()
                         self.state = 'menu'
                         self.play_sound('menu_select')
-    
+
+        # Controller menu handling (runs once per frame, outside event loop)
+        if self.controller and self.controller.connected:
+            move_x, move_y = self.controller.get_movement_vector()
+
+            if self.state == 'menu':
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.state = 'difficulty'
+                    self.menu_selection = 1  # Default to 'normal'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'difficulty':
+                # Navigate with stick
+                if self.menu_cooldown <= 0:
+                    if move_y < -0.5:  # Up
+                        self.menu_selection = max(0, self.menu_selection - 1)
+                        self.menu_cooldown = 15
+                        self.play_sound('menu_select')
+                    elif move_y > 0.5:  # Down
+                        self.menu_selection = min(3, self.menu_selection + 1)
+                        self.menu_cooldown = 15
+                        self.play_sound('menu_select')
+                # Select with A
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    difficulties = ['easy', 'normal', 'hard', 'nightmare']
+                    self.set_difficulty(difficulties[self.menu_selection])
+                # Back with B
+                if self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'menu'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'playing':
+                if self.controller.is_button_just_pressed(XboxButton.START):
+                    self.state = 'paused'
+                    self.play_sound('menu_select')
+                if self.controller.is_button_just_pressed(XboxButton.RB):
+                    self.player.cycle_ammo()
+                    self.play_sound('ammo_switch')
+
+            elif self.state == 'paused':
+                if self.controller.is_button_just_pressed(XboxButton.START):
+                    self.state = 'playing'
+                    self.play_sound('menu_select')
+                if self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'playing'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'shop':
+                # Navigate shop with stick
+                if self.menu_cooldown <= 0:
+                    if move_y < -0.5:  # Up
+                        self.menu_selection = max(0, self.menu_selection - 1)
+                        self.menu_cooldown = 15
+                    elif move_y > 0.5:  # Down
+                        self.menu_selection = min(8, self.menu_selection + 1)
+                        self.menu_cooldown = 15
+                # Select with A
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    if self.menu_selection < 8:
+                        keys = [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4,
+                               pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8]
+                        self.handle_shop_input(keys[self.menu_selection])
+                    else:
+                        self.handle_shop_input(pygame.K_RETURN)
+
+            elif self.state in ['gameover', 'victory']:
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.reset_game()
+                    self.state = 'menu'
+                    self.play_sound('menu_select')
+
     def set_difficulty(self, difficulty):
         """Set game difficulty and start"""
         self.difficulty = difficulty
@@ -384,6 +451,10 @@ class Game:
             self.controller.haptics_enabled = self.state in ('playing', 'paused')
             self.controller.update(dt)
 
+        # Menu navigation cooldown
+        if self.menu_cooldown > 0:
+            self.menu_cooldown -= 1
+
         # Update scrolling background
         if hasattr(self, "space_background"):
             self.space_background.update(2.0)
@@ -405,9 +476,12 @@ class Game:
         # Player shooting
         controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
         if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
-            bullets = self.player.shoot()
+            bullets, muzzle_positions = self.player.shoot()
             if bullets:
                 self.play_sound('autocannon', 0.3)
+                # Muzzle flash particles
+                for mx, my in muzzle_positions:
+                    self.particle_system.emit_muzzle_flash(mx, my, angle=-1.5708, spread=30)
             for bullet in bullets:
                 self.player_bullets.add(bullet)
                 self.all_sprites.add(bullet)
@@ -436,6 +510,9 @@ class Game:
         self.pods.update()
         self.powerups.update()
         self.effects.update()
+
+        # Update particle system
+        self.particle_system.update()
         
         # Update screen shake
         self.shake.update()
@@ -453,6 +530,15 @@ class Game:
         for bullet in self.player_bullets:
             hits = pygame.sprite.spritecollide(bullet, self.enemies, False)
             for enemy in hits:
+                # Emit hit particles based on which layer was hit
+                hit_x, hit_y = bullet.rect.centerx, bullet.rect.centery
+                if enemy.shields > 0:
+                    self.particle_system.emit_shield_impact(hit_x, hit_y, radius=15)
+                elif enemy.armor > 0:
+                    self.particle_system.emit_armor_sparks(hit_x, hit_y, count=8)
+                else:
+                    self.particle_system.emit_hull_damage(hit_x, hit_y, count=6)
+
                 bullet.kill()
                 if enemy.take_damage(bullet):
                     # Enemy destroyed
@@ -497,15 +583,19 @@ class Game:
         hits = pygame.sprite.spritecollide(self.player, self.enemy_bullets, True)
         for bullet in hits:
             damage = int(bullet.damage * self.difficulty_settings['enemy_damage_mult'])
-            
-            # Determine which layer took the hit for sound
+
+            # Emit hit particles based on which layer will take damage
+            hit_x, hit_y = bullet.rect.centerx, bullet.rect.centery
             if self.player.shields > 0:
+                self.particle_system.emit_shield_impact(hit_x, hit_y, radius=20)
                 self.play_sound('shield_hit', 0.5)
             elif self.player.armor > 0:
+                self.particle_system.emit_armor_sparks(hit_x, hit_y, count=12)
                 self.play_sound('armor_hit', 0.5)
             else:
+                self.particle_system.emit_hull_damage(hit_x, hit_y, count=10)
                 self.play_sound('hull_hit', 0.6)
-            
+
             self.shake.add(SHAKE_SMALL)
             
             if self.player.take_damage(damage):
@@ -569,6 +659,12 @@ class Game:
             self.player.shield_boost_until = now + data['duration']
             self.player.shields = min(self.player.shields + 30, self.player.max_shields)
             self.show_message("Shields Boosted!", 60)
+        elif powerup.powerup_type == 'weapon_upgrade':
+            self.player.spread_bonus = min(3, self.player.spread_bonus + 1)
+            self.show_message("Weapons Upgraded!", 60)
+        elif powerup.powerup_type == 'rapid_fire':
+            self.player.fire_rate_mult *= 1.2
+            self.show_message("Rapid Fire!", 60)
     
     def update_waves(self):
         """Handle wave progression"""
@@ -652,7 +748,7 @@ class Game:
         title = self.font_large.render("SELECT DIFFICULTY", True, COLOR_MINMATAR_ACCENT)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
         self.render_surface.blit(title, rect)
-        
+
         y = 250
         difficulties = [
             ('1', 'easy', 'Easy', 'Reduced enemy health and damage, more powerups'),
@@ -660,26 +756,44 @@ class Game:
             ('3', 'hard', 'Hard', 'Tougher enemies, faster attacks, fewer powerups'),
             ('4', 'nightmare', 'Nightmare', 'For veteran pilots only')
         ]
-        
-        for key, diff_id, name, desc in difficulties:
-            # Highlight current selection style
-            color = COLOR_MINMATAR_ACCENT if diff_id == 'normal' else COLOR_TEXT
-            if diff_id == 'nightmare':
+
+        for i, (key, diff_id, name, desc) in enumerate(difficulties):
+            # Highlight selected option (controller) or default colors
+            is_selected = (i == self.menu_selection)
+            if is_selected:
+                color = (255, 255, 100)  # Bright yellow for selection
+                prefix = "> "
+            elif diff_id == 'nightmare':
                 color = (255, 100, 100)
-            
-            text = self.font.render(f"[{key}] {name}", True, color)
+                prefix = ""
+            elif diff_id == 'normal':
+                color = COLOR_MINMATAR_ACCENT
+                prefix = ""
+            else:
+                color = COLOR_TEXT
+                prefix = ""
+
+            text = self.font.render(f"{prefix}[{key}] {name}", True, color)
             self.render_surface.blit(text, (150, y))
-            
-            desc_text = self.font_small.render(desc, True, (150, 150, 150))
+
+            desc_color = (200, 200, 150) if is_selected else (150, 150, 150)
+            desc_text = self.font_small.render(desc, True, desc_color)
             self.render_surface.blit(desc_text, (150, y + 25))
-            
+
             y += 70
-        
+
         # Back option
         y += 30
-        text = self.font.render("[ESC] Back to Menu", True, (150, 150, 150))
+        back_text = "[B] Back" if self.controller and self.controller.connected else "[ESC] Back to Menu"
+        text = self.font.render(back_text, True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
+
+        # Controller hint
+        if self.controller and self.controller.connected:
+            hint = self.font_small.render("Use stick to navigate, A to select", True, (100, 100, 100))
+            rect = hint.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
+            self.render_surface.blit(hint, rect)
     
     def draw_game(self):
         # Draw space background
@@ -694,7 +808,10 @@ class Game:
         
         # Draw player last (on top)
         self.render_surface.blit(self.player.image, self.player.rect)
-        
+
+        # Draw particle effects (above sprites, below HUD)
+        self.particle_system.draw(self.render_surface)
+
         # Draw HUD
         self.draw_hud()
         
@@ -787,16 +904,26 @@ class Game:
         rect = sub.get_rect(center=(SCREEN_WIDTH // 2, 250))
         self.render_surface.blit(sub, rect)
         
-        # Instructions
+        # Instructions - show controller or keyboard based on what's connected
         y = 340
-        instructions = [
-            "WASD or Arrow Keys - Move",
-            "Space or Left Click - Fire Autocannons",
-            "Shift or Right Click - Fire Rockets",
-            "1-5 or Q/Tab - Switch Ammo",
-            "",
-            "Press ENTER to Start"
-        ]
+        if self.controller and self.controller.connected:
+            instructions = [
+                "Left Stick - Move",
+                "RT / A - Fire Autocannons",
+                "LT / X - Fire Rockets",
+                "RB - Switch Ammo",
+                "",
+                "Press A to Start"
+            ]
+        else:
+            instructions = [
+                "WASD or Arrow Keys - Move",
+                "Space or Left Click - Fire Autocannons",
+                "Shift or Right Click - Fire Rockets",
+                "1-5 or Q/Tab - Switch Ammo",
+                "",
+                "Press ENTER to Start"
+            ]
         for line in instructions:
             text = self.font.render(line, True, COLOR_TEXT)
             rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))

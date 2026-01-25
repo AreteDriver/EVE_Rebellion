@@ -164,32 +164,41 @@ class Player(pygame.sprite.Sprite):
         return now - self.last_shot > cooldown
     
     def shoot(self):
-        """Fire autocannons, returns list of bullets"""
+        """Fire autocannons, returns tuple of (bullets, muzzle_positions)"""
         if not self.can_shoot():
-            return []
-        
+            return [], []
+
         self.last_shot = pygame.time.get_ticks()
         bullets = []
+        muzzle_positions = []
         ammo = AMMO_TYPES[self.current_ammo]
-        
+
         # Base shots
         num_shots = 2 + self.spread_bonus
         spread = 15 + (self.spread_bonus * 5)
-        
+
+        # Upgrade level based on spread_bonus (0-3)
+        upgrade_level = min(3, self.spread_bonus)
+
         for i in range(num_shots):
             offset = (i - (num_shots - 1) / 2) * spread
+            muzzle_x = self.rect.centerx + offset
+            muzzle_y = self.rect.top
+
             bullet = Bullet(
-                self.rect.centerx + offset,
-                self.rect.top,
+                muzzle_x,
+                muzzle_y,
                 0, -BULLET_SPEED,
                 ammo['tracer'],
                 BULLET_DAMAGE,
                 ammo['shield_mult'],
-                ammo['armor_mult']
+                ammo['armor_mult'],
+                upgrade_level
             )
             bullets.append(bullet)
-        
-        return bullets
+            muzzle_positions.append((muzzle_x, muzzle_y))
+
+        return bullets, muzzle_positions
     
     def can_rocket(self):
         """Check if can fire rocket"""
@@ -247,13 +256,44 @@ class Player(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    """Projectile sprite"""
-    
-    def __init__(self, x, y, dx, dy, color, damage, shield_mult=1.0, armor_mult=1.0):
+    """Projectile sprite with upgrade-based visuals"""
+
+    def __init__(self, x, y, dx, dy, color, damage, shield_mult=1.0, armor_mult=1.0, upgrade_level=0):
         super().__init__()
-        self.image = pygame.Surface((4, 12), pygame.SRCALPHA)
-        pygame.draw.rect(self.image, color, (0, 0, 4, 12))
-        pygame.draw.rect(self.image, (255, 255, 255), (1, 0, 2, 4))  # Bright tip
+        self.upgrade_level = upgrade_level
+
+        # Scale bullet size with upgrades (4x12 base -> up to 7x18 at level 3)
+        width = 4 + upgrade_level
+        height = 12 + upgrade_level * 2
+
+        # Create surface with glow space for upgraded bullets
+        glow_pad = upgrade_level * 3 if upgrade_level > 0 else 0
+        surf_w = width + glow_pad * 2
+        surf_h = height + glow_pad * 2
+
+        self.image = pygame.Surface((surf_w, surf_h), pygame.SRCALPHA)
+
+        # Draw glow for upgraded bullets
+        if upgrade_level > 0:
+            glow_alpha = 40 + upgrade_level * 25
+            glow_color = (*color[:3], glow_alpha)
+            # Outer glow ellipse
+            pygame.draw.ellipse(self.image, glow_color, (0, 0, surf_w, surf_h))
+            # Inner brighter glow
+            inner_pad = glow_pad // 2
+            inner_glow = (*color[:3], glow_alpha + 30)
+            pygame.draw.ellipse(self.image, inner_glow,
+                              (inner_pad, inner_pad, surf_w - inner_pad * 2, surf_h - inner_pad * 2))
+
+        # Draw core bullet
+        cx, cy = glow_pad, glow_pad
+        pygame.draw.rect(self.image, color, (cx, cy, width, height))
+
+        # Bright tip (scales with upgrades)
+        tip_width = max(2, width - 2)
+        tip_height = 4 + upgrade_level
+        pygame.draw.rect(self.image, (255, 255, 255), (cx + 1, cy, tip_width, tip_height))
+
         self.rect = self.image.get_rect(center=(x, y))
         self.dx = dx
         self.dy = dy
