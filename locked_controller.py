@@ -11,7 +11,7 @@ Philosophy: One tested layout > infinite broken configurations
 import pygame
 from enum import IntEnum
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Optional
 
 
 class GameAction(IntEnum):
@@ -218,7 +218,7 @@ class LockedControllerInput:
             self.joystick.init()
             self.connected = True
             print(f"✓ Controller: {self.joystick.get_name()}")
-            print(f"✓ Layout: HARD-LOCKED (no rebinding)")
+            print("✓ Layout: HARD-LOCKED (no rebinding)")
             print(f"✓ Axes: {self.joystick.get_numaxes()}")
             print(f"✓ Buttons: {self.joystick.get_numbuttons()}")
         else:
@@ -308,7 +308,7 @@ class LockedControllerInput:
         """Safely read axis value"""
         try:
             return self.joystick.get_axis(axis_id)
-        except:
+        except Exception:
             return 0.0
     
     def _apply_deadzone(self, value: float, deadzone: float) -> float:
@@ -332,7 +332,7 @@ class LockedControllerInput:
             return
         try:
             self.joystick.rumble(intensity, intensity, duration_ms)
-        except:
+        except Exception:
             pass
     
     # === PUBLIC API ===

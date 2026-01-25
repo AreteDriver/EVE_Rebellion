@@ -12,7 +12,6 @@ Based on Devil Blade Reboot (SHIGATAKE GAMES, May 2024)
 import pygame
 from enum import IntEnum
 from typing import Optional, Tuple
-import math
 
 
 class XboxButton(IntEnum):
@@ -109,7 +108,7 @@ class VerticalShmupController:
             self.joystick.init()
             self.connected = True
             print(f"Controller connected: {self.joystick.get_name()}")
-            print(f"Control scheme: Vertical Shmup (Devil Blade style)")
+            print("Control scheme: Vertical Shmup (Devil Blade style)")
         else:
             print("No controller detected")
     
@@ -199,7 +198,7 @@ class VerticalShmupController:
         try:
             if self.joystick.get_numaxes() > axis_id:
                 return self.joystick.get_axis(axis_id)
-        except:
+        except Exception:
             pass
         return 0.0
     
@@ -242,7 +241,7 @@ class VerticalShmupController:
             low_freq = intensity * 0.7
             high_freq = intensity * 0.3
             self.joystick.rumble(low_freq, high_freq, 1000)
-        except:
+        except Exception:
             pass
     
     def _pulse_haptic(self, intensity: float, duration_ms: int):
@@ -256,7 +255,7 @@ class VerticalShmupController:
                     intensity * self.haptic_intensity,
                     duration_ms
                 )
-        except:
+        except Exception:
             pass
     
     # === PUBLIC API ===

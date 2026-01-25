@@ -3,7 +3,7 @@ import pygame
 import math
 import random
 from constants import *
-from visual_enhancements import add_ship_glow, add_colored_tint, add_outline, add_strong_outline
+from visual_enhancements import add_ship_glow, add_colored_tint, add_strong_outline
 
 
 class Player(pygame.sprite.Sprite):

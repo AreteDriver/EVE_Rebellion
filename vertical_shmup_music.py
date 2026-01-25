@@ -11,8 +11,6 @@ Based on vertical shmup audio design:
 
 import pygame
 import numpy as np
-import io
-from typing import Optional
 
 
 class VerticalShmupMusic:

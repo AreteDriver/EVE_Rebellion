@@ -10,7 +10,6 @@ Design Philosophy:
 """
 
 import pygame
-import math
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -160,7 +159,7 @@ class ControllerInput:
                 self.joystick.get_axis(4),  # Left trigger (sometimes axis 2)
                 self.config.trigger_deadzone
             )
-        except:
+        except Exception:
             rt = 0.0
             lt = 0.0
         
@@ -263,7 +262,7 @@ class ControllerInput:
         if not self.haptics_enabled:
             try:
                 self.joystick.rumble(0, 0, 100)
-            except:
+            except Exception:
                 pass
             self.current_rumble = 0
             return
@@ -284,7 +283,7 @@ class ControllerInput:
                 self.current_rumble * 0.3,  # High frequency motor
                 100  # Duration in ms
             )
-        except:
+        except Exception:
             pass
 
     def _haptic_spike(self, intensity: float):
@@ -294,7 +293,7 @@ class ControllerInput:
 
         try:
             self.joystick.rumble(intensity, intensity, 200)
-        except:
+        except Exception:
             pass
     
     def trigger_lock_haptic(self):
