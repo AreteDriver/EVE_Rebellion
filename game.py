@@ -1,7 +1,14 @@
 """Main game logic for Minmatar Rebellion"""
 import pygame
 import random
-from constants import *
+from constants import (
+    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, STAGES, AMMO_TYPES, POWERUP_TYPES,
+    DIFFICULTY_SETTINGS, UPGRADE_COSTS, COLOR_MINMATAR_ACCENT, COLOR_AMARR_ACCENT,
+    COLOR_TEXT, COLOR_SHIELD, COLOR_ARMOR, COLOR_HULL,
+    SHAKE_SMALL, SHAKE_MEDIUM, SHAKE_LARGE, SHAKE_DECAY,
+    WOLF_SPEED_BONUS, WOLF_ARMOR_BONUS, WOLF_HULL_BONUS,
+    DIRECTION_UP, DIRECTION_CONFIG,
+)
 from sprites import (Player, Enemy, RefugeePod, Powerup, Explosion, Star)
 from sounds import get_sound_manager, get_music_manager
 from controller_input import ControllerInput, XboxButton
@@ -95,11 +102,11 @@ class Game:
         self.pods = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
-        
+
         # Player
         self.player = Player()
         self.all_sprites.add(self.player)
-        
+
         # Stage/Wave tracking
         self.current_stage = 0
         self.current_wave = 0
@@ -108,13 +115,40 @@ class Game:
         self.spawn_timer = 0
         self.wave_delay = 0
         self.stage_complete = False
-        
+
+        # Flight direction tracking
+        self.current_direction = DIRECTION_UP
+        self.scroll_direction = (0, 1)  # Default scroll down
+
         # Messages
         self.message = ""
         self.message_timer = 0
 
         # Clear particle effects on reset
         self.particle_system.clear()
+
+    def set_stage_direction(self, stage_index):
+        """Set up flight direction for a stage"""
+        if stage_index < len(STAGES):
+            stage = STAGES[stage_index]
+            direction = stage.get('direction', DIRECTION_UP)
+            self.current_direction = direction
+
+            # Get direction config
+            config = DIRECTION_CONFIG.get(direction, DIRECTION_CONFIG[DIRECTION_UP])
+
+            # Update background scroll direction
+            self.scroll_direction = config['scroll']
+            if hasattr(self, 'space_background'):
+                self.space_background.set_direction(self.scroll_direction)
+
+            # Update player position and rotation
+            self.player.set_flight_direction(
+                direction,
+                start_pos=config['player_start'],
+                fire_default=config['fire_default'],
+                rotation=config['rotation']
+            )
     
     def show_message(self, text, duration=120):
         """Show a temporary message"""
@@ -124,21 +158,34 @@ class Game:
     def spawn_wave(self):
         """Spawn enemies for current wave"""
         stage = STAGES[self.current_stage]
-        
+
         # Determine wave composition
         num_enemies = 3 + self.current_wave + self.current_stage
-        
+
         # Check for boss wave
         if (stage['boss'] and self.current_wave == stage['waves'] - 1):
             # Boss wave
             boss_type = stage['boss']
-            
+            direction = self.current_direction
+
+            # Determine boss spawn position based on direction
+            if direction == 'up' or direction == DIRECTION_UP:
+                boss_x, boss_y = SCREEN_WIDTH // 2, -100
+            elif direction == 'right':
+                boss_x, boss_y = SCREEN_WIDTH + 100, SCREEN_HEIGHT // 2
+            elif direction == 'left':
+                boss_x, boss_y = -100, SCREEN_HEIGHT // 2
+            elif direction == 'down':
+                boss_x, boss_y = SCREEN_WIDTH // 2, SCREEN_HEIGHT + 100
+            else:
+                boss_x, boss_y = SCREEN_WIDTH // 2, -100
+
             # Use specialized CapitalShipEnemy class for amarr_capital
             if boss_type == 'amarr_capital':
-                boss = CapitalShipEnemy(SCREEN_WIDTH // 2, self.difficulty_settings)
+                boss = CapitalShipEnemy(boss_x, self.difficulty_settings)
             else:
-                boss = Enemy(boss_type, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
-            
+                boss = Enemy(boss_type, boss_x, boss_y, self.difficulty_settings, flight_direction=direction)
+
             self.enemies.add(boss)
             self.all_sprites.add(boss)
             self.wave_enemies = 1
@@ -146,43 +193,58 @@ class Game:
             self.show_message(f"WARNING: {boss.stats['name'].upper()} APPROACHING!", 180)
             self.play_sound('warning')
             return
-        
+
         # Regular wave
         self.wave_enemies = num_enemies
         self.wave_spawned = 0
-        
+
         # Maybe spawn industrial
         if random.random() < stage['industrial_chance']:
             self.wave_enemies += 1
     
     def spawn_enemy(self):
-        """Spawn a single enemy"""
+        """Spawn a single enemy based on current flight direction"""
         if self.wave_spawned >= self.wave_enemies:
             return
-        
+
         stage = STAGES[self.current_stage]
-        
+
         # Chance for industrial
-        if (self.wave_spawned == self.wave_enemies - 1 and 
+        if (self.wave_spawned == self.wave_enemies - 1 and
             random.random() < stage['industrial_chance'] * 2):
             enemy_type = 'bestower'
         else:
             enemy_type = random.choice(stage['enemies'])
-        
-        x = random.randint(50, SCREEN_WIDTH - 50)
-        y = -50
-        
-        enemy = Enemy(enemy_type, x, y, self.difficulty_settings)
+
+        # Determine spawn position based on flight direction
+        direction = self.current_direction
+        if direction == DIRECTION_UP or direction == 'up':
+            x = random.randint(50, SCREEN_WIDTH - 50)
+            y = -50
+        elif direction == 'right':
+            x = SCREEN_WIDTH + 50
+            y = random.randint(50, SCREEN_HEIGHT - 50)
+        elif direction == 'left':
+            x = -50
+            y = random.randint(50, SCREEN_HEIGHT - 50)
+        elif direction == 'down':
+            x = random.randint(50, SCREEN_WIDTH - 50)
+            y = SCREEN_HEIGHT + 50
+        else:
+            x = random.randint(50, SCREEN_WIDTH - 50)
+            y = -50
+
+        enemy = Enemy(enemy_type, x, y, self.difficulty_settings, flight_direction=direction)
         self.enemies.add(enemy)
         self.all_sprites.add(enemy)
         self.wave_spawned += 1
     
     def spawn_powerup(self, x, y):
-        """Maybe spawn a powerup at location"""
+        """Maybe spawn a powerup at location with direction-aware drift"""
         chance = self.difficulty_settings.get('powerup_chance', 0.15)
         if random.random() < chance:
             powerup_type = random.choice(list(POWERUP_TYPES.keys()))
-            powerup = Powerup(x, y, powerup_type)
+            powerup = Powerup(x, y, powerup_type, drift_direction=self.scroll_direction)
             self.powerups.add(powerup)
             self.all_sprites.add(powerup)
     
@@ -342,6 +404,7 @@ class Game:
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
         self.reset_game()
+        self.set_stage_direction(0)  # Set up initial stage direction
         self.state = 'playing'
         self.show_message(STAGES[0]['name'], 180)
         self.play_sound('wave_start')
@@ -433,6 +496,7 @@ class Game:
                 self.current_wave = 0
                 self.wave_delay = 60
                 self.stage_complete = False
+                self.set_stage_direction(self.current_stage)  # Update direction for new stage
                 self.state = 'playing'
                 self.show_message(STAGES[self.current_stage]['name'], 180)
                 self.play_sound('wave_start')
@@ -455,8 +519,10 @@ class Game:
         if self.menu_cooldown > 0:
             self.menu_cooldown -= 1
 
-        # Update scrolling background
+        # Update scrolling background with current direction
         if hasattr(self, "space_background"):
+            if hasattr(self, 'scroll_direction'):
+                self.space_background.set_direction(self.scroll_direction)
             self.space_background.update(2.0)
 
         if self.state != 'playing':
@@ -475,11 +541,11 @@ class Game:
             self.player.rect.clamp_ip(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
         # Player shooting
         controller_fire = self.controller.is_firing() if (self.controller and self.controller.connected) else False
-        # Get fire direction from controller (twin-stick) or default up
+        # Get fire direction from controller (twin-stick) or use player's default for current direction
         if self.controller and self.controller.connected and self.controller.right_stick_fire:
             fire_dir = self.controller.get_fire_direction()
         else:
-            fire_dir = (0, -1)  # Default: fire up
+            fire_dir = self.player.fire_default  # Use direction-appropriate default
         if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] or controller_fire:
             bullets, muzzle_positions = self.player.shoot(fire_dir=fire_dir)
             if bullets:
@@ -573,7 +639,8 @@ class Game:
                         for _ in range(max(1, refugee_count)):
                             pod = RefugeePod(
                                 enemy.rect.centerx + random.randint(-20, 20),
-                                enemy.rect.centery + random.randint(-20, 20)
+                                enemy.rect.centery + random.randint(-20, 20),
+                                drift_direction=self.scroll_direction
                             )
                             self.pods.add(pod)
                             self.all_sprites.add(pod)

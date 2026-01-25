@@ -8,17 +8,24 @@ from visual_enhancements import add_ship_glow, add_colored_tint, add_strong_outl
 
 class Player(pygame.sprite.Sprite):
     """Player ship - Rifter/Wolf"""
-    
+
     def __init__(self):
         super().__init__()
         self.is_wolf = False
         self.width = 46  # 15% larger
         self.height = 58
-        self.image = self._create_ship_image()
+
+        # Flight direction (default: up)
+        self.flight_direction = 'up'
+        self.direction_rotation = 0  # Extra rotation for direction
+        self.fire_default = (0, -1)  # Default fire direction
+
+        self.base_image = self._create_ship_image()
+        self.image = self.base_image
         self.rect = self.image.get_rect()
         self.rect.centerx = SCREEN_WIDTH // 2
         self.rect.bottom = SCREEN_HEIGHT - 50
-        
+
         # Stats
         self.max_shields = PLAYER_START_SHIELDS
         self.max_armor = PLAYER_START_ARMOR
@@ -26,34 +33,51 @@ class Player(pygame.sprite.Sprite):
         self.shields = self.max_shields
         self.armor = self.max_armor
         self.hull = self.max_hull
-        
+
         # Weapons
         self.current_ammo = 'sabot'
         self.unlocked_ammo = ['sabot']
         self.rockets = PLAYER_MAX_ROCKETS
         self.max_rockets = PLAYER_MAX_ROCKETS
-        
+
         # Timing
         self.last_shot = 0
         self.last_rocket = 0
         self.fire_rate_mult = 1.0
         self.spread_bonus = 0
-        
+
         # Movement
         self.speed = PLAYER_SPEED
-        
+
         # Upgrades
         self.has_gyro = False
         self.has_tracking = False
-        
+
         # Powerup effects
         self.overdrive_until = 0
         self.shield_boost_until = 0
-        
+
         # Score/Progress
         self.refugees = 0
         self.total_refugees = 0
         self.score = 0
+
+    def set_flight_direction(self, direction, start_pos=None, fire_default=None, rotation=0):
+        """Set the flight direction and adjust ship orientation"""
+        from constants import DIRECTION_UP, DIRECTION_RIGHT, DIRECTION_LEFT, DIRECTION_DOWN
+
+        self.flight_direction = direction
+        self.direction_rotation = rotation
+        self.fire_default = fire_default if fire_default else (0, -1)
+
+        # Rotate the ship image for the new direction
+        if rotation != 0:
+            self.image = pygame.transform.rotate(self.base_image, rotation)
+            self.rect = self.image.get_rect(center=self.rect.center)
+
+        # Set starting position
+        if start_pos:
+            self.rect.center = start_pos
     
     def _create_ship_image(self):
         """Load ship image from SVG file"""
@@ -118,7 +142,14 @@ class Player(pygame.sprite.Sprite):
         self.armor = min(self.armor + WOLF_ARMOR_BONUS, self.max_armor)
         self.hull = min(self.hull + WOLF_HULL_BONUS, self.max_hull)
         self.spread_bonus += 1
-        self.image = self._create_ship_image()
+        self.base_image = self._create_ship_image()
+        # Re-apply direction rotation
+        if self.direction_rotation != 0:
+            self.image = pygame.transform.rotate(self.base_image, self.direction_rotation)
+        else:
+            self.image = self.base_image
+        old_center = self.rect.center
+        self.rect = self.image.get_rect(center=old_center)
     
     def unlock_ammo(self, ammo_type):
         """Unlock new ammo type"""
@@ -163,14 +194,19 @@ class Player(pygame.sprite.Sprite):
         cooldown = PLAYER_BASE_FIRE_RATE / (ammo['fire_rate'] * self.fire_rate_mult)
         return now - self.last_shot > cooldown
     
-    def shoot(self, fire_dir=(0, -1)):
+    def shoot(self, fire_dir=None):
         """Fire autocannons, returns tuple of (bullets, muzzle_positions)
 
         Args:
-            fire_dir: Normalized (dx, dy) direction for bullets. Default fires up.
+            fire_dir: Normalized (dx, dy) direction for bullets.
+                      If None, uses the default direction for current flight direction.
         """
         if not self.can_shoot():
             return [], []
+
+        # Use the flight-direction-appropriate default if no explicit direction
+        if fire_dir is None:
+            fire_dir = self.fire_default
 
         self.last_shot = pygame.time.get_ticks()
         bullets = []
@@ -369,7 +405,7 @@ class EnemyBullet(pygame.sprite.Sprite):
 
 class Enemy(pygame.sprite.Sprite):
     """Base enemy class"""
-    
+
     # Movement pattern types
     PATTERN_DRIFT = 0      # Basic side-to-side drift
     PATTERN_SINE = 1       # Sine wave movement
@@ -377,18 +413,19 @@ class Enemy(pygame.sprite.Sprite):
     PATTERN_CIRCLE = 3     # Circular strafing
     PATTERN_SWOOP = 4      # Dive toward player then retreat
     PATTERN_FLANK = 5      # Move to screen edge then track player
-    
-    def __init__(self, enemy_type, x, y, difficulty=None):
+
+    def __init__(self, enemy_type, x, y, difficulty=None, flight_direction='up'):
         super().__init__()
         self.enemy_type = enemy_type
         self.stats = ENEMY_STATS[enemy_type]
         self.difficulty = difficulty or {}
-        
+        self.flight_direction = flight_direction
+
         self.width, self.height = self.stats['size']
-        
+
         # Apply difficulty scaling
         health_mult = self.difficulty.get('enemy_health_mult', 1.0)
-        
+
         # Combat stats
         self.shields = int(self.stats['shields'] * health_mult)
         self.armor = int(self.stats['armor'] * health_mult)
@@ -396,7 +433,7 @@ class Enemy(pygame.sprite.Sprite):
         self.max_shields = self.shields
         self.max_armor = self.armor
         self.max_hull = self.hull
-        
+
         # Behavior
         self.speed = self.stats['speed']
         fire_rate_mult = self.difficulty.get('enemy_fire_rate_mult', 1.0)
@@ -405,27 +442,76 @@ class Enemy(pygame.sprite.Sprite):
         self.score = self.stats['score']
         self.refugees = self.stats.get('refugees', 0)
         self.is_boss = self.stats.get('boss', False)
-        
-        # Create image after all attributes are set
-        self.image = self._create_image()
+
+        # Create image after all attributes are set (rotated for direction)
+        self.base_image = self._create_image()
+        self.image = self._rotate_for_direction()
         self.rect = self.image.get_rect(center=(x, y))
-        
+
         # Movement pattern selection based on enemy type
         self._select_movement_pattern()
-        
+
         # Pattern state variables
         self.pattern_timer = random.uniform(0, math.pi * 2)
-        self.target_y = self._get_target_y()
+        self.target_pos = self._get_target_position()
         self.entered = False  # Has reached initial position
         self.swoop_state = 'enter'  # For swoop pattern
         self.flank_side = random.choice([-1, 1])  # For flank pattern
         self.circle_center_x = x
+        self.circle_center_y = y
         self.circle_radius = random.randint(50, 100)
-        
+
         # Boss-specific behavior
         if self.is_boss:
             self.boss_phase = 0
             self.boss_phase_timer = 0
+
+    def _rotate_for_direction(self):
+        """Rotate enemy image to face toward the player based on flight direction"""
+        # Enemy needs to face toward where the player is
+        if self.flight_direction == 'up':
+            # Enemy comes from top, faces down (already rotated -90 in _create_image)
+            return self.base_image
+        elif self.flight_direction == 'right':
+            # Enemy comes from right, faces left
+            return pygame.transform.rotate(self.base_image, -90)
+        elif self.flight_direction == 'left':
+            # Enemy comes from left, faces right
+            return pygame.transform.rotate(self.base_image, 90)
+        elif self.flight_direction == 'down':
+            # Enemy comes from bottom, faces up
+            return pygame.transform.rotate(self.base_image, 180)
+        return self.base_image
+
+    def _get_target_position(self):
+        """Get target position based on flight direction"""
+        if self.flight_direction == 'up':
+            # Classic vertical: enemies stop partway down the screen
+            if self.is_boss:
+                return (self.rect.centerx, 120)
+            elif self.enemy_type == 'bestower':
+                return (self.rect.centerx, random.randint(80, 180))
+            else:
+                return (self.rect.centerx, random.randint(80, 300))
+        elif self.flight_direction == 'right':
+            # Horizontal right: enemies stop partway from right edge
+            if self.is_boss:
+                return (SCREEN_WIDTH - 200, self.rect.centery)
+            else:
+                return (random.randint(SCREEN_WIDTH - 400, SCREEN_WIDTH - 150), self.rect.centery)
+        elif self.flight_direction == 'left':
+            # Horizontal left: enemies stop partway from left edge
+            if self.is_boss:
+                return (200, self.rect.centery)
+            else:
+                return (random.randint(150, 400), self.rect.centery)
+        elif self.flight_direction == 'down':
+            # Inverted vertical: enemies stop partway up
+            if self.is_boss:
+                return (self.rect.centerx, SCREEN_HEIGHT - 120)
+            else:
+                return (self.rect.centerx, random.randint(SCREEN_HEIGHT - 300, SCREEN_HEIGHT - 80))
+        return (self.rect.centerx, 150)
     
     def _select_movement_pattern(self):
         """Select movement pattern based on enemy type"""
@@ -455,13 +541,8 @@ class Enemy(pygame.sprite.Sprite):
             self.pattern = self.PATTERN_DRIFT
     
     def _get_target_y(self):
-        """Get target Y position based on enemy type"""
-        if self.is_boss:
-            return 120
-        elif self.enemy_type == 'bestower':
-            return random.randint(80, 180)
-        else:
-            return random.randint(80, 300)
+        """Get target Y position based on enemy type (legacy, use _get_target_position)"""
+        return self.target_pos[1] if hasattr(self, 'target_pos') else 150
     
     def _create_image(self):
         """Load enemy ship image from SVG based on type"""
@@ -529,16 +610,35 @@ class Enemy(pygame.sprite.Sprite):
     def update(self, player_rect=None):
         """Update enemy position and behavior with advanced patterns"""
         self.pattern_timer += 0.05
-        
-        # Enter phase - move to target Y first
+
+        # Enter phase - move to target position based on direction
         if not self.entered:
-            if self.rect.centery < self.target_y:
-                self.rect.y += self.speed * 1.5
-            else:
+            target_x, target_y = self.target_pos
+            entered_x = True
+            entered_y = True
+
+            if self.flight_direction == 'up':
+                if self.rect.centery < target_y:
+                    self.rect.y += self.speed * 1.5
+                    entered_y = False
+            elif self.flight_direction == 'right':
+                if self.rect.centerx > target_x:
+                    self.rect.x -= self.speed * 1.5
+                    entered_x = False
+            elif self.flight_direction == 'left':
+                if self.rect.centerx < target_x:
+                    self.rect.x += self.speed * 1.5
+                    entered_x = False
+            elif self.flight_direction == 'down':
+                if self.rect.centery > target_y:
+                    self.rect.y -= self.speed * 1.5
+                    entered_y = False
+
+            if entered_x and entered_y:
                 self.entered = True
             return
-        
-        # Execute movement pattern
+
+        # Execute movement pattern (adjusted for direction)
         if self.pattern == self.PATTERN_DRIFT:
             self._move_drift()
         elif self.pattern == self.PATTERN_SINE:
@@ -551,94 +651,201 @@ class Enemy(pygame.sprite.Sprite):
             self._move_swoop(player_rect)
         elif self.pattern == self.PATTERN_FLANK:
             self._move_flank(player_rect)
-        
+
         # Boss phase changes
         if self.is_boss:
             self._update_boss_behavior()
-        
-        # Keep on screen horizontally
-        if self.rect.left < 10:
-            self.rect.left = 10
-        elif self.rect.right > SCREEN_WIDTH - 10:
-            self.rect.right = SCREEN_WIDTH - 10
+
+        # Keep on screen (both directions)
+        margin = 10
+        self.rect.left = max(margin, self.rect.left)
+        self.rect.right = min(SCREEN_WIDTH - margin, self.rect.right)
+        self.rect.top = max(margin, self.rect.top)
+        self.rect.bottom = min(SCREEN_HEIGHT - margin, self.rect.bottom)
     
     def _move_drift(self):
-        """Basic side-to-side drift"""
-        self.rect.x += math.sin(self.pattern_timer) * self.speed
-        # Slow vertical drift
-        if self.rect.centery < self.target_y:
-            self.rect.y += self.speed * 0.3
+        """Basic drift perpendicular to flight direction"""
+        target_x, target_y = self.target_pos
+        if self.flight_direction in ('up', 'down'):
+            # Horizontal drift for vertical flight
+            self.rect.x += math.sin(self.pattern_timer) * self.speed
+            # Slow drift toward target
+            if self.flight_direction == 'up' and self.rect.centery < target_y:
+                self.rect.y += self.speed * 0.3
+            elif self.flight_direction == 'down' and self.rect.centery > target_y:
+                self.rect.y -= self.speed * 0.3
+        else:
+            # Vertical drift for horizontal flight
+            self.rect.y += math.sin(self.pattern_timer) * self.speed
+            # Slow drift toward target
+            if self.flight_direction == 'right' and self.rect.centerx > target_x:
+                self.rect.x -= self.speed * 0.3
+            elif self.flight_direction == 'left' and self.rect.centerx < target_x:
+                self.rect.x += self.speed * 0.3
     
     def _move_sine(self):
-        """Smooth sine wave movement"""
+        """Smooth sine wave movement (direction-aware)"""
+        target_x, target_y = self.target_pos
         amplitude = 80 + 40 * math.sin(self.pattern_timer * 0.3)
-        self.rect.centerx = SCREEN_WIDTH // 2 + math.sin(self.pattern_timer * 1.5) * amplitude
-        # Gentle vertical oscillation
-        self.rect.centery = self.target_y + math.sin(self.pattern_timer * 0.8) * 30
+
+        if self.flight_direction in ('up', 'down'):
+            # Horizontal sine for vertical flight
+            self.rect.centerx = SCREEN_WIDTH // 2 + math.sin(self.pattern_timer * 1.5) * amplitude
+            self.rect.centery = target_y + math.sin(self.pattern_timer * 0.8) * 30
+        else:
+            # Vertical sine for horizontal flight
+            self.rect.centery = SCREEN_HEIGHT // 2 + math.sin(self.pattern_timer * 1.5) * amplitude
+            self.rect.centerx = target_x + math.sin(self.pattern_timer * 0.8) * 30
     
     def _move_zigzag(self):
-        """Sharp zigzag pattern"""
+        """Sharp zigzag pattern (direction-aware)"""
         # Change direction every ~60 frames
         direction = 1 if int(self.pattern_timer * 2) % 2 == 0 else -1
-        self.rect.x += direction * self.speed * 2
-        # Slight downward movement on direction change
-        if abs(math.sin(self.pattern_timer * 2)) < 0.1:
-            self.rect.y += self.speed
-    
+
+        if self.flight_direction in ('up', 'down'):
+            self.rect.x += direction * self.speed * 2
+            # Movement toward player on direction change
+            if abs(math.sin(self.pattern_timer * 2)) < 0.1:
+                if self.flight_direction == 'up':
+                    self.rect.y += self.speed
+                else:
+                    self.rect.y -= self.speed
+        else:
+            self.rect.y += direction * self.speed * 2
+            if abs(math.sin(self.pattern_timer * 2)) < 0.1:
+                if self.flight_direction == 'right':
+                    self.rect.x -= self.speed
+                else:
+                    self.rect.x += self.speed
+
     def _move_circle(self):
-        """Circular strafing pattern"""
+        """Circular strafing pattern (direction-aware)"""
+        target_x, target_y = self.target_pos
         self.rect.centerx = self.circle_center_x + math.cos(self.pattern_timer) * self.circle_radius
-        self.rect.centery = self.target_y + math.sin(self.pattern_timer) * (self.circle_radius * 0.5)
+        self.rect.centery = self.circle_center_y + math.sin(self.pattern_timer) * (self.circle_radius * 0.5)
+
         # Slowly drift the center
-        self.circle_center_x += math.sin(self.pattern_timer * 0.2) * 0.5
-        self.circle_center_x = max(100, min(SCREEN_WIDTH - 100, self.circle_center_x))
+        if self.flight_direction in ('up', 'down'):
+            self.circle_center_x += math.sin(self.pattern_timer * 0.2) * 0.5
+            self.circle_center_x = max(100, min(SCREEN_WIDTH - 100, self.circle_center_x))
+        else:
+            self.circle_center_y += math.sin(self.pattern_timer * 0.2) * 0.5
+            self.circle_center_y = max(100, min(SCREEN_HEIGHT - 100, self.circle_center_y))
     
     def _move_swoop(self, player_rect):
-        """Dive toward player then retreat"""
+        """Dive toward player then retreat (direction-aware)"""
+        target_x, target_y = self.target_pos
+
         if self.swoop_state == 'enter':
-            if self.rect.centery >= self.target_y:
+            # Check if entered based on direction
+            entered = False
+            if self.flight_direction == 'up':
+                entered = self.rect.centery >= target_y
+            elif self.flight_direction == 'down':
+                entered = self.rect.centery <= target_y
+            elif self.flight_direction == 'right':
+                entered = self.rect.centerx <= target_x
+            elif self.flight_direction == 'left':
+                entered = self.rect.centerx >= target_x
+            if entered:
                 self.swoop_state = 'aim'
+
         elif self.swoop_state == 'aim':
-            # Wait and aim at player
             if self.pattern_timer % (math.pi * 2) < 0.1:
                 self.swoop_state = 'dive'
                 if player_rect:
                     self.swoop_target_x = player_rect.centerx
+                    self.swoop_target_y = player_rect.centery
                 else:
                     self.swoop_target_x = SCREEN_WIDTH // 2
+                    self.swoop_target_y = SCREEN_HEIGHT // 2
+
         elif self.swoop_state == 'dive':
-            # Dive toward player position
-            self.rect.y += self.speed * 3
-            dx = self.swoop_target_x - self.rect.centerx
-            self.rect.x += max(-self.speed * 2, min(self.speed * 2, dx * 0.1))
-            if self.rect.centery > SCREEN_HEIGHT * 0.6:
-                self.swoop_state = 'retreat'
+            # Dive toward player based on direction
+            if self.flight_direction == 'up':
+                self.rect.y += self.speed * 3
+                dx = self.swoop_target_x - self.rect.centerx
+                self.rect.x += max(-self.speed * 2, min(self.speed * 2, dx * 0.1))
+                if self.rect.centery > SCREEN_HEIGHT * 0.6:
+                    self.swoop_state = 'retreat'
+            elif self.flight_direction == 'down':
+                self.rect.y -= self.speed * 3
+                dx = self.swoop_target_x - self.rect.centerx
+                self.rect.x += max(-self.speed * 2, min(self.speed * 2, dx * 0.1))
+                if self.rect.centery < SCREEN_HEIGHT * 0.4:
+                    self.swoop_state = 'retreat'
+            elif self.flight_direction == 'right':
+                self.rect.x -= self.speed * 3
+                dy = self.swoop_target_y - self.rect.centery
+                self.rect.y += max(-self.speed * 2, min(self.speed * 2, dy * 0.1))
+                if self.rect.centerx < SCREEN_WIDTH * 0.4:
+                    self.swoop_state = 'retreat'
+            elif self.flight_direction == 'left':
+                self.rect.x += self.speed * 3
+                dy = self.swoop_target_y - self.rect.centery
+                self.rect.y += max(-self.speed * 2, min(self.speed * 2, dy * 0.1))
+                if self.rect.centerx > SCREEN_WIDTH * 0.6:
+                    self.swoop_state = 'retreat'
+
         elif self.swoop_state == 'retreat':
-            # Retreat back up
-            self.rect.y -= self.speed * 2
-            if self.rect.centery < self.target_y:
-                self.swoop_state = 'aim'
-        
-        # Horizontal drift while aiming
+            # Retreat back to target position
+            if self.flight_direction == 'up':
+                self.rect.y -= self.speed * 2
+                if self.rect.centery < target_y:
+                    self.swoop_state = 'aim'
+            elif self.flight_direction == 'down':
+                self.rect.y += self.speed * 2
+                if self.rect.centery > target_y:
+                    self.swoop_state = 'aim'
+            elif self.flight_direction == 'right':
+                self.rect.x += self.speed * 2
+                if self.rect.centerx > target_x:
+                    self.swoop_state = 'aim'
+            elif self.flight_direction == 'left':
+                self.rect.x -= self.speed * 2
+                if self.rect.centerx < target_x:
+                    self.swoop_state = 'aim'
+
+        # Drift while aiming
         if self.swoop_state == 'aim':
-            self.rect.x += math.sin(self.pattern_timer * 2) * self.speed
-    
+            if self.flight_direction in ('up', 'down'):
+                self.rect.x += math.sin(self.pattern_timer * 2) * self.speed
+            else:
+                self.rect.y += math.sin(self.pattern_timer * 2) * self.speed
+
     def _move_flank(self, player_rect):
-        """Move to screen edge then track player"""
-        target_x = 80 if self.flank_side < 0 else SCREEN_WIDTH - 80
-        
-        # Move to flanking position
-        dx = target_x - self.rect.centerx
-        if abs(dx) > 5:
-            self.rect.x += max(-self.speed, min(self.speed, dx * 0.05))
-        
-        # Track player Y position loosely
-        if player_rect:
-            target_y = min(player_rect.centery - 200, 250)
-            target_y = max(80, target_y)
+        """Move to screen edge then track player (direction-aware)"""
+        if self.flight_direction in ('up', 'down'):
+            # Flank horizontally for vertical flight
+            target_x = 80 if self.flank_side < 0 else SCREEN_WIDTH - 80
+            dx = target_x - self.rect.centerx
+            if abs(dx) > 5:
+                self.rect.x += max(-self.speed, min(self.speed, dx * 0.05))
+
+            if player_rect:
+                if self.flight_direction == 'up':
+                    target_y = min(player_rect.centery - 200, 250)
+                else:
+                    target_y = max(player_rect.centery + 200, SCREEN_HEIGHT - 250)
+                target_y = max(80, min(SCREEN_HEIGHT - 80, target_y))
+                dy = target_y - self.rect.centery
+                self.rect.y += max(-self.speed * 0.5, min(self.speed * 0.5, dy * 0.02))
+        else:
+            # Flank vertically for horizontal flight
+            target_y = 80 if self.flank_side < 0 else SCREEN_HEIGHT - 80
             dy = target_y - self.rect.centery
-            self.rect.y += max(-self.speed * 0.5, min(self.speed * 0.5, dy * 0.02))
-        
+            if abs(dy) > 5:
+                self.rect.y += max(-self.speed, min(self.speed, dy * 0.05))
+
+            if player_rect:
+                if self.flight_direction == 'right':
+                    target_x = max(player_rect.centerx + 200, SCREEN_WIDTH - 250)
+                else:
+                    target_x = min(player_rect.centerx - 200, 250)
+                target_x = max(80, min(SCREEN_WIDTH - 80, target_x))
+                dx = target_x - self.rect.centerx
+                self.rect.x += max(-self.speed * 0.5, min(self.speed * 0.5, dx * 0.02))
+
         # Occasionally switch sides
         if random.random() < 0.002:
             self.flank_side *= -1
@@ -719,8 +926,8 @@ class Enemy(pygame.sprite.Sprite):
 
 class RefugeePod(pygame.sprite.Sprite):
     """Escape pod with refugees"""
-    
-    def __init__(self, x, y, count=1):
+
+    def __init__(self, x, y, count=1, drift_direction=None):
         super().__init__()
         self.image = pygame.Surface((16, 16), pygame.SRCALPHA)
         pygame.draw.circle(self.image, (200, 200, 200), (8, 8), 7)
@@ -728,32 +935,50 @@ class RefugeePod(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
         self.count = count
         self.lifetime = 300  # frames until disappear
-        self.drift_x = random.uniform(-0.5, 0.5)
-        self.drift_y = random.uniform(0.5, 1.5)
-    
+
+        # Drift in the scroll direction (opposite to flight direction)
+        if drift_direction:
+            dx, dy = drift_direction
+            self.drift_x = dx * random.uniform(0.5, 1.5) + random.uniform(-0.3, 0.3)
+            self.drift_y = dy * random.uniform(0.5, 1.5) + random.uniform(-0.3, 0.3)
+        else:
+            self.drift_x = random.uniform(-0.5, 0.5)
+            self.drift_y = random.uniform(0.5, 1.5)
+
     def update(self):
         self.rect.x += self.drift_x
         self.rect.y += self.drift_y
         self.lifetime -= 1
-        
+
         # Blink when about to expire
         if self.lifetime < 60 and self.lifetime % 10 < 5:
             self.image.set_alpha(128)
         else:
             self.image.set_alpha(255)
-        
-        if self.lifetime <= 0 or self.rect.top > SCREEN_HEIGHT:
+
+        # Check if off screen (any direction)
+        if (self.lifetime <= 0 or self.rect.top > SCREEN_HEIGHT or
+                self.rect.bottom < 0 or self.rect.left > SCREEN_WIDTH or
+                self.rect.right < 0):
             self.kill()
 
 
 class Powerup(pygame.sprite.Sprite):
     """Powerup pickup - simple and readable"""
 
-    def __init__(self, x, y, powerup_type):
+    def __init__(self, x, y, powerup_type, drift_direction=None):
         super().__init__()
         self.powerup_type = powerup_type
         self.data = POWERUP_TYPES[powerup_type]
         self.speed = 2
+
+        # Drift in scroll direction (opposite to flight direction)
+        if drift_direction:
+            self.drift_x = drift_direction[0] * self.speed
+            self.drift_y = drift_direction[1] * self.speed
+        else:
+            self.drift_x = 0
+            self.drift_y = self.speed
 
         # Simple 20x20 powerup with colored core
         self.image = pygame.Surface((20, 20), pygame.SRCALPHA)
@@ -763,8 +988,11 @@ class Powerup(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
 
     def update(self):
-        self.rect.y += self.speed
-        if self.rect.top > SCREEN_HEIGHT:
+        self.rect.x += self.drift_x
+        self.rect.y += self.drift_y
+        # Check if off screen (any direction)
+        if (self.rect.top > SCREEN_HEIGHT or self.rect.bottom < 0 or
+                self.rect.left > SCREEN_WIDTH or self.rect.right < 0):
             self.kill()
 
 

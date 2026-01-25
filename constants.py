@@ -6,6 +6,46 @@ SCREEN_WIDTH = 1800
 SCREEN_HEIGHT = 800
 FPS = 60
 
+# Flight directions for levels
+# Direction the player is "flying" towards (enemies come from opposite direction)
+DIRECTION_UP = 'up'       # Classic vertical shooter (enemies from top)
+DIRECTION_RIGHT = 'right' # Horizontal shooter (enemies from right) - like Gradius
+DIRECTION_LEFT = 'left'   # Horizontal shooter (enemies from left)
+DIRECTION_DOWN = 'down'   # Inverted vertical (enemies from bottom)
+
+# Direction vectors for each flight direction
+# (scroll_dx, scroll_dy, enemy_spawn_side, player_start_x, player_start_y)
+DIRECTION_CONFIG = {
+    DIRECTION_UP: {
+        'scroll': (0, 1),           # Background scrolls down
+        'enemy_spawn': 'top',       # Enemies come from top
+        'player_start': (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80),
+        'rotation': 0,              # Ship faces up (default)
+        'fire_default': (0, -1),    # Fire upward
+    },
+    DIRECTION_RIGHT: {
+        'scroll': (-1, 0),          # Background scrolls left
+        'enemy_spawn': 'right',     # Enemies come from right
+        'player_start': (100, SCREEN_HEIGHT // 2),
+        'rotation': -90,            # Ship faces right
+        'fire_default': (1, 0),     # Fire right
+    },
+    DIRECTION_LEFT: {
+        'scroll': (1, 0),           # Background scrolls right
+        'enemy_spawn': 'left',      # Enemies come from left
+        'player_start': (SCREEN_WIDTH - 100, SCREEN_HEIGHT // 2),
+        'rotation': 90,             # Ship faces left
+        'fire_default': (-1, 0),    # Fire left
+    },
+    DIRECTION_DOWN: {
+        'scroll': (0, -1),          # Background scrolls up
+        'enemy_spawn': 'bottom',    # Enemies come from bottom
+        'player_start': (SCREEN_WIDTH // 2, 80),
+        'rotation': 180,            # Ship faces down
+        'fire_default': (0, 1),     # Fire downward
+    },
+}
+
 # Screen shake
 SHAKE_SMALL = 3
 SHAKE_MEDIUM = 6
@@ -800,7 +840,8 @@ STAGES_MINMATAR = [
         'waves': 5,
         'enemies': ['executioner', 'punisher', 'drone'],
         'industrial_chance': 0.1,
-        'boss': None
+        'boss': None,
+        'direction': DIRECTION_UP,  # Classic vertical start
     },
     {
         'name': 'Amarr Patrol Interdiction',
@@ -808,7 +849,8 @@ STAGES_MINMATAR = [
         'waves': 7,
         'enemies': ['executioner', 'punisher', 'coercer', 'drone'],
         'industrial_chance': 0.15,
-        'boss': 'omen'
+        'boss': 'omen',
+        'direction': DIRECTION_RIGHT,  # Horizontal - flying right through patrol
     },
     {
         'name': 'Slave Colony Liberation',
@@ -816,7 +858,8 @@ STAGES_MINMATAR = [
         'waves': 8,
         'enemies': ['executioner', 'punisher', 'coercer', 'omen', 'interceptor'],
         'industrial_chance': 0.25,
-        'boss': None
+        'boss': None,
+        'direction': DIRECTION_UP,  # Vertical assault
     },
     {
         'name': 'Gate Assault',
@@ -824,7 +867,8 @@ STAGES_MINMATAR = [
         'waves': 10,
         'enemies': ['punisher', 'coercer', 'omen', 'maller', 'interceptor', 'bomber'],
         'industrial_chance': 0.15,
-        'boss': 'apocalypse'
+        'boss': 'apocalypse',
+        'direction': DIRECTION_LEFT,  # Flying left toward the gate
     },
     {
         'name': 'Final Push - Amarr Station',
@@ -832,7 +876,8 @@ STAGES_MINMATAR = [
         'waves': 12,
         'enemies': ['coercer', 'omen', 'maller', 'harbinger', 'interceptor', 'bomber', 'dragoon'],
         'industrial_chance': 0.2,
-        'boss': 'abaddon'
+        'boss': 'abaddon',
+        'direction': DIRECTION_RIGHT,  # Final horizontal push
     }
 ]
 
@@ -844,7 +889,8 @@ STAGES_AMARR = [
         'waves': 5,
         'enemies': ['rifter', 'slasher', 'drone'],
         'industrial_chance': 0.1,
-        'boss': None
+        'boss': None,
+        'direction': DIRECTION_UP,
     },
     {
         'name': 'Rebel Convoy Ambush',
@@ -852,7 +898,8 @@ STAGES_AMARR = [
         'waves': 7,
         'enemies': ['rifter', 'slasher', 'thrasher', 'drone'],
         'industrial_chance': 0.15,
-        'boss': 'stabber'
+        'boss': 'stabber',
+        'direction': DIRECTION_LEFT,  # Intercepting from the right
     },
     {
         'name': 'Terrorist Cell Raid',
@@ -860,7 +907,8 @@ STAGES_AMARR = [
         'waves': 8,
         'enemies': ['rifter', 'slasher', 'thrasher', 'stabber', 'interceptor'],
         'industrial_chance': 0.25,
-        'boss': None
+        'boss': None,
+        'direction': DIRECTION_RIGHT,
     },
     {
         'name': 'Gate Defense',
@@ -868,7 +916,8 @@ STAGES_AMARR = [
         'waves': 10,
         'enemies': ['slasher', 'thrasher', 'stabber', 'rupture', 'interceptor', 'bomber'],
         'industrial_chance': 0.15,
-        'boss': 'hurricane'
+        'boss': 'hurricane',
+        'direction': DIRECTION_UP,
     },
     {
         'name': 'Crushing the Rebellion',
@@ -876,7 +925,8 @@ STAGES_AMARR = [
         'waves': 12,
         'enemies': ['thrasher', 'stabber', 'rupture', 'hurricane', 'interceptor', 'bomber'],
         'industrial_chance': 0.2,
-        'boss': 'maelstrom'
+        'boss': 'maelstrom',
+        'direction': DIRECTION_RIGHT,
     }
 ]
 
@@ -888,7 +938,8 @@ STAGES_CALDARI = [
         'waves': 5,
         'enemies': ['tristan', 'atron', 'drone'],
         'industrial_chance': 0.1,
-        'boss': None
+        'boss': None,
+        'direction': DIRECTION_UP,
     },
     {
         'name': 'Trade Lane Defense',
@@ -896,7 +947,8 @@ STAGES_CALDARI = [
         'waves': 7,
         'enemies': ['tristan', 'atron', 'incursus', 'catalyst'],
         'industrial_chance': 0.15,
-        'boss': 'thorax'
+        'boss': 'thorax',
+        'direction': DIRECTION_RIGHT,  # Following the trade lane
     },
     {
         'name': 'Rogue Drone Infestation',
@@ -904,7 +956,8 @@ STAGES_CALDARI = [
         'waves': 8,
         'enemies': ['drone', 'interceptor', 'vexor'],
         'industrial_chance': 0.1,
-        'boss': None
+        'boss': None,
+        'direction': DIRECTION_UP,
     },
     {
         'name': 'Outer Ring Assault',
@@ -912,7 +965,8 @@ STAGES_CALDARI = [
         'waves': 10,
         'enemies': ['vexor', 'thorax', 'brutix', 'bomber'],
         'industrial_chance': 0.2,
-        'boss': 'myrmidon'
+        'boss': 'myrmidon',
+        'direction': DIRECTION_LEFT,  # Pushing into enemy space
     },
     {
         'name': 'Federation Dreadnought',
@@ -920,7 +974,8 @@ STAGES_CALDARI = [
         'waves': 12,
         'enemies': ['brutix', 'myrmidon', 'dominix', 'bomber'],
         'industrial_chance': 0.25,
-        'boss': 'megathron'
+        'boss': 'megathron',
+        'direction': DIRECTION_RIGHT,
     }
 ]
 
@@ -932,7 +987,8 @@ STAGES_GALLENTE = [
         'waves': 5,
         'enemies': ['kestrel', 'condor', 'drone'],
         'industrial_chance': 0.1,
-        'boss': None
+        'boss': None,
+        'direction': DIRECTION_UP,
     },
     {
         'name': 'Corporate Outpost Raid',
@@ -940,7 +996,8 @@ STAGES_GALLENTE = [
         'waves': 7,
         'enemies': ['kestrel', 'merlin', 'condor', 'cormorant'],
         'industrial_chance': 0.15,
-        'boss': 'caracal'
+        'boss': 'caracal',
+        'direction': DIRECTION_LEFT,  # Raiding from right side
     },
     {
         'name': 'Missile Barrage',
@@ -948,7 +1005,8 @@ STAGES_GALLENTE = [
         'waves': 8,
         'enemies': ['caracal', 'moa', 'cormorant', 'interceptor'],
         'industrial_chance': 0.1,
-        'boss': None
+        'boss': None,
+        'direction': DIRECTION_UP,
     },
     {
         'name': 'Drake Wall Assault',
@@ -956,7 +1014,8 @@ STAGES_GALLENTE = [
         'waves': 10,
         'enemies': ['caracal', 'moa', 'drake', 'ferox', 'bomber'],
         'industrial_chance': 0.2,
-        'boss': 'drake'
+        'boss': 'drake',
+        'direction': DIRECTION_RIGHT,  # Breaking through the wall
     },
     {
         'name': 'State Flagship',
@@ -964,7 +1023,8 @@ STAGES_GALLENTE = [
         'waves': 12,
         'enemies': ['drake', 'ferox', 'raven', 'bomber'],
         'industrial_chance': 0.25,
-        'boss': 'rokh'
+        'boss': 'rokh',
+        'direction': DIRECTION_LEFT,
     }
 ]
 
