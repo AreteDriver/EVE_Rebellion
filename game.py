@@ -4031,10 +4031,9 @@ class Game:
 
         # Controller update - MUST happen before early return so menus work!
         if self.controller:
+            # Disable haptics entirely on menus (stops Xbox controller vibration)
+            self.controller.haptics_enabled = self.state in ('playing', 'paused')
             self.controller.update(dt)
-            # Stop haptics when not actively playing
-            if self.state not in ('playing', 'paused'):
-                self.controller.set_heat_level(0)
 
         # Handle splash screen
         if self.state == 'splash':

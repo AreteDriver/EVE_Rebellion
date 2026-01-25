@@ -140,6 +140,7 @@ class ControllerInput:
         # Haptic state
         self.current_rumble = 0.0
         self.heat_level = 0.0  # 0.0 to 1.0
+        self.haptics_enabled = True  # Disable on menus to stop vibration
 
         # Input lock (for death sequence)
         self.input_locked = False
@@ -299,8 +300,8 @@ class ControllerInput:
             self.buttons_pressed.add(button)
             self.buttons_just_pressed.add(button)
             
-            # Haptic spike on important buttons
-            if button in [0, 1, 2, 3]:  # Face buttons
+            # Haptic spike on important buttons (only during gameplay)
+            if self.haptics_enabled and button in [0, 1, 2, 3]:  # Face buttons
                 self._haptic_spike(self.config.haptic_decision)
         
         elif event.type == pygame.JOYBUTTONUP:
@@ -438,16 +439,14 @@ class ControllerInput:
         if not self.connected or not hasattr(self.joystick, 'rumble'):
             return
 
-        # Only rumble if heat level is actively set (during gameplay)
-        if self.heat_level <= 0:
-            # Stop rumble when not in gameplay
-            if self.current_rumble > 0:
-                self.current_rumble = 0
-                try:
-                    # Duration must be non-zero to actually stop rumble on Xbox controllers
-                    self.joystick.rumble(0, 0, 100)
-                except Exception:
-                    pass
+        # Stop all rumble when haptics disabled (menus) or no heat
+        if not self.haptics_enabled or self.heat_level <= 0:
+            # Always send stop command when haptics disabled (Xbox controllers need this)
+            try:
+                self.joystick.rumble(0, 0, 100)
+            except Exception:
+                pass
+            self.current_rumble = 0
             return
 
         # Rumble intensity scales with heat (no base rumble)
@@ -468,9 +467,9 @@ class ControllerInput:
     
     def _haptic_spike(self, intensity: float):
         """Trigger sharp haptic spike (lock-on, decision, death)"""
-        if not self.connected or not hasattr(self.joystick, 'rumble'):
+        if not self.haptics_enabled or not self.connected or not hasattr(self.joystick, 'rumble'):
             return
-        
+
         try:
             self.joystick.rumble(intensity, intensity, 200)
         except Exception:
