@@ -15,7 +15,7 @@ Visual effects for:
 import pygame
 import math
 import random
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from dataclasses import dataclass
 
 
@@ -82,8 +82,8 @@ class WeaponEffects:
             alpha = int(255 * (particle.life / particle.max_life)) if particle.fade else 255
             alpha = max(0, min(255, alpha))
             
-            # Create color with alpha
-            color = (*particle.color, alpha)
+            # Create color with alpha (unused - pygame.draw doesn't support alpha)
+            _color = (*particle.color, alpha)
             
             # Draw particle
             if particle.size > 2:

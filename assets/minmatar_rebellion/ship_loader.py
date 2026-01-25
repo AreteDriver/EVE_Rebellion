@@ -1,7 +1,6 @@
 """SVG ship loader for Minmatar Rebellion"""
 import pygame
 import os
-import xml.etree.ElementTree as ET
 from io import BytesIO
 
 
@@ -173,15 +172,11 @@ def load_ship_image(ship_name, width, height, color=None):
 def check_svg_support():
     """Check if SVG loading libraries are available"""
     try:
-        import cairosvg
-        return True
-    except ImportError:
-        try:
-            from PIL import Image
-            import cairosvg
-            return True
-        except ImportError:
-            return False
+        import importlib.util
+        return (importlib.util.find_spec("cairosvg") is not None and
+                importlib.util.find_spec("PIL") is not None)
+    except Exception:
+        return False
 
 
 if __name__ == "__main__":

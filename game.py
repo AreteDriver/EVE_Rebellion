@@ -1,11 +1,9 @@
 """Main game logic for Minmatar Rebellion"""
 import pygame
 import random
-import math
 from constants import *
-from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
-                     RefugeePod, Powerup, Explosion, Star)
-from sounds import get_sound_manager, get_music_manager, play_sound
+from sprites import (Player, Enemy, RefugeePod, Powerup, Explosion, Star)
+from sounds import get_sound_manager, get_music_manager
 from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground
 
@@ -764,7 +762,7 @@ class Game:
         # Stage/Wave
         if self.current_stage < len(STAGES):
             y += 30
-            stage = STAGES[self.current_stage]
+            _stage = STAGES[self.current_stage]  # Reserved for future use
             text = self.font_small.render(f"Stage {self.current_stage + 1}", True, COLOR_TEXT)
             self.render_surface.blit(text, (x, y))
         
@@ -809,8 +807,8 @@ class Game:
         y += 30
         sound_status = "ON" if self.sound_enabled else "OFF"
         music_status = "ON" if self.music_enabled else "OFF"
-        sound_color = (100, 255, 100) if self.sound_enabled else (255, 100, 100)
-        music_color = (100, 255, 100) if self.music_enabled else (255, 100, 100)
+        _sound_color = (100, 255, 100) if self.sound_enabled else (255, 100, 100)  # Reserved
+        _music_color = (100, 255, 100) if self.music_enabled else (255, 100, 100)  # Reserved
         
         text = self.font_small.render(f"[S] Sound: {sound_status}  [M] Music: {music_status}", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))

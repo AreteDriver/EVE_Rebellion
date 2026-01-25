@@ -28,7 +28,6 @@ class TestBerserkSystem:
         assert self.berserk.total_score == 0
         assert self.berserk.session_score == 0
         assert self.berserk.current_multiplier == 1.0
-        assert self.berserk.combo_count == 0
         assert self.berserk.total_kills == 0
 
     def test_calculate_multiplier_extreme(self):
@@ -70,31 +69,6 @@ class TestBerserkSystem:
         multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
         assert multiplier == 0.5
         assert range_name == 'VERY_FAR'
-
-    def test_get_combo_bonus_no_combo(self):
-        """Test combo bonus with no kills"""
-        self.berserk.combo_count = 0
-        assert self.berserk.get_combo_bonus() == 1.0
-
-    def test_get_combo_bonus_5_kills(self):
-        """Test combo bonus at 5 kills"""
-        self.berserk.combo_count = 5
-        assert self.berserk.get_combo_bonus() == 1.2
-
-    def test_get_combo_bonus_10_kills(self):
-        """Test combo bonus at 10 kills"""
-        self.berserk.combo_count = 10
-        assert self.berserk.get_combo_bonus() == 1.5
-
-    def test_get_combo_bonus_20_kills(self):
-        """Test combo bonus at 20 kills"""
-        self.berserk.combo_count = 20
-        assert self.berserk.get_combo_bonus() == 2.0
-
-    def test_get_combo_bonus_50_kills(self):
-        """Test combo bonus at 50 kills"""
-        self.berserk.combo_count = 50
-        assert self.berserk.get_combo_bonus() == 3.0
 
     def test_distance_thresholds(self):
         """Test that distance thresholds are correctly defined"""

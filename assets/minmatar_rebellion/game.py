@@ -1,11 +1,9 @@
 """Main game logic for Minmatar Rebellion"""
 import pygame
 import random
-import math
 from constants import *
-from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
-                     RefugeePod, Powerup, Explosion, Star)
-from sounds import get_sound_manager, get_music_manager, play_sound
+from sprites import (Player, Enemy, RefugeePod, Powerup, Explosion, Star)
+from sounds import get_sound_manager, get_music_manager
 from controller import Controller
 
 
@@ -665,7 +663,7 @@ class Game:
         
         if self.current_stage < len(STAGES):
             y += 30
-            stage = STAGES[self.current_stage]
+            _stage = STAGES[self.current_stage]  # Reserved for future use
             text = self.font_small.render(f"Stage {self.current_stage + 1}", True, COLOR_TEXT)
             self.render_surface.blit(text, (x, y))
         

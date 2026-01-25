@@ -366,7 +366,7 @@ from core.tutorial import Tutorial
         
         # Read original content
         content = self.read_file()
-        original_content = content
+        _original_content = content  # Kept for potential rollback
         
         print("Applying integrations...\n")
         
