@@ -1,128 +1,176 @@
-# Quick Reference - EVE Rebellion Multi-Repo Setup
+# Devil Blade Reboot Integration - Quick Reference
 
-## 🎯 What This Does
+## 🎮 Core Concept
+**Risk = Reward**: Closer kills = Higher multipliers
 
-**Solves your GitHub storage problem** by splitting assets from code:
-- Before: 1 repo with 267 SVGs = 475% over storage limit ❌
-- After: 2 repos, main game repo <5MB ✅
+## 📏 Distance Ranges
 
-## 📁 Repository Structure
+| Distance | Multiplier | Risk Level | Color |
+|----------|-----------|------------|--------|
+| 0-80px   | **5.0x**  | EXTREME 🔴 | Red |
+| 80-150px | **3.0x**  | CLOSE 🟠 | Orange |
+| 150-250px| **1.5x**  | MEDIUM 🟡 | Yellow |
+| 250-400px| **1.0x**  | FAR 🟢 | Green |
+| 400+px   | **0.5x**  | COWARD 🔵 | Blue |
 
-### EVE_Ships (Asset Library)
-```
-aretecaresolutions/EVE_Ships
-├── ships/
-│   ├── minmatar/     ← Your 267 SVG files organized here
-│   ├── amarr/
-│   ├── caldari/
-│   └── gallente/
-├── metadata/
-│   └── ship_manifest.json  ← Lists which ships to use
-└── tools/
-    └── validate_ships.py   ← Checks everything
-```
+## ⚡ Quick Implementation
 
-### EVE_Rebellion (Game Code)
-```
-aretecaresolutions/EVE_Rebellion
-├── main.py              ← Your game code
-├── build_all.sh         ← NEW: Builds AppImage + .exe
-├── quick_build.sh       ← NEW: Fast dev builds
-└── assets/
-    └── ships/           ← Empty! Filled during build
-```
+### Minimal Integration (5 minutes)
+```python
+# 1. Import
+from berserk_system import BerserkSystem
 
-## 🚀 Build Process
+# 2. Initialize
+self.berserk = BerserkSystem()
 
-```bash
-# The build script automatically:
-1. git clone EVE_Ships (sparse checkout - only needed ships)
-2. Copy 16 ships to assets/ships/
-3. Build AppImage (Linux)
-4. Build .exe (Windows)
-5. Clean up temporary files
+# 3. On enemy kill
+score = self.berserk.register_kill(
+    100,  # base score
+    player_pos,
+    enemy_pos
+)
+
+# 4. Update each frame
+self.berserk.update()
+
+# 5. Draw HUD
+self.berserk.draw_hud(screen, x, y, font_small, font_large)
 ```
 
-**Result:** 
-- AppImage: ~15-25MB
-- Windows .exe: ~20-30MB
-- Source repo: <5MB
+### Full Integration (30 minutes)
+Add visual effects, screen shake, danger zones, stats tracking
+→ See DEVIL_BLADE_INTEGRATION.md
 
-## ⚡ Quick Commands
+## 🎨 Visual Effects
 
-```bash
-# First time setup
-./build_all.sh --all
+```python
+from devil_blade_effects import EffectManager
 
-# Daily development
-./quick_build.sh
+effects = EffectManager()
 
-# Build specific platform
-./build_all.sh --appimage  # Linux only
-./build_all.sh --windows   # Windows only
+# Explosion
+effects.add_explosion(pos, color, particles=30, spread=8)
 
-# Just run the game (after first build)
-python main.py
+# Screen shake
+effects.add_shake(intensity=5, duration=10)
+
+# Flash
+effects.add_flash((255,255,255), duration=10, alpha=180)
+
+# Trail
+effects.add_trail(start, end, color, lifetime=5)
+
+# Impact ring
+effects.add_impact_ring(pos, color, radius=30)
+
+# Update & draw
+effects.update()
+effects.draw_background_effects(screen)  # Trails/rings
+# ... draw game ...
+effects.draw_foreground_effects(screen)  # Explosions/flashes
 ```
 
-## 📦 Ships Included in Build
+## 📊 Statistics
 
-**Player (3):**
-- Rifter, Wolf, Jaguar
+```python
+stats = self.berserk.get_stats()
 
-**Enemies (11):**
-- Frigates: Punisher, Tormentor, Crucifier
-- Destroyer: Coercer
-- Cruisers: Arbitrator, Maller, Omen
-- Battleships: Apocalypse, Armageddon, Abaddon
+stats['total_score']        # Total points earned
+stats['avg_multiplier']     # Average risk taken
+stats['extreme_kills']      # Kills at 5.0x
+stats['kills_by_range']     # Dict of kills per range
+```
 
-**Drones (2):**
-- Acolyte, Infiltrator
+## 🎯 Balancing Quick Tips
 
-**Background (1):**
-- Slasher
+**Too Easy?** → Reduce danger zone sizes
+```python
+EXTREME_CLOSE = 60  # Was 80
+```
 
-= **16 total ships** instead of 267!
+**Too Hard?** → Increase danger zones
+```python
+EXTREME_CLOSE = 100  # Was 80
+```
 
-## 🔧 Setup Steps
+**Effects too intense?** → Lower particle counts
+```python
+add_explosion(pos, color, particles=15)  # Was 30
+```
 
-1. **EVE_Ships repo:**
-   - Upload the EVE_Ships folder
-   - Run `./setup_structure.sh`
-   - Copy your 267 SVGs into ships/ folders
-   - Commit and push
+**Too much screen shake?** → Reduce intensity
+```python
+add_shake(intensity=3)  # Was 8
+```
 
-2. **EVE_Rebellion repo:**
-   - Remove all ship SVGs from current repo
-   - Upload the new build scripts
-   - Update ASSET_REPO URL in build_all.sh
-   - Commit and push
+## 🏆 Achievements Ideas
 
-3. **Build:**
-   - Run `./build_all.sh --all`
-   - Distribute the files in dist/
+- "Berserk Master": 100 kills at 5.0x
+- "Perfect Danger": Complete stage with 3.0x+ average
+- "No Fear": Never kill beyond 150px for entire stage
+- "Safe Player": Complete stage with 1.0x average (survival run)
 
-## 🎮 What You Get
+## 🔧 Troubleshooting
 
-✅ GitHub storage problem solved
-✅ Professional architecture
-✅ AppImage for Linux (Steam Deck ready!)
-✅ Windows .exe
-✅ <30MB distributions
-✅ Can add all 267 ships later without bloat
+**Problem:** Multipliers not showing
+**Fix:** Check `draw_hud()` is called with proper fonts
 
-## 📋 Next Features to Add
+**Problem:** Effects causing lag
+**Fix:** Reduce particle counts, limit concurrent effects
 
-From your list:
-- [ ] Better weapon/damage visuals
-- [ ] Wingman powerup (33% before bosses)
-- [ ] Drone waves from Amarr carriers
-- [ ] Background ships with parallax
-- [ ] Controller support polish
-- [ ] Better powerup visuals
+**Problem:** Shake too violent
+**Fix:** Lower intensity parameter (try 3-5 instead of 8-12)
 
-All ready to implement with the new structure!
+**Problem:** Colors wrong
+**Fix:** Check RGB tuples in RANGE_COLORS dict
+
+## 📱 HUD Layout Suggestion
+
+```
+┌──────────────────────────────────┐
+│ SCORE: 125,750        x3.0 🟠    │ ← Top bar
+│                        BERSERK    │
+├──────────────────────────────────┤
+│                                   │
+│          [GAMEPLAY AREA]          │
+│                                   │
+│     +500 x5.0                     │ ← Score popup
+│     BERSERK!                      │
+│                                   │
+├──────────────────────────────────┤
+│ ████████░░░░░░░░░░  DANGER        │ ← Bottom bar
+│ RIFTER   REFUGEES: 45  AMMO: AC   │
+└──────────────────────────────────┘
+```
+
+## 🎬 When to Trigger Effects
+
+| Event | Effect |
+|-------|--------|
+| Any kill | Small explosion (20 particles) |
+| Close kill (3.0x) | Medium explosion + light shake |
+| Extreme kill (5.0x) | Large explosion + heavy shake + flash |
+| Boss death | Massive explosion + long shake + bright flash |
+| Bullet impact | Impact ring + tiny sparks (8 particles) |
+
+## 💡 Pro Tips
+
+1. **Combine with EVE lore**: "Optimal range" bonuses fit EVE's tactical combat
+2. **Balance vs Refugees**: High-risk players get score, safe players save more refugees
+3. **Difficulty scaling**: Berserk makes game easier for skilled players (more score) but harder (more danger)
+4. **Tutorial**: Show danger zones in first stage, hide them later
+5. **Accessibility**: Option to show/hide visual danger rings for learning
+
+## 📦 Files Required
+
+- `berserk_system.py` - Core mechanics (300 lines)
+- `devil_blade_effects.py` - Visual effects (400 lines)
+- `DEVIL_BLADE_INTEGRATION.md` - Full guide
+
+Total code: ~700 lines  
+Integration time: 30-60 minutes  
+Compatible with: All existing Minmatar Rebellion systems
 
 ---
 
-**See SETUP_GUIDE.md for detailed instructions**
+**Remember:** The Berserk System is about player choice. Let players choose their risk level - don't force aggressive play!

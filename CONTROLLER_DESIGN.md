@@ -1,5 +1,5 @@
 # Controller-First Input Design
-## EVE Rebellion - Arcade Style Vertical Scroller
+## EVE Rebellion - Devil Blade Style Vertical Scroller
 
 ---
 
@@ -301,7 +301,7 @@ else:
 - Mistakes: Final > Undoable
 - Death: Felt > Observed
 
-Good arcade games work because they respect hands, not UI.
+Devil Blade works because it respects hands, not UI.
 EVE Rebellion follows the same principle.
 
 ---

@@ -4,11 +4,11 @@ Quick test script for Berserk System
 Run this to verify the system works before integrating
 """
 
-from berserk_system import BerserkSystem
-from arcade_effects import EffectManager
+from berserk_system import BerserkSystem, DangerIndicator
+from devil_blade_effects import EffectManager
 
 def test_berserk_system():
-    print("🎮 Testing Berserk Scoring System\n")
+    print("🎮 Testing Devil Blade Berserk System\n")
     
     # Create system
     berserk = BerserkSystem()
@@ -46,7 +46,7 @@ def test_berserk_system():
     print(f"  Total kills: {stats['total_kills']}")
     print(f"  Average multiplier: {stats['avg_multiplier']:.2f}x")
     print(f"  Extreme kills: {stats['extreme_kills']}")
-    print("  Kills by range:")
+    print(f"  Kills by range:")
     for range_name, count in stats['kills_by_range'].items():
         if count > 0:
             print(f"    {range_name}: {count}")
@@ -74,7 +74,7 @@ def test_effects():
     for i in range(5):
         effects.update()
     
-    print("\n✅ After 5 frames of updates:")
+    print(f"\n✅ After 5 frames of updates:")
     print(f"  - {len(effects.explosions)} explosions remaining")
     print(f"  - {len(effects.shakes)} shakes remaining")
     print(f"  - {len(effects.flashes)} flashes remaining")
@@ -84,17 +84,18 @@ def test_effects():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("BERSERK SCORING SYSTEM - STANDALONE TEST")
+    print("DEVIL BLADE BERSERK SYSTEM - STANDALONE TEST")
     print("=" * 60)
-
+    
     try:
         test_berserk_system()
         test_effects()
-
+        
         print("\n" + "=" * 60)
         print("✅ ALL TESTS PASSED!")
         print("=" * 60)
         print("\nThe Berserk System is ready for integration!")
+        print("See DEVIL_BLADE_INTEGRATION.md for next steps.")
         
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")

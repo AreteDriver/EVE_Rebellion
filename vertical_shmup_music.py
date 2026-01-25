@@ -1,6 +1,6 @@
 """
 VERTICAL SHMUP SOUNDTRACK GENERATOR
-EVE Rebellion - Arcade Style Audio
+EVE Rebellion - Devil Blade Reboot Inspired Audio
 
 Based on vertical shmup audio design:
 - Tense, building ambient layers (not constant chaos)
@@ -11,6 +11,8 @@ Based on vertical shmup audio design:
 
 import pygame
 import numpy as np
+import io
+from typing import Optional
 
 
 class VerticalShmupMusic:

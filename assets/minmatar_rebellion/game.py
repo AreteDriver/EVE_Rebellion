@@ -1,15 +1,11 @@
 """Main game logic for Minmatar Rebellion"""
 import pygame
 import random
-from constants import (
-    AMMO_TYPES, COLOR_AMARR_ACCENT, COLOR_ARMOR, COLOR_HULL,
-    COLOR_MINMATAR_ACCENT, COLOR_SHIELD, COLOR_TEXT,
-    DIFFICULTY_SETTINGS, FPS, POWERUP_TYPES, SCREEN_HEIGHT,
-    SCREEN_WIDTH, SHAKE_DECAY, SHAKE_LARGE, SHAKE_MEDIUM,
-    SHAKE_SMALL, STAGES, UPGRADE_COSTS
-)
-from sprites import (Player, Enemy, RefugeePod, Powerup, Explosion, Star)
-from sounds import get_sound_manager, get_music_manager
+import math
+from constants import *
+from sprites import (Player, Enemy, Bullet, EnemyBullet, Rocket, 
+                     RefugeePod, Powerup, Explosion, Star)
+from sounds import get_sound_manager, get_music_manager, play_sound
 from controller import Controller
 
 
@@ -669,7 +665,7 @@ class Game:
         
         if self.current_stage < len(STAGES):
             y += 30
-            STAGES[self.current_stage]
+            stage = STAGES[self.current_stage]
             text = self.font_small.render(f"Stage {self.current_stage + 1}", True, COLOR_TEXT)
             self.render_surface.blit(text, (x, y))
         

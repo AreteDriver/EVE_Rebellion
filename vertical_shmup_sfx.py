@@ -1,6 +1,6 @@
 """
 VERTICAL SHMUP SOUND EFFECTS
-EVE Rebellion - Arcade Style
+EVE Rebellion - Devil Blade Reboot Style
 
 Procedurally generated sound effects for:
 - Weapons (autocannon, missiles, lasers)
@@ -13,7 +13,7 @@ Procedurally generated sound effects for:
 
 import pygame
 import numpy as np
-from typing import Dict
+from typing import Dict, Optional
 
 
 class VerticalShmupSFX:
@@ -600,7 +600,7 @@ class VerticalShmupSFX:
 
 if __name__ == "__main__":
     print("=== VERTICAL SHMUP SOUND EFFECTS ===")
-    print("Total sounds: 30+")
+    print(f"Total sounds: 30+")
     print()
     print("Categories:")
     print("  Weapons: autocannon, missile, laser, rocket")

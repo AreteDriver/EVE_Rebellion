@@ -15,7 +15,7 @@ def add_ship_glow(surface, color, intensity=0.3):
     for i in range(5):
         alpha = int(intensity * 255 * (5 - i) / 5)
         glow_color = (*color[:3], alpha)
-        i * 2
+        offset = i * 2
         
         # Scale up the ship slightly for each glow layer
         scale = 1.0 + (i * 0.05)

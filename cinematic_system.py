@@ -4,8 +4,8 @@ Handles story sequences, tribal identity, and narrative moments
 """
 
 import pygame
-import random
-from typing import Optional
+import time
+from typing import Dict, List, Tuple, Optional
 from enum import Enum
 
 class TribeType(Enum):
@@ -209,7 +209,7 @@ class CinematicManager:
             
         # Screen shake simulation (render offset)
         if intensity > 0.5:
-            int((1.0 - progress) * 10)
+            shake_amount = int((1.0 - progress) * 10)
             # This would be applied to camera in full implementation
             
         # Debris particles (simple version)
@@ -343,6 +343,7 @@ class CinematicManager:
             tribe: Player's tribe
             performance: "excellent", "good", "survival", or "difficult"
         """
+        import random
         
         messages = self.tribes[tribe]["thanks_messages"]
         
@@ -403,13 +404,10 @@ class CinematicManager:
         """
         Render ship upgrade cinematic
         Returns True when complete
-
-        Future enhancement: Show ship in hangar with engineer dialogue
-        and visual upgrade effects (armor plates, weapon mounts, etc.)
         """
-        # Placeholder: Skip directly to gameplay for now
-        # Full cinematic implementation deferred to future release
-        return True
+        # TODO: Implement upgrade cinematics (Wolf, Jaguar)
+        # Would show ship in hangar, engineer message, visual upgrades
+        pass
     
     def render_first_ship_cinematic(self, screen: pygame.Surface, delta_time: float, tribe: TribeType) -> bool:
         """
@@ -449,7 +447,7 @@ class CinematicManager:
         # Phase 4: Fade out
         else:
             progress = (self.cinematic_timer - PHASE_ELDER_RESPONSE) / (PHASE_TOTAL - PHASE_ELDER_RESPONSE)
-            int((1.0 - progress) * 255)
+            fade_alpha = int((1.0 - progress) * 255)
             # Simple fade to black
             
         if self.cinematic_timer > 1.0:

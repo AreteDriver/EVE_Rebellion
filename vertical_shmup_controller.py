@@ -1,8 +1,8 @@
 """
 VERTICAL SHMUP CONTROLLER
-EVE Rebellion - Arcade Style
+EVE Rebellion - Devil Blade Reboot Style
 
-Features:
+Based on Devil Blade Reboot (SHIGATAKE GAMES, May 2024)
 - Point-blank proximity scoring
 - Berserk mode (Heat system)
 - Boost mechanic (5x gain with drain)
@@ -12,6 +12,7 @@ Features:
 import pygame
 from enum import IntEnum
 from typing import Optional, Tuple
+import math
 
 
 class XboxButton(IntEnum):
@@ -53,8 +54,8 @@ class PlayStationButton(IntEnum):
 class VerticalShmupController:
     """
     Controller input for vertical shoot-em-ups.
-    Arcade-style control philosophy.
-
+    Based on Devil Blade Reboot's control philosophy.
+    
     Key Mechanics:
     - Slower, precise movement (vertical shmup standard)
     - Formation switch: Spread (fast) ↔ Focused (slow + narrow)
@@ -72,7 +73,7 @@ class VerticalShmupController:
         self.sensitivity_move = 1.0
         self.invert_y = False
         
-        # Formation state (Wide ↔ Narrow)
+        # Formation state (Devil Blade: Wide ↔ Narrow)
         self.formation = "spread"  # "spread" or "focused"
         self.focused_speed_mult = 0.5  # 50% speed in focused mode
         
@@ -108,7 +109,7 @@ class VerticalShmupController:
             self.joystick.init()
             self.connected = True
             print(f"Controller connected: {self.joystick.get_name()}")
-            print("Control scheme: Vertical Shmup (Arcade style)")
+            print(f"Control scheme: Vertical Shmup (Devil Blade style)")
         else:
             print("No controller detected")
     
@@ -198,7 +199,7 @@ class VerticalShmupController:
         try:
             if self.joystick.get_numaxes() > axis_id:
                 return self.joystick.get_axis(axis_id)
-        except Exception:
+        except:
             pass
         return 0.0
     
@@ -241,7 +242,7 @@ class VerticalShmupController:
             low_freq = intensity * 0.7
             high_freq = intensity * 0.3
             self.joystick.rumble(low_freq, high_freq, 1000)
-        except Exception:
+        except:
             pass
     
     def _pulse_haptic(self, intensity: float, duration_ms: int):
@@ -255,7 +256,7 @@ class VerticalShmupController:
                     intensity * self.haptic_intensity,
                     duration_ms
                 )
-        except Exception:
+        except:
             pass
     
     # === PUBLIC API ===
@@ -340,8 +341,8 @@ class VerticalShmupController:
     def proximity_pulse(self, distance: float):
         """
         Haptic pulse on point-blank kill.
-
-        Closer enemy death = higher multiplier.
+        
+        Devil Blade: Closer enemy death = higher multiplier
         Haptic confirms max multiplier achieved.
         
         Args:
@@ -434,7 +435,7 @@ def apply_vertical_shmup_movement(controller: VerticalShmupController,
 
 if __name__ == "__main__":
     print("=== VERTICAL SHMUP CONTROLLER ===")
-    print("EVE Rebellion - Arcade Style Controls")
+    print("Based on Devil Blade Reboot (SHIGATAKE GAMES)")
     print()
     print("Controls:")
     print("  Left Stick: Ship movement")

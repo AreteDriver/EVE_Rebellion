@@ -1,6 +1,6 @@
 """
 VERTICAL SHMUP WEAPON EFFECTS
-EVE Rebellion - Arcade Visual Style
+EVE Rebellion - Devil Blade Reboot Visual Style
 
 Visual effects for:
 - Projectile trails (autocannon, missiles, lasers)
@@ -15,7 +15,7 @@ Visual effects for:
 import pygame
 import math
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from dataclasses import dataclass
 
 
@@ -83,6 +83,7 @@ class WeaponEffects:
             alpha = max(0, min(255, alpha))
             
             # Create color with alpha
+            color = (*particle.color, alpha)
             
             # Draw particle
             if particle.size > 2:

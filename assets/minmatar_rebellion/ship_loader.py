@@ -1,6 +1,7 @@
 """SVG ship loader for Minmatar Rebellion"""
 import pygame
 import os
+import xml.etree.ElementTree as ET
 from io import BytesIO
 
 
@@ -173,14 +174,12 @@ def check_svg_support():
     """Check if SVG loading libraries are available"""
     try:
         import cairosvg
-        # Verify the module is functional by checking it has the expected attribute
-        return hasattr(cairosvg, 'svg2png')
+        return True
     except ImportError:
         try:
-            import importlib.util
-            if importlib.util.find_spec("PIL") and importlib.util.find_spec("cairosvg"):
-                return True
-            return False
+            from PIL import Image
+            import cairosvg
+            return True
         except ImportError:
             return False
 

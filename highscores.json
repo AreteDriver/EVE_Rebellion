@@ -1,0 +1,129 @@
+{
+  "scores": [
+    {
+      "score": 3826,
+      "refugees": 0,
+      "stage": 0,
+      "wave": 0,
+      "ship": "Wolf",
+      "difficulty": "normal",
+      "date": "2026-01-25 01:57",
+      "berserk": {
+        "total_score": 3826,
+        "session_score": 3826,
+        "total_kills": 22,
+        "kills_by_range": {
+          "EXTREME": 2,
+          "CLOSE": 0,
+          "MEDIUM": 1,
+          "FAR": 5,
+          "VERY_FAR": 14
+        },
+        "avg_multiplier": 1.0681818181818181,
+        "extreme_kills": 2,
+        "safe_kills": 19,
+        "max_combo": 22
+      }
+    },
+    {
+      "score": 3820,
+      "refugees": 0,
+      "stage": 0,
+      "wave": 0,
+      "ship": "Rifter",
+      "difficulty": "normal",
+      "date": "2026-01-25 02:01",
+      "berserk": {
+        "total_score": 4981,
+        "session_score": 3820,
+        "total_kills": 13,
+        "kills_by_range": {
+          "EXTREME": 1,
+          "CLOSE": 0,
+          "MEDIUM": 0,
+          "FAR": 4,
+          "VERY_FAR": 8
+        },
+        "avg_multiplier": 1.0,
+        "extreme_kills": 1,
+        "safe_kills": 12,
+        "max_combo": 28
+      }
+    },
+    {
+      "score": 1895,
+      "refugees": 0,
+      "stage": 0,
+      "wave": 0,
+      "ship": "Rifter",
+      "difficulty": "normal",
+      "date": "2026-01-25 02:06",
+      "berserk": {
+        "total_score": 1895,
+        "session_score": 1895,
+        "total_kills": 15,
+        "kills_by_range": {
+          "EXTREME": 0,
+          "CLOSE": 0,
+          "MEDIUM": 1,
+          "FAR": 6,
+          "VERY_FAR": 8
+        },
+        "avg_multiplier": 0.7666666666666667,
+        "extreme_kills": 0,
+        "safe_kills": 14,
+        "max_combo": 15
+      }
+    },
+    {
+      "score": 1161,
+      "refugees": 0,
+      "stage": 0,
+      "wave": 0,
+      "ship": "Rifter",
+      "difficulty": "normal",
+      "date": "2026-01-25 02:01",
+      "berserk": {
+        "total_score": 1161,
+        "session_score": 1161,
+        "total_kills": 15,
+        "kills_by_range": {
+          "EXTREME": 1,
+          "CLOSE": 0,
+          "MEDIUM": 5,
+          "FAR": 5,
+          "VERY_FAR": 4
+        },
+        "avg_multiplier": 1.3,
+        "extreme_kills": 1,
+        "safe_kills": 9,
+        "max_combo": 15
+      }
+    },
+    {
+      "score": 50,
+      "refugees": 0,
+      "stage": 0,
+      "wave": 0,
+      "ship": "Rifter",
+      "difficulty": "normal",
+      "date": "2026-01-25 02:19",
+      "berserk": {
+        "total_score": 50,
+        "session_score": 50,
+        "total_kills": 1,
+        "kills_by_range": {
+          "EXTREME": 0,
+          "CLOSE": 0,
+          "MEDIUM": 0,
+          "FAR": 0,
+          "VERY_FAR": 1
+        },
+        "avg_multiplier": 0.5,
+        "extreme_kills": 0,
+        "safe_kills": 1,
+        "max_combo": 1
+      }
+    }
+  ]
+}
