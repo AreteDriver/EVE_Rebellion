@@ -5,7 +5,7 @@ Thank you for your interest in contributing to Minmatar Rebellion! This document
 ## Project Structure
 
 ```
-minmatar_rebellion/
+EVE_Rebellion/
 ├── main.py              # Entry point
 ├── game.py              # Main game logic, states, rendering
 ├── sprites.py           # All game entities (player, enemies, bullets)
@@ -13,19 +13,18 @@ minmatar_rebellion/
 ├── sounds.py            # Procedural sound generation
 ├── core/                # Core utilities and loaders
 │   ├── __init__.py
-│   └── loader.py        # JSON data loader for game content
-├── enemies/             # Enemy class implementations
-│   └── __init__.py
-├── stages/              # Stage class implementations
-│   └── __init__.py
-├── powerups/            # Power-up class implementations
-│   └── __init__.py
+│   ├── loader.py        # JSON data loader for game content
+│   ├── controls.py      # Input configuration
+│   ├── pause_menu.py    # Pause/options menu
+│   ├── save_manager.py  # Save/load system
+│   └── tutorial.py      # Tutorial system
 ├── data/                # JSON data files for game content
 │   ├── enemies/         # Enemy definitions (*.json)
 │   ├── stages/          # Stage definitions (*.json)
 │   └── powerups/        # Power-up definitions (*.json)
-├── docs/                # Documentation
-│   └── development.md   # Development guide
+├── expansion/           # Expansion content
+│   └── capital_ship_enemy.py  # Capital ship boss
+├── docs/                # Documentation and screenshots
 ├── CONTRIBUTING.md      # This file
 └── README.md            # Project overview
 ```

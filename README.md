@@ -9,13 +9,14 @@
 [![Pygame 2.0+](https://img.shields.io/badge/Pygame-2.0+-red.svg)](https://www.pygame.org/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-orange.svg)]()
+[![Version](https://img.shields.io/github/v/tag/AreteDriver/EVE_Rebellion?label=version&color=purple)](https://github.com/AreteDriver/EVE_Rebellion/releases)
 
 ---
 
 ## Screenshots
 
 ### Chapter Select
-Five campaigns across all four EVE factions.
+Four campaigns across all EVE factions.
 ![Chapter Select](docs/screenshot-chapters.png)
 
 ### Faction Selection
@@ -320,7 +321,7 @@ The game uses a data-driven architecture. Add new content via JSON:
 }
 ```
 
-See `docs/development.md` for complete schemas.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for complete schemas and development guidelines.
 
 ---
 

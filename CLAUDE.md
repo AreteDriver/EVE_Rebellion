@@ -41,12 +41,11 @@ pytest
 ---
 
 ## Current Priorities
-From game dev notes:
-- [ ] Powerups need better visuals
-- [ ] Nothing spawns after wave 5/5 first level — investigate
-- [ ] Check controller support
+- [ ] Improve powerup visuals
 - [ ] Improve weapon/damage visuals (especially upgraded)
 - [ ] Add ships flying in background with random space backdrops
+- [ ] Steam Deck optimized controls
+- [ ] Leaderboard system
 
 ---
 
