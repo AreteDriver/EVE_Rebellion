@@ -75,6 +75,16 @@ COLOR_AMARR_HULL = (218, 165, 32)
 COLOR_AMARR_ACCENT = (255, 215, 0)
 COLOR_AMARR_DARK = (139, 117, 0)
 
+# Colors - Caldari (steel blue/corporate)
+COLOR_CALDARI_HULL = (30, 58, 95)
+COLOR_CALDARI_ACCENT = (70, 130, 180)
+COLOR_CALDARI_DARK = (20, 40, 70)
+
+# Colors - Gallente (olive green/organic)
+COLOR_GALLENTE_HULL = (46, 93, 46)
+COLOR_GALLENTE_ACCENT = (107, 142, 35)
+COLOR_GALLENTE_DARK = (30, 60, 30)
+
 # === FACTION DEFINITIONS ===
 FACTIONS = {
     'minmatar': {
@@ -991,7 +1001,7 @@ CHAPTERS = [
         'description': 'Defend Caldari Prime from Gallente occupation. Fight for State independence.',
         'faction': 'caldari',
         'stages': STAGES_CALDARI,
-        'color': (70, 130, 180),  # Steel blue
+        'color': COLOR_CALDARI_ACCENT,
         'year': 'BYC 187',
     },
     {
@@ -1011,7 +1021,7 @@ CHAPTERS = [
         'description': 'Liberate oppressed systems from Caldari corporate tyranny.',
         'faction': 'gallente',
         'stages': STAGES_GALLENTE,
-        'color': (107, 142, 35),  # Olive green
+        'color': COLOR_GALLENTE_ACCENT,
         'year': 'YC 110',
     },
 ]

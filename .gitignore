@@ -1,2 +1,4 @@
-# [paste the contents from the file I created]
 __pycache__/
+*.pyc
+.venv/
+*.egg-info/

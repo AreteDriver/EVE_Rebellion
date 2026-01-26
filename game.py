@@ -950,9 +950,8 @@ class Game:
         self.render_surface.blit(text, (x, y))
         
         # Stage/Wave
-        if self.current_stage < len(STAGES):
+        if self.current_stage < len(self.current_stages):
             y += 30
-            _stage = self.current_stages[self.current_stage]  # Reserved for future use
             text = self.font_small.render(f"Stage {self.current_stage + 1}", True, COLOR_TEXT)
             self.render_surface.blit(text, (x, y))
         
