@@ -70,3 +70,38 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: EVE_Rebellion-${{ github.ref_name }}-linux.tar.gz
+
+  build-linux-portable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Package portable release
+        run: |
+          mkdir -p portable/EVE_Rebellion
+
+          # Copy all Python source files
+          cp *.py portable/EVE_Rebellion/
+          cp -r core portable/EVE_Rebellion/
+
+          # Copy game data and assets
+          cp -r data portable/EVE_Rebellion/data 2>/dev/null || echo "No data folder"
+          cp -r assets portable/EVE_Rebellion/assets 2>/dev/null || echo "No assets folder"
+
+          # Copy launcher scripts
+          cp run_game.sh portable/EVE_Rebellion/
+          cp install_desktop.sh portable/EVE_Rebellion/
+          chmod +x portable/EVE_Rebellion/*.sh
+
+          # Copy documentation
+          cp README.md portable/EVE_Rebellion/
+          cp requirements.txt portable/EVE_Rebellion/
+          cp MinmatarRebellion.desktop portable/EVE_Rebellion/
+
+          # Create portable package
+          cd portable && tar -czvf ../EVE_Rebellion-${{ github.ref_name }}-linux-portable.tar.gz EVE_Rebellion
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: EVE_Rebellion-${{ github.ref_name }}-linux-portable.tar.gz

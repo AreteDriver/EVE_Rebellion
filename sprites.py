@@ -5,6 +5,13 @@ import random
 from constants import *
 from visual_enhancements import add_ship_glow, add_colored_tint, add_strong_outline
 
+# Import portable path resolution
+try:
+    from platform_init import get_resource_path
+except ImportError:
+    def get_resource_path(path: str) -> str:
+        return path
+
 
 class Player(pygame.sprite.Sprite):
     """Player ship - Rifter/Wolf"""
@@ -62,9 +69,9 @@ class Player(pygame.sprite.Sprite):
         
         # Map ship types to SVG files
         ship_svgs = {
-            'Rifter': 'assets/minmatar_rebellion/svg/top/rifter.svg',
-            'Wolf': 'assets/minmatar_rebellion/svg/top/Wolf.svg',
-            'Jaguar': 'assets/minmatar_rebellion/svg/top/jaguar.svg'
+            'Rifter': get_resource_path('assets/minmatar_rebellion/svg/top/rifter.svg'),
+            'Wolf': get_resource_path('assets/minmatar_rebellion/svg/top/Wolf.svg'),
+            'Jaguar': get_resource_path('assets/minmatar_rebellion/svg/top/jaguar.svg')
         }
         
         ship_type = getattr(self, 'ship_class', 'Rifter')
@@ -610,7 +617,7 @@ class Enemy(pygame.sprite.Sprite):
         else:
             ship_name = random.choice(frigate_ships)
         
-        svg_path = f'assets/minmatar_rebellion/svg/top/{ship_name}.svg'
+        svg_path = get_resource_path(f'assets/minmatar_rebellion/svg/top/{ship_name}.svg')
         
         try:
             # Convert SVG to PNG

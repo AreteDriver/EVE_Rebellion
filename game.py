@@ -1,4 +1,8 @@
 """Main game logic for Minmatar Rebellion"""
+# Platform init must happen before pygame import to set SDL env vars
+from platform_init import init_platform
+init_platform()
+
 import pygame
 import random
 from constants import *

@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eve-rebellion"
+version = "1.0.0"
+description = "EVE Online inspired arcade space shooter"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+keywords = ["game", "arcade", "shooter", "eve-online", "pygame"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment :: Arcade",
+]
+dependencies = [
+    "pygame>=2.0.0",
+    "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "pre-commit",
+]
+assets = [
+    "cairosvg>=2.5.0",
+]
+
+[project.scripts]
+eve-rebellion = "eve_rebellion:main"
+
+[project.gui-scripts]
+eve-rebellion-gui = "eve_rebellion:main"
+
+[project.urls]
+Homepage = "https://github.com/AreteDriver/EVE_Rebellion"
+Repository = "https://github.com/AreteDriver/EVE_Rebellion"
+Issues = "https://github.com/AreteDriver/EVE_Rebellion/issues"
+
+[tool.setuptools]
+py-modules = ["eve_rebellion"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*"]
+
+[tool.setuptools.package-data]
+"*" = ["data/**/*.json", "assets/**/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
