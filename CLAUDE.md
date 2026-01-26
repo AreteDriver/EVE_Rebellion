@@ -45,7 +45,7 @@ pytest
 - [x] Improve weapon/damage visuals (animated glow, bullet trails, rocket exhaust)
 - [x] Add ships flying in background with random space backdrops
 - [x] Steam Deck optimized controls (auto-detection, back buttons, tuned deadzones)
-- [ ] Leaderboard system
+- [x] Leaderboard system (high scores, achievements, persistent storage)
 
 ---
 

@@ -7,6 +7,7 @@ from sounds import get_sound_manager, get_music_manager
 from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground
 from visual_effects import ParticleSystem
+from high_scores import HighScoreManager, AchievementManager
 
 
 class ScreenShake:
@@ -66,10 +67,16 @@ class Game:
         self.particle_system = ParticleSystem()
 
         # Game state
-        self.state = 'menu'  # menu, chapter_select, difficulty, playing, shop, paused, gameover, victory
+        self.state = 'menu'  # menu, chapter_select, difficulty, playing, shop, paused, gameover, victory, leaderboard
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
+
+        # High scores and achievements
+        self.high_scores = HighScoreManager()
+        self.achievements = AchievementManager()
+        self.last_score_rank = 0  # Rank of last game's score (0 = not on leaderboard)
+        self.is_new_high_score = False
 
         # Menu navigation for controller
         self.menu_selection = 0
@@ -220,6 +227,9 @@ class Game:
                         self.state = 'chapter_select'
                         self.menu_selection = 0
                         self.play_sound('menu_select')
+                    elif event.key == pygame.K_l:
+                        self.state = 'leaderboard'
+                        self.play_sound('menu_select')
                     elif event.key == pygame.K_m:
                         self.music_enabled = not self.music_enabled
                         if self.music_enabled:
@@ -293,6 +303,14 @@ class Game:
                         self.reset_game()
                         self.state = 'menu'
                         self.play_sound('menu_select')
+                    elif event.key == pygame.K_l:
+                        self.state = 'leaderboard'
+                        self.play_sound('menu_select')
+
+                elif self.state == 'leaderboard':
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                        self.state = 'menu'
+                        self.play_sound('menu_select')
 
         # Controller menu handling (runs once per frame, outside event loop)
         if self.controller and self.controller.connected:
@@ -302,6 +320,9 @@ class Game:
                 if self.controller.is_button_just_pressed(XboxButton.A):
                     self.state = 'chapter_select'
                     self.menu_selection = 0
+                    self.play_sound('menu_select')
+                if self.controller.is_button_just_pressed(XboxButton.Y):
+                    self.state = 'leaderboard'
                     self.play_sound('menu_select')
 
             elif self.state == 'chapter_select':
@@ -394,6 +415,17 @@ class Game:
                     self.reset_game()
                     self.state = 'menu'
                     self.play_sound('menu_select')
+                if self.controller.is_button_just_pressed(XboxButton.Y):
+                    self.state = 'leaderboard'
+                    self.play_sound('menu_select')
+
+            elif self.state == 'leaderboard':
+                if self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'menu'
+                    self.play_sound('menu_select')
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.state = 'menu'
+                    self.play_sound('menu_select')
 
     def select_chapter(self, chapter_index):
         """Select a chapter/campaign from the collection"""
@@ -410,11 +442,38 @@ class Game:
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
         self.reset_game()
+        self.last_score_rank = 0
+        self.is_new_high_score = False
         self.state = 'playing'
         self.show_message(self.current_stages[0]['name'], 180)
         self.play_sound('wave_start')
         if self.music_enabled:
             self.music_manager.start_music()
+
+    def save_score(self, victory: bool = False):
+        """Save the current score to the leaderboard"""
+        ship_type = "Wolf" if self.player.is_wolf else "Rifter"
+        rank, is_new = self.high_scores.add_score(
+            score=self.player.score,
+            refugees=self.player.total_refugees,
+            stage=self.current_stage + 1,
+            wave=self.current_wave + 1,
+            ship=ship_type,
+            difficulty=self.difficulty
+        )
+        self.last_score_rank = rank
+        self.is_new_high_score = is_new
+
+        # Check achievements
+        game_stats = {
+            'score': self.player.score,
+            'refugees': self.player.total_refugees,
+            'stage': self.current_stage + 1,
+            'victory': victory,
+            'ship': ship_type,
+            'difficulty': self.difficulty
+        }
+        self.achievements.check_achievements(game_stats)
     
     def handle_shop_input(self, key):
         """Handle shop menu input"""
@@ -495,6 +554,7 @@ class Game:
             # Continue to next stage
             self.current_stage += 1
             if self.current_stage >= len(STAGES):
+                self.save_score(victory=True)
                 self.state = 'victory'
                 self.play_sound('stage_complete')
             else:
@@ -682,6 +742,7 @@ class Game:
                 self.all_sprites.add(explosion)
                 self.shake.add(SHAKE_LARGE)
                 self.play_sound('explosion_large')
+                self.save_score(victory=False)
                 self.state = 'gameover'
                 self.music_manager.stop_music()
                 return
@@ -694,6 +755,7 @@ class Game:
             if self.player.take_damage(30):
                 self.play_sound('explosion_large')
                 self.shake.add(SHAKE_LARGE)
+                self.save_score(victory=False)
                 self.state = 'gameover'
                 self.music_manager.stop_music()
                 return
@@ -828,7 +890,9 @@ class Game:
             self.draw_gameover()
         elif self.state == 'victory':
             self.draw_victory()
-        
+        elif self.state == 'leaderboard':
+            self.draw_leaderboard()
+
         # Apply screen shake
         shake_x, shake_y = self.shake.offset_x, self.shake.offset_y
         self.screen.blit(self.render_surface, (shake_x, shake_y))
@@ -1041,12 +1105,28 @@ class Game:
             self.render_surface.blit(text, rect)
             y += 32
 
+        # High score display
+        high_score = self.high_scores.get_high_score()
+        if high_score > 0:
+            y += 10
+            text = self.font.render(f"High Score: {high_score:,}", True, (255, 215, 0))
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+            self.render_surface.blit(text, rect)
+
+        # Leaderboard option
+        y += 35
+        if self.controller and self.controller.connected:
+            leaderboard_text = "[Y] Leaderboard"
+        else:
+            leaderboard_text = "[L] Leaderboard"
+        text = self.font_small.render(leaderboard_text, True, (150, 150, 150))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+
         # Sound options
-        y += 30
+        y += 25
         sound_status = "ON" if self.sound_enabled else "OFF"
         music_status = "ON" if self.music_enabled else "OFF"
-        _sound_color = (100, 255, 100) if self.sound_enabled else (255, 100, 100)  # Reserved
-        _music_color = (100, 255, 100) if self.music_enabled else (255, 100, 100)  # Reserved
 
         text = self.font_small.render(f"[S] Sound: {sound_status}  [M] Music: {music_status}", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
@@ -1177,19 +1257,33 @@ class Game:
         self.render_surface.blit(overlay, (0, 0))
         
         text = self.font_large.render("SHIP DESTROYED", True, (255, 100, 100))
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 70))
         self.render_surface.blit(text, rect)
-        
+
+        # Show new high score notification
+        if self.is_new_high_score:
+            text = self.font_large.render("NEW HIGH SCORE!", True, (255, 215, 0))
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 30))
+            self.render_surface.blit(text, rect)
+        elif self.last_score_rank > 0:
+            text = self.font.render(f"Leaderboard Rank: #{self.last_score_rank}", True, (100, 200, 255))
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 30))
+            self.render_surface.blit(text, rect)
+
         text = self.font.render(f"Final Score: {self.player.score}", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 10))
         self.render_surface.blit(text, rect)
-        
+
         text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 35))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 45))
         self.render_surface.blit(text, rect)
-        
+
         text = self.font.render("Press ENTER to return to menu", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100))
+        self.render_surface.blit(text, rect)
+
+        text = self.font_small.render("[L] View Leaderboard  [Y] Leaderboard", True, (150, 150, 150))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 130))
         self.render_surface.blit(text, rect)
     
     def draw_victory(self):
@@ -1232,10 +1326,117 @@ class Game:
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 110))
         self.render_surface.blit(text, rect)
         
+        # Show new high score notification
+        if self.is_new_high_score:
+            text = self.font_large.render("NEW HIGH SCORE!", True, (255, 215, 0))
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 150))
+            self.render_surface.blit(text, rect)
+        elif self.last_score_rank > 0:
+            text = self.font.render(f"Leaderboard Rank: #{self.last_score_rank}", True, (100, 200, 255))
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 150))
+            self.render_surface.blit(text, rect)
+
         text = self.font.render("Press ENTER to play again", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 170))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 190))
         self.render_surface.blit(text, rect)
-    
+
+        text = self.font_small.render("[L] View Leaderboard  [Y] Leaderboard", True, (150, 150, 150))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 220))
+        self.render_surface.blit(text, rect)
+
+    def draw_leaderboard(self):
+        """Draw the leaderboard screen"""
+        # Title
+        title = self.font_large.render("LEADERBOARD", True, (255, 215, 0))
+        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 60))
+        self.render_surface.blit(title, rect)
+
+        # Column headers
+        y = 120
+        headers = ["RANK", "SCORE", "REFUGEES", "STAGE", "SHIP", "DIFFICULTY", "DATE"]
+        x_positions = [60, 140, 260, 360, 440, 540, 680]
+        for i, header in enumerate(headers):
+            text = self.font_small.render(header, True, (150, 150, 150))
+            self.render_surface.blit(text, (x_positions[i], y))
+
+        # Draw scores
+        y = 150
+        scores = self.high_scores.get_top_scores(10)
+
+        if not scores:
+            text = self.font.render("No scores yet - go make history!", True, COLOR_TEXT)
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+            self.render_surface.blit(text, rect)
+        else:
+            for i, entry in enumerate(scores):
+                rank = i + 1
+                is_highlighted = (rank == self.last_score_rank)
+
+                # Highlight recent score
+                if is_highlighted:
+                    highlight_rect = pygame.Rect(50, y - 2, 720, 28)
+                    pygame.draw.rect(self.render_surface, (50, 50, 80), highlight_rect)
+                    pygame.draw.rect(self.render_surface, (100, 150, 255), highlight_rect, 1)
+
+                # Rank color based on position
+                if rank == 1:
+                    rank_color = (255, 215, 0)   # Gold
+                elif rank == 2:
+                    rank_color = (192, 192, 192)  # Silver
+                elif rank == 3:
+                    rank_color = (205, 127, 50)   # Bronze
+                else:
+                    rank_color = COLOR_TEXT
+
+                # Draw each column
+                text = self.font.render(f"#{rank}", True, rank_color)
+                self.render_surface.blit(text, (x_positions[0], y))
+
+                text = self.font.render(f"{entry['score']:,}", True, COLOR_TEXT)
+                self.render_surface.blit(text, (x_positions[1], y))
+
+                text = self.font.render(str(entry.get('refugees', 0)), True, (100, 255, 100))
+                self.render_surface.blit(text, (x_positions[2], y))
+
+                text = self.font.render(f"S{entry.get('stage', '?')}", True, COLOR_TEXT)
+                self.render_surface.blit(text, (x_positions[3], y))
+
+                text = self.font_small.render(entry.get('ship', 'Rifter'), True, COLOR_TEXT)
+                self.render_surface.blit(text, (x_positions[4], y + 3))
+
+                diff = entry.get('difficulty', 'normal')
+                diff_colors = {
+                    'easy': (100, 255, 100),
+                    'normal': COLOR_TEXT,
+                    'hard': (255, 200, 100),
+                    'nightmare': (255, 100, 100)
+                }
+                text = self.font_small.render(diff.title(), True, diff_colors.get(diff, COLOR_TEXT))
+                self.render_surface.blit(text, (x_positions[5], y + 3))
+
+                date_str = entry.get('date', '')[:10]  # Just the date part
+                text = self.font_small.render(date_str, True, (150, 150, 150))
+                self.render_surface.blit(text, (x_positions[6], y + 3))
+
+                y += 32
+
+        # Instructions
+        y = SCREEN_HEIGHT - 50
+        if self.controller and self.controller.connected:
+            inst = "Press A or B to return"
+        else:
+            inst = "Press ENTER or ESC to return"
+        text = self.font.render(inst, True, (150, 150, 150))
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(text, rect)
+
+        # High score
+        high_score = self.high_scores.get_high_score()
+        if high_score > 0:
+            text = self.font_small.render(f"High Score: {high_score:,}", True, (255, 215, 0))
+            rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 25))
+            self.render_surface.blit(text, rect)
+
     def run(self):
         """Main game loop"""
         while self.running:
