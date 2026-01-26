@@ -1,0 +1,15 @@
+# Desktop Entry Template
+# This file is a template - do not use directly
+# Run ./install_desktop.sh to generate the actual desktop entry with correct paths
+
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Minmatar Rebellion
+Comment=EVE-inspired arcade space shooter
+Exec=${INSTALL_DIR}/run_game.sh
+Icon=${INSTALL_DIR}/assets/icon.png
+Terminal=false
+Categories=Game;ArcadeGame;
+Keywords=eve;space;shooter;arcade;minmatar;
+StartupNotify=true

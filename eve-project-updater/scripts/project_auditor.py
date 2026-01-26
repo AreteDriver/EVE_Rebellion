@@ -14,11 +14,11 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
 class ProjectType(Enum):
@@ -64,28 +64,28 @@ class ProjectAudit:
     project_type: ProjectType
     score: int = 0
     grade: str = "F"
-    
+
     # Detection results
     has_esi: bool = False
     has_image_server: bool = False
     has_sso: bool = False
     has_sde: bool = False
-    
+
     # File counts
     python_files: int = 0
     js_files: int = 0
     json_files: int = 0
     total_lines: int = 0
-    
+
     # Compliance
     checks: List[ComplianceCheck] = field(default_factory=list)
-    
+
     # Opportunities
     opportunities: List[IntegrationOpportunity] = field(default_factory=list)
-    
+
     # Recommendations
     priority_actions: List[str] = field(default_factory=list)
-    
+
     def calculate_grade(self):
         if self.score >= 90:
             self.grade = "A"
@@ -107,24 +107,24 @@ PATTERNS = {
     "flask": re.compile(r'from flask|import flask|Flask\(__name__\)'),
     "react": re.compile(r'"react":|from [\'"]react[\'"]'),
     "express": re.compile(r'require\([\'"]express[\'"]\)|from [\'"]express[\'"]'),
-    
+
     # ESI patterns
     "esi_url": re.compile(r'esi\.evetech\.net'),
     "image_server": re.compile(r'images\.evetech\.net'),
     "sso_url": re.compile(r'login\.eveonline\.com'),
     "sde_usage": re.compile(r'sde\.sqlite|fuzzwork|Static Data Export', re.IGNORECASE),
-    
+
     # Compliance patterns
     "user_agent": re.compile(r'["\']User-Agent["\']|user.?agent', re.IGNORECASE),
     "cache_header": re.compile(r'Expires|Cache-Control|ETag|If-None-Match', re.IGNORECASE),
     "error_limit": re.compile(r'X-ESI-Error-Limit|error.?limit|420'),
     "rate_limit": re.compile(r'rate.?limit|throttle|sleep|asyncio\.sleep', re.IGNORECASE),
     "versioned": re.compile(r'/v\d+/|/latest/|/dev/'),
-    
+
     # Bad patterns
     "discovery_loop": re.compile(r'for.*range.*get.*(character|corporation|structure)', re.IGNORECASE),
     "hardcoded_secret": re.compile(r'(client_secret|secret_key)\s*=\s*["\'][^"\']{10,}["\']', re.IGNORECASE),
-    
+
     # Attribution
     "ccp_attribution": re.compile(r'CCP|EVE Online.*trademark|eveonline\.com', re.IGNORECASE),
 }
@@ -133,7 +133,7 @@ PATTERNS = {
 def detect_project_type(project_path: Path) -> ProjectType:
     """Detect the type of EVE project."""
     all_content = ""
-    
+
     for ext in ['*.py', '*.js', '*.jsx', '*.ts', '*.tsx', '*.json']:
         for f in project_path.rglob(ext):
             if 'node_modules' in str(f) or '.git' in str(f):
@@ -142,40 +142,40 @@ def detect_project_type(project_path: Path) -> ProjectType:
                 all_content += f.read_text(errors='ignore')
             except Exception:
                 pass
-    
+
     # Check for game frameworks
     if PATTERNS["pygame"].search(all_content):
         return ProjectType.GAME
-    
+
     # Check for API frameworks
     if PATTERNS["fastapi"].search(all_content) or PATTERNS["flask"].search(all_content):
         return ProjectType.API
-    
+
     # Check for web frameworks
     if PATTERNS["react"].search(all_content) or PATTERNS["express"].search(all_content):
         return ProjectType.WEB
-    
+
     # Check for asset collections
     svg_count = len(list(project_path.rglob('*.svg')))
     png_count = len(list(project_path.rglob('*.png')))
     if svg_count > 10 or png_count > 20:
         return ProjectType.ASSETS
-    
+
     # Check for library patterns
     if (project_path / 'setup.py').exists() or (project_path / 'pyproject.toml').exists():
         return ProjectType.LIBRARY
-    
+
     return ProjectType.UNKNOWN
 
 
 def count_files(project_path: Path) -> Tuple[int, int, int, int]:
     """Count files and lines in project."""
     py_files = js_files = json_files = total_lines = 0
-    
+
     for f in project_path.rglob('*'):
         if 'node_modules' in str(f) or '.git' in str(f) or not f.is_file():
             continue
-        
+
         try:
             if f.suffix == '.py':
                 py_files += 1
@@ -187,14 +187,14 @@ def count_files(project_path: Path) -> Tuple[int, int, int, int]:
                 json_files += 1
         except Exception:
             pass
-    
+
     return py_files, js_files, json_files, total_lines
 
 
 def scan_for_patterns(project_path: Path) -> Dict[str, bool]:
     """Scan project for various patterns."""
     results = {key: False for key in PATTERNS.keys()}
-    
+
     for ext in ['*.py', '*.js', '*.jsx', '*.ts', '*.tsx', '*.md']:
         for f in project_path.rglob(ext):
             if 'node_modules' in str(f) or '.git' in str(f):
@@ -206,14 +206,14 @@ def scan_for_patterns(project_path: Path) -> Dict[str, bool]:
                         results[name] = True
             except Exception:
                 pass
-    
+
     return results
 
 
 def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project_type: ProjectType) -> List[ComplianceCheck]:
     """Run compliance checks and return findings."""
     checks = []
-    
+
     # Only check ESI compliance if ESI is used
     if patterns["esi_url"]:
         # User-Agent check
@@ -228,7 +228,7 @@ def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project
                 "No User-Agent header detected - CCP requires this",
                 fix="Add header: {'User-Agent': 'AppName/1.0 (contact@email.com)'}"
             ))
-        
+
         # Cache handling
         if patterns["cache_header"]:
             checks.append(ComplianceCheck(
@@ -241,7 +241,7 @@ def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project
                 "No cache header handling detected",
                 fix="Respect ESI's Expires header to avoid unnecessary requests"
             ))
-        
+
         # Error limit
         if patterns["error_limit"]:
             checks.append(ComplianceCheck(
@@ -254,7 +254,7 @@ def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project
                 "No error limit handling - risk of ban",
                 fix="Monitor X-ESI-Error-Limit-Remain header"
             ))
-        
+
         # Discovery abuse
         if patterns["discovery_loop"]:
             checks.append(ComplianceCheck(
@@ -267,7 +267,7 @@ def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project
                 "Discovery Abuse", ComplianceLevel.PASS, 20,
                 "No discovery abuse patterns detected"
             ))
-        
+
         # Rate limiting
         if patterns["rate_limit"]:
             checks.append(ComplianceCheck(
@@ -280,7 +280,7 @@ def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project
                 "No rate limiting detected",
                 fix="Consider adding rate limiting for bulk operations"
             ))
-        
+
         # Versioned endpoints
         if patterns["versioned"]:
             checks.append(ComplianceCheck(
@@ -293,7 +293,7 @@ def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project
                 "Unversioned endpoints detected",
                 fix="Use /latest/ or /v{n}/ prefixed endpoints"
             ))
-    
+
     # Attribution check (always applies for EVE projects)
     if patterns["ccp_attribution"]:
         checks.append(ComplianceCheck(
@@ -306,7 +306,7 @@ def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project
             "No CCP attribution in README",
             fix="Add: 'EVE Online and the EVE logo are registered trademarks of CCP hf.'"
         ))
-    
+
     # Hardcoded secrets
     if patterns["hardcoded_secret"]:
         checks.append(ComplianceCheck(
@@ -314,14 +314,14 @@ def run_compliance_checks(project_path: Path, patterns: Dict[str, bool], project
             "CRITICAL: Hardcoded secrets detected",
             fix="Move secrets to environment variables"
         ))
-    
+
     return checks
 
 
 def identify_opportunities(project_type: ProjectType, patterns: Dict[str, bool]) -> List[IntegrationOpportunity]:
     """Identify ESI integration opportunities."""
     opportunities = []
-    
+
     if project_type == ProjectType.GAME:
         if not patterns["image_server"]:
             opportunities.append(IntegrationOpportunity(
@@ -342,7 +342,7 @@ def identify_opportunities(project_type: ProjectType, patterns: Dict[str, bool])
             "easy", "low",
             "Add authentic faction lore and colors"
         ))
-    
+
     elif project_type == ProjectType.API:
         if not patterns["sso_url"]:
             opportunities.append(IntegrationOpportunity(
@@ -364,7 +364,7 @@ def identify_opportunities(project_type: ProjectType, patterns: Dict[str, bool])
             "easy", "high",
             "Add real-time activity overlays"
         ))
-    
+
     elif project_type == ProjectType.ASSETS:
         opportunities.append(IntegrationOpportunity(
             "Automated Fetching",
@@ -378,7 +378,7 @@ def identify_opportunities(project_type: ProjectType, patterns: Dict[str, bool])
             "easy", "medium",
             "Associate images with EVE type IDs"
         ))
-    
+
     elif project_type == ProjectType.WEB:
         if not patterns["image_server"]:
             opportunities.append(IntegrationOpportunity(
@@ -387,30 +387,30 @@ def identify_opportunities(project_type: ProjectType, patterns: Dict[str, bool])
                 "easy", "high",
                 "Lazy-load ship images from EVE CDN"
             ))
-    
+
     return opportunities
 
 
 def generate_priority_actions(audit: ProjectAudit) -> List[str]:
     """Generate prioritized action items."""
     actions = []
-    
+
     # Critical issues first
     critical_checks = [c for c in audit.checks if c.level == ComplianceLevel.CRITICAL]
     for check in critical_checks:
         actions.append(f"🚨 CRITICAL: {check.fix or check.message}")
-    
+
     # High-value opportunities
     high_value = [o for o in audit.opportunities if o.value == "high" and o.difficulty == "easy"]
     for opp in high_value[:2]:
         actions.append(f"🎯 {opp.feature}: {opp.description}")
-    
+
     # Warning fixes
     warning_checks = [c for c in audit.checks if c.level == ComplianceLevel.WARNING]
     for check in warning_checks[:3]:
         if check.fix:
             actions.append(f"⚠️ {check.name}: {check.fix}")
-    
+
     return actions
 
 
@@ -418,14 +418,14 @@ def calculate_score(checks: List[ComplianceCheck], has_esi: bool) -> int:
     """Calculate compliance score."""
     if not has_esi:
         return 100  # No ESI = no violations possible
-    
+
     max_score = sum(c.weight for c in checks)
     earned = sum(c.weight for c in checks if c.level == ComplianceLevel.PASS)
-    
+
     # Critical issues are severe penalties
     critical_count = sum(1 for c in checks if c.level == ComplianceLevel.CRITICAL)
     earned -= critical_count * 25
-    
+
     return max(0, min(100, int(earned / max_score * 100) if max_score > 0 else 100))
 
 
@@ -436,30 +436,30 @@ def audit_project(project_path: Path) -> ProjectAudit:
         path=str(project_path),
         project_type=detect_project_type(project_path)
     )
-    
+
     # Count files
     audit.python_files, audit.js_files, audit.json_files, audit.total_lines = count_files(project_path)
-    
+
     # Scan patterns
     patterns = scan_for_patterns(project_path)
     audit.has_esi = patterns["esi_url"]
     audit.has_image_server = patterns["image_server"]
     audit.has_sso = patterns["sso_url"]
     audit.has_sde = patterns["sde_usage"]
-    
+
     # Run compliance checks
     audit.checks = run_compliance_checks(project_path, patterns, audit.project_type)
-    
+
     # Calculate score
     audit.score = calculate_score(audit.checks, audit.has_esi)
     audit.calculate_grade()
-    
+
     # Identify opportunities
     audit.opportunities = identify_opportunities(audit.project_type, patterns)
-    
+
     # Generate actions
     audit.priority_actions = generate_priority_actions(audit)
-    
+
     return audit
 
 
@@ -469,23 +469,23 @@ def print_audit_report(audits: List[ProjectAudit]):
     print("  EVE PROJECT AUDIT REPORT")
     print("  Generated:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print("=" * 70)
-    
+
     # Summary table
     print("\n📊 PROJECT SUMMARY\n")
     print(f"{'Project':<25} {'Type':<12} {'Score':>6} {'Grade':>6} {'ESI':>5} {'SSO':>5}")
     print("-" * 70)
-    
+
     for audit in audits:
         esi = "✅" if audit.has_esi else "❌"
         sso = "✅" if audit.has_sso else "❌"
         print(f"{audit.name:<25} {audit.project_type.value:<12} {audit.score:>6} {audit.grade:>6} {esi:>5} {sso:>5}")
-    
+
     # Overall grade
     avg_score = sum(a.score for a in audits) / len(audits) if audits else 0
     overall_grade = "A" if avg_score >= 90 else "B" if avg_score >= 80 else "C" if avg_score >= 70 else "D" if avg_score >= 60 else "F"
     print("-" * 70)
     print(f"{'OVERALL':<25} {'':<12} {avg_score:>6.0f} {overall_grade:>6}")
-    
+
     # Detailed per-project reports
     for audit in audits:
         print(f"\n{'─' * 70}")
@@ -493,7 +493,7 @@ def print_audit_report(audits: List[ProjectAudit]):
         print(f"   Type: {audit.project_type.value} | Score: {audit.score}/100 ({audit.grade})")
         print(f"   Files: {audit.python_files} Python, {audit.js_files} JS, {audit.json_files} JSON")
         print(f"   Lines: {audit.total_lines:,}")
-        
+
         # Compliance checks
         fails = [c for c in audit.checks if c.level != ComplianceLevel.PASS]
         if fails:
@@ -505,20 +505,20 @@ def print_audit_report(audits: List[ProjectAudit]):
                     print(f"         → {check.fix}")
         else:
             print("\n   ✅ All compliance checks passed!")
-        
+
         # Opportunities
         if audit.opportunities:
             print("\n   🎯 Integration Opportunities:")
             for opp in audit.opportunities[:3]:
                 print(f"      • {opp.feature} [{opp.difficulty}/{opp.value}]")
                 print(f"        {opp.description}")
-        
+
         # Priority actions
         if audit.priority_actions:
             print("\n   📋 Priority Actions:")
             for i, action in enumerate(audit.priority_actions[:5], 1):
                 print(f"      {i}. {action}")
-    
+
     print("\n" + "=" * 70)
     print("  Run 'project_updater.py <path> --apply' to implement fixes")
     print("=" * 70 + "\n")
@@ -530,9 +530,9 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     parser.add_argument("--report", action="store_true", help="Generate detailed report")
     parser.add_argument("--output", "-o", type=Path, help="Save report to file")
-    
+
     args = parser.parse_args()
-    
+
     # Expand glob patterns
     projects = []
     for path in args.paths:
@@ -550,14 +550,14 @@ def main():
             # Try glob
             import glob
             projects.extend([Path(p) for p in glob.glob(str(path))])
-    
+
     if not projects:
         print("No projects found to audit")
         sys.exit(1)
-    
+
     # Run audits
     audits = [audit_project(p) for p in projects]
-    
+
     if args.json:
         output = {
             "generated": datetime.now().isoformat(),
@@ -586,7 +586,7 @@ def main():
         print(json.dumps(output, indent=2))
     else:
         print_audit_report(audits)
-    
+
     if args.output:
         # Save to file
         with open(args.output, 'w') as f:
@@ -595,7 +595,7 @@ def main():
                 "audits": [asdict(a) for a in audits]
             }, f, indent=2, default=str)
         print(f"\n📄 Report saved to: {args.output}")
-    
+
     # Exit with error if any critical issues
     critical_count = sum(1 for a in audits for c in a.checks if c.level == ComplianceLevel.CRITICAL)
     sys.exit(1 if critical_count > 0 else 0)

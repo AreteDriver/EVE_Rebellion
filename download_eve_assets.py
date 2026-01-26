@@ -9,9 +9,9 @@ Image Server Docs: https://docs.esi.evetech.net/docs/image_server.html
 """
 
 import os
-import urllib.request
-import urllib.error
 import time
+import urllib.error
+import urllib.request
 
 # EVE Type IDs for ships used in the game
 SHIP_TYPE_IDS = {

@@ -3,9 +3,10 @@ Minmatar Rebellion - Enhanced Particle Effects
 Adds visual polish with trails, sparks, and enhanced explosions
 """
 
-import pygame
-import random
 import math
+import random
+
+import pygame
 
 
 class Particle(pygame.sprite.Sprite):

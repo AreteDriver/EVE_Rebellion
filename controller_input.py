@@ -9,9 +9,10 @@ Design Philosophy:
 - Mistakes are final (no undo)
 """
 
-import pygame
 from dataclasses import dataclass
 from typing import Optional, Tuple
+
+import pygame
 
 
 @dataclass
@@ -71,7 +72,7 @@ DUALSENSE_CONFIG = ControllerConfig(
 class ControllerInput:
     """
     Controller-first input handler for vertical scrollers.
-    
+
     LAYOUT (Xbox/PlayStation):
     - Left Stick: Ship movement (analog 360°, momentum-aware)
     - Right Stick: Precision aim offset (subtle aim adjustment)
@@ -85,14 +86,14 @@ class ControllerInput:
     - Y/Triangle: Formation switch (Jaguar only)
     - Start: Pause
     - Select/Share: Quick stats
-    
+
     WHY CONTROLLER > KEYBOARD:
     1. Analog movement creates natural evasion patterns
     2. Trigger pressure = fire intensity (future feature)
     3. Haptic feedback communicates danger without UI
     4. Muscle memory for high-pressure decisions
     """
-    
+
     def __init__(self, config: Optional[ControllerConfig] = None):
         self.config = config or ControllerConfig()
         self.joystick: Optional[pygame.joystick.Joystick] = None
@@ -136,7 +137,7 @@ class ControllerInput:
         # Input lock (for death sequence)
         self.input_locked = False
         self.lock_timer = 0
-    
+
     def _connect_controller(self):
         """Auto-detect and connect first available controller"""
         joystick_count = pygame.joystick.get_count()
@@ -180,7 +181,7 @@ class ControllerInput:
         else:
             self.controller_type = 'unknown'
             # Keep default config
-    
+
     def start_frame(self):
         """Call at the start of each frame to clear edge-detection states"""
         self.buttons_just_pressed.clear()
@@ -193,14 +194,14 @@ class ControllerInput:
         """Update controller state - call once per frame"""
         if not self.connected or self.joystick is None:
             return
-        
+
         # Update input lock timer
         if self.input_locked:
             self.lock_timer -= dt
             if self.lock_timer <= 0:
                 self.input_locked = False
             return  # Skip input processing while locked
-        
+
         # Read analog sticks with deadzone
         left_x = self._apply_deadzone(
             self.joystick.get_axis(0),
@@ -210,7 +211,7 @@ class ControllerInput:
             self.joystick.get_axis(1),
             self.config.left_stick_deadzone
         )
-        
+
         right_x = self._apply_deadzone(
             self.joystick.get_axis(2),
             self.config.right_stick_deadzone
@@ -219,12 +220,12 @@ class ControllerInput:
             self.joystick.get_axis(3),
             self.config.right_stick_deadzone
         )
-        
+
         # Apply movement with momentum curve (not linear)
         # Use exponential curve for finer control at low speeds
         self.movement_x = self._momentum_curve(left_x) * self.config.movement_sensitivity
         self.movement_y = self._momentum_curve(left_y) * self.config.movement_sensitivity
-        
+
         # Right stick for directional firing (twin-stick style)
         right_stick_magnitude = (right_x ** 2 + right_y ** 2) ** 0.5
         self.right_stick_fire = right_stick_magnitude > 0.3
@@ -240,7 +241,7 @@ class ControllerInput:
         # Legacy aim offset (for compatibility)
         self.aim_offset_x = right_x * self.config.aim_sensitivity * 30
         self.aim_offset_y = right_y * self.config.aim_sensitivity * 30
-        
+
         # Read triggers (axis 2/5 on most controllers, but varies)
         # Try common layouts
         try:
@@ -256,18 +257,18 @@ class ControllerInput:
         except Exception:
             rt = 0.0
             lt = 0.0
-        
+
         # Normalize trigger values (some controllers use -1 to 1, others 0 to 1)
         rt = (rt + 1.0) / 2.0 if rt < 0 else rt
         lt = (lt + 1.0) / 2.0 if lt < 0 else lt
-        
+
         self.primary_fire = rt > 0.1
         self.alternate_fire = lt > 0.1
         self.primary_pressure = rt
-        
+
         # Update haptic feedback based on heat
         self._update_haptics()
-    
+
     def handle_event(self, event: pygame.event.Event):
         """Handle pygame joystick events for button presses"""
         if not self.connected or self.input_locked:
@@ -323,7 +324,7 @@ class ControllerInput:
         """Clear back button action states (call after processing)"""
         for key in self.back_button_actions:
             self.back_button_actions[key] = False
-    
+
     def _apply_deadzone(self, value: float, deadzone: float) -> float:
         """Apply circular deadzone to analog input"""
         if abs(value) < deadzone:
@@ -332,7 +333,7 @@ class ControllerInput:
         sign = 1.0 if value > 0 else -1.0
         scaled = (abs(value) - deadzone) / (1.0 - deadzone)
         return sign * scaled
-    
+
     def _momentum_curve(self, input_value: float) -> float:
         """
         Apply momentum curve for weighty, not twitchy movement.
@@ -340,22 +341,22 @@ class ControllerInput:
         """
         if input_value == 0.0:
             return 0.0
-        
+
         sign = 1.0 if input_value > 0 else -1.0
         magnitude = abs(input_value)
-        
+
         # Exponential curve: x^1.8 gives good "weight" feel
         curved = pow(magnitude, 1.8)
         return sign * curved
-    
+
     def get_movement_vector(self) -> Tuple[float, float]:
         """Get movement vector with magnitude 0.0 to 1.0"""
         return (self.movement_x, self.movement_y)
-    
+
     def get_aim_offset(self) -> Tuple[float, float]:
         """Get precision aim offset in pixels"""
         return (self.aim_offset_x, self.aim_offset_y)
-    
+
     def is_firing(self) -> bool:
         """Check if primary fire is active (RT or right stick)"""
         return self.primary_fire or self.right_stick_fire
@@ -367,26 +368,26 @@ class ControllerInput:
     def is_alternate_fire(self) -> bool:
         """Check if alternate fire (rockets) is active"""
         return self.alternate_fire
-    
+
     def get_fire_pressure(self) -> float:
         """Get trigger pressure (0.0 to 1.0) for future fire rate scaling"""
         return self.primary_pressure
-    
+
     def is_button_just_pressed(self, button: int) -> bool:
         """Check if button was pressed this frame (edge detection)"""
         return button in self.buttons_just_pressed
-    
+
     def is_button_held(self, button: int) -> bool:
         """Check if button is currently held"""
         return button in self.buttons_pressed
-    
+
     def set_heat_level(self, heat: float):
         """
         Set heat level (0.0 to 1.0) for dynamic haptic feedback.
         Higher heat = stronger continuous rumble.
         """
         self.heat_level = max(0.0, min(1.0, heat))
-    
+
     def _update_haptics(self):
         """Update continuous haptic feedback based on heat"""
         if not self.connected or not hasattr(self.joystick, 'rumble'):
@@ -429,15 +430,15 @@ class ControllerInput:
             self.joystick.rumble(intensity, intensity, 200)
         except Exception:
             pass
-    
+
     def trigger_lock_haptic(self):
         """Sharp spike when enemy locks onto player"""
         self._haptic_spike(self.config.haptic_lock)
-    
+
     def trigger_decision_haptic(self):
         """Sharp spike for irreversible decisions"""
         self._haptic_spike(self.config.haptic_decision)
-    
+
     def trigger_death_sequence(self):
         """
         Lock inputs and trigger death haptic.
@@ -446,7 +447,7 @@ class ControllerInput:
         self.input_locked = True
         self.lock_timer = 1.0  # 1 second lock
         self._haptic_spike(self.config.haptic_death)
-    
+
     def reconnect(self):
         """Attempt to reconnect controller - reinitializes joystick subsystem"""
         # Quit and reinit to detect newly connected controllers
@@ -516,7 +517,7 @@ class SteamDeckButton:
 def apply_controller_movement(player, controller: ControllerInput, dt: float):
     """
     Apply controller input to player movement with analog precision.
-    
+
     This demonstrates WHY analog is superior:
     - Player can dodge with precise 23° angle, not just 8 directions
     - Speed varies naturally with stick pressure
@@ -524,23 +525,23 @@ def apply_controller_movement(player, controller: ControllerInput, dt: float):
     """
     if not controller.connected:
         return  # Fall back to keyboard
-    
+
     # Get analog movement vector
     move_x, move_y = controller.get_movement_vector()
-    
+
     # Get aim offset for precision targeting
     aim_x, aim_y = controller.get_aim_offset()
-    
+
     # Apply movement with momentum
     player.rect.x += move_x * player.speed * dt
     player.rect.y += move_y * player.speed * dt
-    
+
     # Optional: Apply aim offset to bullets when firing
     # This creates a "turret offset" effect for precision
     if controller.is_firing():
         # Bullets spawn with slight offset based on right stick
         pass  # Implement in shooting logic
-    
+
     # Example: Trigger pressure affects fire rate (future feature)
     fire_pressure = controller.get_fire_pressure()
     if fire_pressure > 0.5:
@@ -552,7 +553,7 @@ if __name__ == "__main__":
     # Test controller detection
     pygame.init()
     controller = ControllerInput()
-    
+
     if controller.connected:
         print("\n=== Controller Layout ===")
         print("Left Stick: Movement (analog 360°)")
@@ -572,5 +573,5 @@ if __name__ == "__main__":
         print("4. Physical tension matches game tension")
     else:
         print("No controller detected")
-    
+
     pygame.quit()

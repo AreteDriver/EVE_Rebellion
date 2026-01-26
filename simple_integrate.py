@@ -40,14 +40,14 @@ AFTER:
         # Calculate berserked score
         player_pos = (self.player.rect.centerx, self.player.rect.centery)
         enemy_pos = (enemy.rect.centerx, enemy.rect.centery)
-        
+
         final_score = self.berserk_system.register_kill(
             enemy.score_value,
             player_pos,
             enemy_pos
         )
         self.score += final_score
-        
+
         # Add explosion effect
         self.effect_manager.add_explosion(
             enemy_pos,
@@ -71,18 +71,18 @@ In your Game.draw() method:
 
     # Get shake offset
     shake_x, shake_y = self.effect_manager.get_shake_offset()
-    
+
     # Draw background (with shake)
     self.screen.blit(self.background, (shake_x, shake_y))
-    
+
     # Draw background effects
     self.effect_manager.draw_background_effects(self.screen)
-    
+
     # ... draw gameplay ...
-    
+
     # Draw foreground effects
     self.effect_manager.draw_foreground_effects(self.screen)
-    
+
     # Draw HUD
     self.draw_hud()
 
@@ -99,7 +99,7 @@ In your draw_hud() method:
         self.font_small,
         self.font_large
     )
-    
+
     # Score popups
     self.berserk_system.draw_popups(
         self.screen,
@@ -122,7 +122,7 @@ In handle_enemy_death(), after register_kill():
         self.effect_manager.add_shake(intensity=5, duration=8)
 
 
-THAT'S IT! 
+THAT'S IT!
 
 Test: Run 'python3 test_berserk.py' to verify the system works
 Guide: See DEVIL_BLADE_INTEGRATION.md for detailed examples

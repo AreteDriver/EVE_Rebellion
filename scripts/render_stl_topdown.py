@@ -3,9 +3,10 @@ Blender script to render STL models as top-down sprites.
 Run with: blender --background --python render_stl_topdown.py -- input.stl output.png [size]
 """
 
-import bpy
-import sys
 import math
+import sys
+
+import bpy
 from mathutils import Vector
 
 

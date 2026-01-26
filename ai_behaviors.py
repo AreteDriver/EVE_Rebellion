@@ -5,9 +5,8 @@ Implements the 6 core AI behaviors from the design doc.
 
 import math
 import random
-from typing import Tuple, Any
 from dataclasses import dataclass
-
+from typing import Any, Tuple
 
 # Behavior type constants
 AI_BASIC = 'basic'

@@ -14,14 +14,16 @@ Integration with EVE theme:
 - Compatible with refugee rescue currency system
 """
 
-import pygame
 import math
 from typing import Tuple
+
+import pygame
+
 
 class BerserkSystem:
     """
     Devil Blade Reboot's signature Berserk System
-    
+
     Distance Ranges (from player):
     - EXTREME CLOSE: 0-80 pixels → 5.0x multiplier (INSANE!)
     - CLOSE: 80-150 pixels → 3.0x multiplier (DANGEROUS!)
@@ -29,13 +31,13 @@ class BerserkSystem:
     - FAR: 250-400 pixels → 1.0x multiplier (SAFE)
     - VERY FAR: 400+ pixels → 0.5x multiplier (COWARD)
     """
-    
+
     # Distance thresholds (in pixels)
     EXTREME_CLOSE = 80
     CLOSE = 150
     MEDIUM = 250
     FAR = 400
-    
+
     # Multipliers for each range
     MULTIPLIERS = {
         'EXTREME': 5.0,
@@ -44,7 +46,7 @@ class BerserkSystem:
         'FAR': 1.0,
         'VERY_FAR': 0.5
     }
-    
+
     # Colors for range indicators
     RANGE_COLORS = {
         'EXTREME': (255, 50, 50),      # Bright red - DANGER
@@ -53,7 +55,7 @@ class BerserkSystem:
         'FAR': (100, 200, 100),        # Green - SAFE
         'VERY_FAR': (100, 100, 200)    # Blue - TOO FAR
     }
-    
+
     def __init__(self):
         self.total_score = 0
         self.session_score = 0
@@ -86,19 +88,19 @@ class BerserkSystem:
             'VERY_FAR': 0
         }
         self.total_kills = 0
-        
-    def calculate_multiplier(self, player_pos: Tuple[float, float], 
+
+    def calculate_multiplier(self, player_pos: Tuple[float, float],
                            enemy_pos: Tuple[float, float]) -> Tuple[float, str]:
         """
         Calculate score multiplier based on distance at moment of kill
-        
+
         Returns: (multiplier, range_name)
         """
         # Calculate distance
         dx = enemy_pos[0] - player_pos[0]
         dy = enemy_pos[1] - player_pos[1]
         distance = math.sqrt(dx * dx + dy * dy)
-        
+
         # Determine range and multiplier
         if distance < self.EXTREME_CLOSE:
             return (self.MULTIPLIERS['EXTREME'], 'EXTREME')
@@ -157,8 +159,8 @@ class BerserkSystem:
             self.danger_pulse = 30  # Flash screen
 
         return final_score
-    
-    def create_score_popup(self, pos: Tuple[float, float], score: int, 
+
+    def create_score_popup(self, pos: Tuple[float, float], score: int,
                           multiplier: float, range_name: str):
         """Create floating score indicator"""
         popup = {
@@ -171,7 +173,7 @@ class BerserkSystem:
             'alpha': 255
         }
         self.score_popups.append(popup)
-    
+
     def update(self, delta_time: float = 1.0):
         """Update berserk system state"""
         # Update combo timer
@@ -196,7 +198,7 @@ class BerserkSystem:
         # Update danger pulse
         if self.danger_pulse > 0:
             self.danger_pulse -= 1
-    
+
     def draw_popups(self, surface: pygame.Surface, font_small: pygame.font.Font,
                    font_large: pygame.font.Font):
         """Draw score popups on screen"""
@@ -206,19 +208,19 @@ class BerserkSystem:
             multiplier = popup['multiplier']
             range_name = popup['range']
             alpha = popup['alpha']
-            
+
             # Choose font based on multiplier
             font = font_large if multiplier >= 3.0 else font_small
-            
+
             # Score text
             score_text = f"+{score}"
             color = self.RANGE_COLORS[range_name]
-            
+
             score_surf = font.render(score_text, True, color)
             score_surf.set_alpha(alpha)
             score_rect = score_surf.get_rect(center=(int(x), int(y)))
             surface.blit(score_surf, score_rect)
-            
+
             # Multiplier indicator for high-risk kills
             if multiplier > 1.0:
                 mult_text = f"x{multiplier:.1f}"
@@ -226,7 +228,7 @@ class BerserkSystem:
                 mult_surf.set_alpha(alpha)
                 mult_rect = mult_surf.get_rect(center=(int(x), int(y + 20)))
                 surface.blit(mult_surf, mult_rect)
-                
+
                 # Range name for extreme kills
                 if range_name == 'EXTREME':
                     danger_text = "BERSERK!"
@@ -234,7 +236,7 @@ class BerserkSystem:
                     danger_surf.set_alpha(alpha)
                     danger_rect = danger_surf.get_rect(center=(int(x), int(y + 35)))
                     surface.blit(danger_surf, danger_rect)
-    
+
     def draw_hud(self, surface: pygame.Surface, x: int, y: int,
                 font_small: pygame.font.Font, font_large: pygame.font.Font):
         """
@@ -245,7 +247,7 @@ class BerserkSystem:
         if self.current_multiplier > 1.0:
             mult_text = f"x{self.current_multiplier:.1f}"
             color = self.RANGE_COLORS[self.current_range]
-            
+
             # Pulsing effect for extreme danger
             if self.current_range == 'EXTREME' and self.danger_pulse > 0:
                 pulse_scale = 1.0 + (self.danger_pulse / 30.0) * 0.3
@@ -262,12 +264,12 @@ class BerserkSystem:
                 mult_surf = font_large.render(mult_text, True, color)
                 rect = mult_surf.get_rect(topright=(x, y))
                 surface.blit(mult_surf, rect)
-            
+
             # Small "BERSERK" label
             label_surf = font_small.render("BERSERK", True, (200, 200, 200))
             label_rect = label_surf.get_rect(topright=(x, y + 30))
             surface.blit(label_surf, label_rect)
-    
+
     def draw_danger_zones(self, surface: pygame.Surface, player_pos: Tuple[int, int],
                          alpha: int = 60):
         """
@@ -275,7 +277,7 @@ class BerserkSystem:
         Can be toggled on/off in settings
         """
         px, py = player_pos
-        
+
         # Draw range circles (from outermost to innermost)
         ranges = [
             (self.FAR, self.RANGE_COLORS['FAR']),
@@ -283,15 +285,15 @@ class BerserkSystem:
             (self.CLOSE, self.RANGE_COLORS['CLOSE']),
             (self.EXTREME_CLOSE, self.RANGE_COLORS['EXTREME'])
         ]
-        
+
         for radius, color in ranges:
             # Create surface for circle with transparency
             circle_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
             pygame.draw.circle(circle_surf, (*color, alpha), (radius, radius), radius, 2)
-            
+
             # Blit centered on player
             surface.blit(circle_surf, (px - radius, py - radius))
-    
+
     def get_stats(self) -> dict:
         """Get statistics for end-of-stage display"""
         avg_multiplier = 0.0
@@ -301,7 +303,7 @@ class BerserkSystem:
                 for range_name, count in self.kills_by_range.items()
             )
             avg_multiplier = weighted_sum / self.total_kills
-        
+
         return {
             'total_score': self.total_score,
             'session_score': self.session_score,
@@ -312,7 +314,7 @@ class BerserkSystem:
             'safe_kills': self.kills_by_range['FAR'] + self.kills_by_range['VERY_FAR'],
             'max_combo': self.max_combo
         }
-    
+
     def reset_session(self):
         """Reset session stats (new stage)"""
         self.session_score = 0
@@ -331,12 +333,12 @@ class DangerIndicator:
     Visual indicator showing current danger level
     Minimal, pixel-art style matching Devil Blade aesthetic
     """
-    
+
     def __init__(self, width: int = 200, height: int = 10):
         self.width = width
         self.height = height
         self.current_danger = 0.0  # 0.0 to 1.0
-        
+
     def update_danger(self, player_pos: Tuple[float, float],
                      enemies: list, berserk_system: BerserkSystem):
         """
@@ -345,7 +347,7 @@ class DangerIndicator:
         if not enemies:
             self.current_danger = max(0, self.current_danger - 0.05)
             return
-        
+
         # Find closest enemy
         min_dist = float('inf')
         for enemy in enemies:
@@ -353,7 +355,7 @@ class DangerIndicator:
             dy = enemy.rect.centery - player_pos[1]
             dist = math.sqrt(dx * dx + dy * dy)
             min_dist = min(min_dist, dist)
-        
+
         # Convert distance to danger (inverse relationship)
         if min_dist < berserk_system.EXTREME_CLOSE:
             danger = 1.0
@@ -365,21 +367,21 @@ class DangerIndicator:
             danger = 0.2
         else:
             danger = 0.0
-        
+
         # Smooth transition
         self.current_danger += (danger - self.current_danger) * 0.1
-    
+
     def draw(self, surface: pygame.Surface, x: int, y: int):
         """Draw danger indicator bar"""
         # Background
         bg_rect = pygame.Rect(x, y, self.width, self.height)
         pygame.draw.rect(surface, (50, 50, 50), bg_rect)
         pygame.draw.rect(surface, (100, 100, 100), bg_rect, 1)
-        
+
         # Danger bar (color changes with danger level)
         if self.current_danger > 0:
             bar_width = int(self.width * self.current_danger)
-            
+
             # Color gradient: green → yellow → red
             if self.current_danger < 0.33:
                 color = (100, 200, 100)
@@ -387,10 +389,10 @@ class DangerIndicator:
                 color = (255, 255, 50)
             else:
                 color = (255, 50, 50)
-            
+
             danger_rect = pygame.Rect(x, y, bar_width, self.height)
             pygame.draw.rect(surface, color, danger_rect)
-        
+
         # Label
         # (Optional - can be drawn externally)
 

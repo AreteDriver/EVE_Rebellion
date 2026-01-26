@@ -1,6 +1,6 @@
 """Tests for the Berserk scoring system"""
-import sys
 import os
+import sys
 from unittest.mock import MagicMock
 
 # Add parent directory to path for imports

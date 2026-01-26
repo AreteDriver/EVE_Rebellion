@@ -3,15 +3,31 @@ Data loader module for loading JSON game data.
 
 This module provides utilities for loading enemy, stage, and power-up
 definitions from JSON files in the data/ directory structure.
+
+Supports both development mode (running from source) and portable/packaged
+mode via the platform_init module.
 """
 
 import json
 import os
+import sys
 from typing import Any, Dict
 
 
 def get_data_path() -> str:
-    """Get the path to the data directory."""
+    """
+    Get the path to the data directory.
+
+    Handles both development mode and portable/packaged installs.
+    """
+    # Try platform_init first for portable/packaged mode
+    try:
+        from platform_init import get_resource_path
+        return get_resource_path('data')
+    except ImportError:
+        pass
+
+    # Fallback for development mode
     return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
 

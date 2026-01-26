@@ -3,12 +3,12 @@ Ship Asset Manager for EVE Rebellion
 Downloads, caches, and processes ship renders from EVE Online's image server.
 """
 
-import os
 import math
-import urllib.request
+import os
 import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 try:
     import pygame

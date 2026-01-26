@@ -1,6 +1,7 @@
 """Quick STL dimension check."""
-import bpy
 import sys
+
+import bpy
 
 # Clear scene
 bpy.ops.object.select_all(action='SELECT')

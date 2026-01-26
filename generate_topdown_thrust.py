@@ -3,8 +3,9 @@
 Generate thrust effects for top-down orthographic ship sprites.
 """
 
-import os
 import math
+import os
+
 import pygame
 
 # Ship categories for thrust colors

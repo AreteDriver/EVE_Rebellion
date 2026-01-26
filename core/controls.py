@@ -8,7 +8,6 @@ import json
 import os
 from pathlib import Path
 
-
 # Maximum allowed config file size (64KB should be plenty for control bindings)
 MAX_CONFIG_SIZE = 65536
 

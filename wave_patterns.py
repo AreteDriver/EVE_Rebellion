@@ -5,8 +5,8 @@ Implements the 6 core wave patterns from the design doc.
 
 import math
 import random
-from typing import List, Tuple, Optional
 from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 
 @dataclass
