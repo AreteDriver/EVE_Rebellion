@@ -807,6 +807,7 @@ class Game:
         self.spawn_timer = 0
         self.wave_delay = 0
         self.stage_complete = False
+        self.pattern_spawn_queue = []  # Clear wave pattern spawns
 
         # Reset wave progression trackers
         self._bc_spawned_this_stage = False
@@ -1320,6 +1321,7 @@ class Game:
                 drone.swarm_radius = random.randint(50, 80)  # Tighter swarm
             self.enemies.add(drone)
             self.all_sprites.add(drone)
+            self.wave_spawned += 1  # Track drone spawns for wave completion
 
         self.wave_spawned += 1  # Count as one "spawn" even though multiple drones
 
@@ -3993,6 +3995,7 @@ class Game:
                 self.current_wave = 0
                 self.wave_delay = 60
                 self.stage_complete = False
+                self.pattern_spawn_queue = []  # Clear any leftover spawn patterns
                 # Set up hazards for new stage
                 self.hazards.clear()
                 self.hazards.set_stage_hazards(self.current_stage)
@@ -4296,7 +4299,11 @@ class Game:
                 self.all_sprites.add(bullet)
 
         self.pods.update()
-        self.powerups.update()
+
+        # Update powerups with player position for LOD optimization
+        player_pos = self.player.rect.center
+        for powerup in self.powerups:
+            powerup.update(player_pos)
 
         # Magnet powerup - attract pods and powerups toward player
         if self.player.has_magnet():
@@ -4690,6 +4697,12 @@ class Game:
             )
             self.effects.add(effect)
             self.all_sprites.add(effect)
+
+            # Screen shake for rare/epic pickups
+            shake_intensity = effect.get_shake_intensity()
+            if shake_intensity > 0 and hasattr(self, 'screen_shake'):
+                self.screen_shake.add_shake(shake_intensity, 12, 'exponential')
+
             self.apply_powerup(powerup)
         
         # Wave/Stage logic
@@ -5963,6 +5976,9 @@ class Game:
         # Draw HUD
         self.draw_hud()
 
+        # Draw buff expiration edge warnings
+        self._draw_buff_expiration_warnings()
+
         # Draw tutorial overlay
         if self.tutorial.active:
             self.tutorial.draw(self.render_surface, self.font, self.font_small, self.font_large)
@@ -6035,17 +6051,24 @@ class Game:
         active_effects = []
 
         # Check each timed powerup and assign colors
-        if now < self.player.invulnerable_until:
+        invuln_active = now < self.player.invulnerable_until
+        double_dmg_active = now < self.player.double_damage_until
+        rapid_fire_active = now < self.player.rapid_fire_until
+        overdrive_active = now < self.player.overdrive_until
+        shield_boost_active = now < self.player.shield_boost_until
+        magnet_active = now < self.player.magnet_until
+
+        if invuln_active:
             active_effects.append((255, 215, 0))    # Gold
-        if now < self.player.double_damage_until:
+        if double_dmg_active:
             active_effects.append((255, 80, 80))    # Red
-        if now < self.player.rapid_fire_until:
+        if rapid_fire_active:
             active_effects.append((255, 150, 50))   # Orange
-        if now < self.player.overdrive_until:
+        if overdrive_active:
             active_effects.append((255, 255, 100))  # Yellow
-        if now < self.player.shield_boost_until:
+        if shield_boost_active:
             active_effects.append((100, 180, 255))  # Blue
-        if now < self.player.magnet_until:
+        if magnet_active:
             active_effects.append((180, 100, 255))  # Purple
 
         if not active_effects:
@@ -6053,6 +6076,7 @@ class Game:
 
         # Pulsing effect
         pulse = 0.6 + 0.4 * math.sin(now * 0.008)
+        fast_pulse = 0.7 + 0.3 * math.sin(now * 0.015)
 
         cx, cy = self.player.rect.center
 
@@ -6078,7 +6102,23 @@ class Game:
             glow_rect = glow_surf.get_rect(center=(cx, cy))
             self.render_surface.blit(glow_surf, glow_rect)
 
-        # Invulnerability already shown by gold glow - no additional outline needed
+        # === BUFF-SPECIFIC VISUAL EFFECTS ===
+
+        # INVULNERABILITY: Golden hexagonal shield bubble
+        if invuln_active:
+            self._draw_invulnerability_effect(cx, cy, now, pulse)
+
+        # OVERDRIVE: Speed lines trailing behind
+        if overdrive_active:
+            self._draw_overdrive_effect(cx, cy, now)
+
+        # RAPID FIRE: Weapon barrel glow
+        if rapid_fire_active:
+            self._draw_rapid_fire_effect(cx, cy, now, fast_pulse)
+
+        # MAGNET: Tractor beam tendrils to nearby powerups
+        if magnet_active:
+            self._draw_magnet_effect(cx, cy, now)
 
         # === JAGUAR FRONTAL SHIELD VISUAL ===
         if hasattr(self.player, 'is_frontal_shield_active') and self.player.is_frontal_shield_active():
@@ -6196,6 +6236,243 @@ class Game:
 
                 shield_rect = shield_surf.get_rect(center=(px, py_arc))
                 self.render_surface.blit(shield_surf, shield_rect)
+
+    def _draw_invulnerability_effect(self, cx, cy, now, pulse):
+        """Draw golden hexagonal shield bubble for invulnerability buff"""
+        # Hexagonal shield with rotating segments
+        hex_radius = 45
+        rotation = (now * 0.001) % (math.pi * 2)
+
+        surf_size = hex_radius * 2 + 30
+        shield_surf = pygame.Surface((surf_size, surf_size), pygame.SRCALPHA)
+        scx, scy = surf_size // 2, surf_size // 2
+
+        # Outer hexagonal glow
+        for layer in range(3, 0, -1):
+            r = hex_radius + layer * 5
+            alpha = int(40 * pulse * (layer / 3))
+            points = []
+            for i in range(6):
+                angle = rotation + i * (math.pi / 3)
+                px = scx + r * math.cos(angle)
+                py = scy + r * math.sin(angle)
+                points.append((px, py))
+            pygame.draw.polygon(shield_surf, (255, 215, 0, alpha), points, 3)
+
+        # Main hexagonal border
+        main_points = []
+        for i in range(6):
+            angle = rotation + i * (math.pi / 3)
+            px = scx + hex_radius * math.cos(angle)
+            py = scy + hex_radius * math.sin(angle)
+            main_points.append((px, py))
+        pygame.draw.polygon(shield_surf, (255, 230, 100, int(150 * pulse)), main_points, 2)
+
+        # Inner hexagonal fill (subtle)
+        inner_points = []
+        for i in range(6):
+            angle = rotation + i * (math.pi / 3)
+            px = scx + (hex_radius - 8) * math.cos(angle)
+            py = scy + (hex_radius - 8) * math.sin(angle)
+            inner_points.append((px, py))
+        pygame.draw.polygon(shield_surf, (255, 215, 0, int(25 * pulse)), inner_points)
+
+        # Corner nodes (vertices glow)
+        for point in main_points:
+            pygame.draw.circle(shield_surf, (255, 255, 200, int(180 * pulse)),
+                             (int(point[0]), int(point[1])), 4)
+            pygame.draw.circle(shield_surf, (255, 255, 255, int(100 * pulse)),
+                             (int(point[0]), int(point[1])), 2)
+
+        shield_rect = shield_surf.get_rect(center=(cx, cy))
+        self.render_surface.blit(shield_surf, shield_rect)
+
+    def _draw_overdrive_effect(self, cx, cy, now):
+        """Draw speed lines trailing behind for overdrive buff"""
+        # Speed lines emanating backwards from ship
+        num_lines = 8
+        line_length_base = 35
+
+        for i in range(num_lines):
+            # Staggered animation phases
+            phase = (now * 0.015 + i * 0.5) % 1.0
+
+            # Lines start near ship and trail back
+            spread = (i - num_lines // 2) * 6
+            start_y = cy + 15  # Behind ship
+            end_y = start_y + int(line_length_base * phase)
+
+            alpha = int(180 * (1 - phase))
+            width = max(1, int(3 * (1 - phase)))
+
+            # Yellow speed line with slight x wobble
+            wobble = math.sin(now * 0.02 + i) * 3
+            pygame.draw.line(self.render_surface,
+                           (255, 255, 100, alpha),
+                           (cx + spread + wobble, start_y),
+                           (cx + spread + wobble * 0.5, end_y),
+                           width)
+
+            # Brighter core
+            if phase < 0.5:
+                pygame.draw.line(self.render_surface,
+                               (255, 255, 200, alpha),
+                               (cx + spread + wobble, start_y),
+                               (cx + spread + wobble * 0.5, start_y + int(line_length_base * phase * 0.5)),
+                               max(1, width - 1))
+
+    def _draw_rapid_fire_effect(self, cx, cy, now, fast_pulse):
+        """Draw weapon barrel orange glow for rapid fire buff"""
+        # Glow at weapon mount points (front of ship)
+        barrel_y = cy - 20  # Front of ship
+        barrel_offsets = [-12, 12]  # Left and right barrels
+
+        for offset in barrel_offsets:
+            bx = cx + offset
+
+            # Outer glow
+            glow_radius = int(8 + 4 * fast_pulse)
+            glow_surf = pygame.Surface((glow_radius * 3, glow_radius * 3), pygame.SRCALPHA)
+            glow_cx, glow_cy = glow_radius * 1.5, glow_radius * 1.5
+
+            # Layered glow
+            for r in range(glow_radius, 2, -2):
+                alpha = int(80 * fast_pulse * (r / glow_radius))
+                pygame.draw.circle(glow_surf, (255, 150, 50, alpha),
+                                 (int(glow_cx), int(glow_cy)), r)
+
+            # Hot core
+            pygame.draw.circle(glow_surf, (255, 200, 100, int(200 * fast_pulse)),
+                             (int(glow_cx), int(glow_cy)), 4)
+            pygame.draw.circle(glow_surf, (255, 255, 200, int(150 * fast_pulse)),
+                             (int(glow_cx), int(glow_cy)), 2)
+
+            glow_rect = glow_surf.get_rect(center=(bx, barrel_y))
+            self.render_surface.blit(glow_surf, glow_rect)
+
+        # Occasional muzzle flare particles
+        if random.random() < 0.3:
+            for offset in barrel_offsets:
+                fx = cx + offset + random.randint(-3, 3)
+                fy = barrel_y + random.randint(-8, -2)
+                pygame.draw.circle(self.render_surface, (255, 200, 100),
+                                 (fx, fy), random.randint(1, 3))
+
+    def _draw_magnet_effect(self, cx, cy, now):
+        """Draw tractor beam tendrils to nearby powerups"""
+        # Find nearby powerups to draw tendrils to
+        player_pos = (cx, cy)
+
+        for powerup in self.powerups:
+            dx = powerup.rect.centerx - cx
+            dy = powerup.rect.centery - cy
+            dist = math.sqrt(dx * dx + dy * dy)
+
+            # Only draw tendrils to powerups within magnet range (typically ~200px)
+            if dist < 250 and dist > 20:
+                # Calculate tendril control points for curved beam
+                mid_x = cx + dx * 0.5 + math.sin(now * 0.01 + powerup.rect.x) * 20
+                mid_y = cy + dy * 0.5 + math.cos(now * 0.01 + powerup.rect.y) * 20
+
+                # Draw curved tendril using line segments
+                points = []
+                for t in range(11):
+                    t_norm = t / 10.0
+                    # Quadratic bezier
+                    px = (1-t_norm)**2 * cx + 2*(1-t_norm)*t_norm * mid_x + t_norm**2 * powerup.rect.centerx
+                    py = (1-t_norm)**2 * cy + 2*(1-t_norm)*t_norm * mid_y + t_norm**2 * powerup.rect.centery
+                    # Add wave motion
+                    wave = math.sin(now * 0.02 + t * 0.5) * 5
+                    px += wave * (dy / dist) if dist > 0 else 0
+                    py += wave * (-dx / dist) if dist > 0 else 0
+                    points.append((int(px), int(py)))
+
+                # Intensity based on distance (stronger when closer)
+                intensity = 1.0 - (dist / 250)
+                alpha = int(120 * intensity)
+
+                # Draw outer glow
+                if len(points) >= 2:
+                    pygame.draw.lines(self.render_surface, (100, 150, 255, alpha // 2),
+                                    False, points, 5)
+                    # Inner bright core
+                    pygame.draw.lines(self.render_surface, (150, 200, 255, alpha),
+                                    False, points, 2)
+                    # Brightest center line
+                    pygame.draw.lines(self.render_surface, (200, 230, 255, alpha),
+                                    False, points, 1)
+
+                # Particles along tendril
+                if random.random() < 0.2 * intensity:
+                    t = random.random()
+                    px = (1-t)**2 * cx + 2*(1-t)*t * mid_x + t**2 * powerup.rect.centerx
+                    py = (1-t)**2 * cy + 2*(1-t)*t * mid_y + t**2 * powerup.rect.centery
+                    pygame.draw.circle(self.render_surface, (180, 220, 255),
+                                     (int(px), int(py)), random.randint(2, 4))
+
+    def _draw_buff_expiration_warnings(self):
+        """Draw pulsing screen-edge glow when buffs are about to expire"""
+        if not hasattr(self, '_expiring_buffs') or not self._expiring_buffs:
+            return
+
+        now = pygame.time.get_ticks()
+
+        for name, color, remaining in self._expiring_buffs:
+            # Urgency increases as time runs out
+            urgency = 1.0 - (remaining / 2.0)  # 0 at 2s, 1 at 0s
+            pulse = 0.4 + 0.6 * abs(math.sin(now * 0.02 * (1 + urgency)))
+
+            # Create edge glow overlay
+            edge_width = int(20 + 30 * urgency * pulse)
+            edge_alpha = int(80 * pulse * urgency)
+
+            if edge_alpha < 10:
+                continue
+
+            # Draw glowing edges
+            edge_surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+
+            # Top edge
+            for i in range(edge_width):
+                line_alpha = int(edge_alpha * (1 - i / edge_width))
+                pygame.draw.line(edge_surf, (*color, line_alpha),
+                               (0, i), (SCREEN_WIDTH, i))
+
+            # Bottom edge
+            for i in range(edge_width):
+                line_alpha = int(edge_alpha * (1 - i / edge_width))
+                pygame.draw.line(edge_surf, (*color, line_alpha),
+                               (0, SCREEN_HEIGHT - i - 1), (SCREEN_WIDTH, SCREEN_HEIGHT - i - 1))
+
+            # Left edge
+            for i in range(edge_width):
+                line_alpha = int(edge_alpha * (1 - i / edge_width))
+                pygame.draw.line(edge_surf, (*color, line_alpha),
+                               (i, 0), (i, SCREEN_HEIGHT))
+
+            # Right edge
+            for i in range(edge_width):
+                line_alpha = int(edge_alpha * (1 - i / edge_width))
+                pygame.draw.line(edge_surf, (*color, line_alpha),
+                               (SCREEN_WIDTH - i - 1, 0), (SCREEN_WIDTH - i - 1, SCREEN_HEIGHT))
+
+            self.render_surface.blit(edge_surf, (0, 0))
+
+            # Corner flare points for extra emphasis
+            if urgency > 0.5:
+                corner_size = int(40 * urgency * pulse)
+                corner_alpha = int(120 * pulse * urgency)
+                corners = [
+                    (0, 0),
+                    (SCREEN_WIDTH, 0),
+                    (0, SCREEN_HEIGHT),
+                    (SCREEN_WIDTH, SCREEN_HEIGHT)
+                ]
+                for corner_x, corner_y in corners:
+                    for r in range(corner_size, 0, -5):
+                        r_alpha = int(corner_alpha * (r / corner_size))
+                        pygame.draw.circle(self.render_surface, (*color, r_alpha),
+                                         (corner_x, corner_y), r)
 
     def draw_hud(self):
         """Draw EVE-style heads-up display with circular capacitor and status arcs"""
@@ -6334,34 +6611,72 @@ class Game:
             spacing = 28
             total_width = len(active_powerups) * spacing
             powerup_x = (SCREEN_WIDTH - total_width) // 2 + spacing // 2
+            expiring_buffs = []  # Track buffs for screen-edge warning
+
             for name, color, remaining in active_powerups:
                 # EVE-style square module icon
                 icon_rect = pygame.Rect(powerup_x - icon_size//2, powerup_y - icon_size//2, icon_size, icon_size)
 
-                # Pulsing glow
-                pulse = 0.5 + 0.5 * math.sin(now * 0.008)
+                # Check if expiring (<2 seconds)
+                is_expiring = remaining < 2.0
+                if is_expiring:
+                    expiring_buffs.append((name, color, remaining))
+
+                # Pulsing glow - FASTER when expiring
+                if is_expiring:
+                    # Rapid pulse for urgency
+                    pulse = 0.3 + 0.7 * abs(math.sin(now * 0.025))
+                    glow_alpha = int(100 * pulse)  # Brighter
+                else:
+                    pulse = 0.5 + 0.5 * math.sin(now * 0.008)
+                    glow_alpha = int(50 * pulse)
+
                 glow_surf = pygame.Surface((icon_size + 8, icon_size + 8), pygame.SRCALPHA)
-                pygame.draw.rect(glow_surf, (*color, int(50 * pulse)), (0, 0, icon_size + 8, icon_size + 8), border_radius=4)
+                pygame.draw.rect(glow_surf, (*color, glow_alpha), (0, 0, icon_size + 8, icon_size + 8), border_radius=4)
                 self.render_surface.blit(glow_surf, (icon_rect.x - 4, icon_rect.y - 4))
 
                 # Icon background
                 pygame.draw.rect(self.render_surface, (20, 25, 35), icon_rect, border_radius=3)
-                pygame.draw.rect(self.render_surface, color, icon_rect, 2, border_radius=3)
+
+                # Border - RED flash when expiring
+                if is_expiring:
+                    # Alternate between color and red
+                    border_flash = abs(math.sin(now * 0.02))
+                    border_color = (
+                        int(color[0] * (1 - border_flash) + 255 * border_flash),
+                        int(color[1] * (1 - border_flash)),
+                        int(color[2] * (1 - border_flash))
+                    )
+                    pygame.draw.rect(self.render_surface, border_color, icon_rect, 3, border_radius=3)
+                else:
+                    pygame.draw.rect(self.render_surface, color, icon_rect, 2, border_radius=3)
 
                 # Inner fill based on remaining time (like EVE module cycle)
                 fill_height = int(icon_size * min(remaining / 5, 1.0))  # 5 seconds max display
                 if fill_height > 0:
                     fill_rect = pygame.Rect(icon_rect.x + 2, icon_rect.y + icon_size - fill_height - 2,
                                            icon_size - 4, fill_height)
-                    pygame.draw.rect(self.render_surface, (*color, 180), fill_rect, border_radius=2)
+                    fill_alpha = 180 if not is_expiring else int(120 + 60 * pulse)
+                    pygame.draw.rect(self.render_surface, (*color, fill_alpha), fill_rect, border_radius=2)
 
-                # Small icon symbol in center
-                symbol = name[0]  # First letter
-                sym_text = self.font_small.render(symbol, True, color)
-                sym_rect = sym_text.get_rect(center=(powerup_x, powerup_y))
-                self.render_surface.blit(sym_text, sym_rect)
+                # Small icon symbol in center (or countdown when expiring)
+                if is_expiring and remaining < 2.0:
+                    # Show countdown number instead
+                    countdown = f"{remaining:.1f}"
+                    countdown_color = (255, 100, 100) if int(now / 100) % 2 == 0 else (255, 255, 255)
+                    count_text = self.font_small.render(countdown, True, countdown_color)
+                    count_rect = count_text.get_rect(center=(powerup_x, powerup_y))
+                    self.render_surface.blit(count_text, count_rect)
+                else:
+                    symbol = name[0]  # First letter
+                    sym_text = self.font_small.render(symbol, True, color)
+                    sym_rect = sym_text.get_rect(center=(powerup_x, powerup_y))
+                    self.render_surface.blit(sym_text, sym_rect)
 
                 powerup_x += spacing
+
+            # Store expiring buffs for screen-edge warnings
+            self._expiring_buffs = expiring_buffs
 
         # Right side - score and wave info
         x = SCREEN_WIDTH - 130

@@ -42,8 +42,8 @@ pytest
 
 ## Current Priorities
 From game dev notes:
-- [ ] Powerups need better visuals
-- [ ] Nothing spawns after wave 5/5 first level — investigate
+- [x] Powerups need better visuals (rarity system, pickup effects, buff visuals, expiration warnings)
+- [x] Nothing spawns after wave 5/5 first level — Fixed: drone swarms weren't incrementing wave_spawned
 - [ ] Check controller support
 - [ ] Improve weapon/damage visuals (especially upgraded)
 - [ ] Add ships flying in background with random space backdrops
