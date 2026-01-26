@@ -1,6 +1,6 @@
 """Tests for game constants"""
-import sys
 import os
+import sys
 from unittest.mock import MagicMock
 
 # Add parent directory to path for imports
@@ -16,9 +16,15 @@ pygame_mock.K_5 = 53
 sys.modules['pygame'] = pygame_mock
 
 from constants import (  # noqa: E402
-    SCREEN_WIDTH, SCREEN_HEIGHT, FPS,
-    DIFFICULTY_SETTINGS, AMMO_TYPES, ENEMY_STATS,
-    STAGES_MINMATAR, STAGES_AMARR, UPGRADE_COSTS,
+    AMMO_TYPES,
+    DIFFICULTY_SETTINGS,
+    ENEMY_STATS,
+    FPS,
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
+    STAGES_AMARR,
+    STAGES_MINMATAR,
+    UPGRADE_COSTS,
 )
 
 

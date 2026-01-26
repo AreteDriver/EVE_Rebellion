@@ -96,7 +96,7 @@ jobs:
           # Copy documentation
           cp README.md portable/EVE_Rebellion/
           cp requirements.txt portable/EVE_Rebellion/
-          cp MinmatarRebellion.desktop portable/EVE_Rebellion/
+          cp MinmatarRebellion.desktop.template portable/EVE_Rebellion/
 
           # Create portable package
           cd portable && tar -czvf ../EVE_Rebellion-${{ github.ref_name }}-linux-portable.tar.gz EVE_Rebellion

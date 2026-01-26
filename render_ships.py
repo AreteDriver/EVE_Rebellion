@@ -8,9 +8,10 @@ Run with: blender --background --python render_ships.py
 Uses orthographic camera from above to create 2D sprites.
 """
 
-import bpy
-import os
 import math
+import os
+
+import bpy
 
 # Configuration
 OUTPUT_DIR = "/home/arete/EVE_Rebellion/assets/ship_sprites"

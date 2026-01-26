@@ -9,10 +9,12 @@ Adds variety and danger to stages with EVE-themed hazards:
 - Proximity mines: Explode when player gets close
 """
 
-import pygame
 import math
 import random
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT
+
+import pygame
+
+from constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 
 class Asteroid(pygame.sprite.Sprite):

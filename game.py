@@ -1,31 +1,34 @@
 """Main game logic for Minmatar Rebellion"""
 # Platform init must happen before pygame import to set SDL env vars
 from platform_init import init_platform
+
 init_platform()
 
-import pygame
 import random
+
+import pygame
+
 from constants import *
-from sprites import (Player, Enemy, RefugeePod, Powerup, PowerupPickupEffect, Explosion, Star)
-from sounds import get_sound_manager, get_music_manager
 from controller_input import ControllerInput, XboxButton
+from high_scores import AchievementManager, HighScoreManager
+from sounds import get_music_manager, get_sound_manager
 from space_background import SpaceBackground
+from sprites import Enemy, Explosion, Player, Powerup, PowerupPickupEffect, RefugeePod, Star
 from visual_effects import ParticleSystem
-from high_scores import HighScoreManager, AchievementManager
 
 
 class ScreenShake:
     """Manages screen shake effects"""
-    
+
     def __init__(self):
         self.intensity = 0
         self.offset_x = 0
         self.offset_y = 0
-    
+
     def add(self, intensity):
         """Add shake intensity"""
         self.intensity = max(self.intensity, intensity)
-    
+
     def update(self):
         """Update shake and get current offset"""
         if self.intensity > 0.5:
@@ -41,12 +44,12 @@ class ScreenShake:
 
 class Game:
     """Main game class"""
-    
+
     def __init__(self):
         pygame.init()
         self.space_background = SpaceBackground(SCREEN_WIDTH, SCREEN_HEIGHT)
         pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-        
+
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.render_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Minmatar Rebellion")
@@ -54,7 +57,7 @@ class Game:
         self.font = pygame.font.Font(None, 28)
         self.font_large = pygame.font.Font(None, 48)
         self.font_small = pygame.font.Font(None, 22)
-        
+
 
         # Controller (optional)
         self.controller = ControllerInput()
@@ -63,7 +66,7 @@ class Game:
         self.music_manager = get_music_manager()
         self.sound_enabled = True
         self.music_enabled = True
-        
+
         # Screen shake
         self.shake = ScreenShake()
 
@@ -89,17 +92,17 @@ class Game:
         # Chapter selection - EVE Rebellion Collection
         self.selected_chapter = 0  # Index into CHAPTERS
         self.current_stages = STAGES_MINMATAR  # Active campaign stages
-        
+
         # Background stars
         self.stars = [Star() for _ in range(100)]
-        
+
         self.reset_game()
-    
+
     def play_sound(self, sound_name, volume=1.0):
         """Play sound if enabled"""
         if self.sound_enabled:
             self.sound_manager.play(sound_name, volume)
-    
+
     def reset_game(self):
         """Reset all game state"""
         # Sprite groups
@@ -110,11 +113,11 @@ class Game:
         self.pods = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.effects = pygame.sprite.Group()
-        
+
         # Player
         self.player = Player()
         self.all_sprites.add(self.player)
-        
+
         # Stage/Wave tracking
         self.current_stage = 0
         self.current_wave = 0
@@ -123,37 +126,37 @@ class Game:
         self.spawn_timer = 0
         self.wave_delay = 0
         self.stage_complete = False
-        
+
         # Messages
         self.message = ""
         self.message_timer = 0
 
         # Clear particle effects on reset
         self.particle_system.clear()
-    
+
     def show_message(self, text, duration=120):
         """Show a temporary message"""
         self.message = text
         self.message_timer = duration
-    
+
     def spawn_wave(self):
         """Spawn enemies for current wave"""
         stage = self.current_stages[self.current_stage]
-        
+
         # Determine wave composition
         num_enemies = 3 + self.current_wave + self.current_stage
-        
+
         # Check for boss wave
         if (stage['boss'] and self.current_wave == stage['waves'] - 1):
             # Boss wave
             boss_type = stage['boss']
-            
+
             # Use specialized CapitalShipEnemy class for amarr_capital
             if boss_type == 'amarr_capital':
                 boss = CapitalShipEnemy(SCREEN_WIDTH // 2, self.difficulty_settings)
             else:
                 boss = Enemy(boss_type, SCREEN_WIDTH // 2, -100, self.difficulty_settings)
-            
+
             self.enemies.add(boss)
             self.all_sprites.add(boss)
             self.wave_enemies = 1
@@ -161,37 +164,37 @@ class Game:
             self.show_message(f"WARNING: {boss.stats['name'].upper()} APPROACHING!", 180)
             self.play_sound('warning')
             return
-        
+
         # Regular wave
         self.wave_enemies = num_enemies
         self.wave_spawned = 0
-        
+
         # Maybe spawn industrial
         if random.random() < stage['industrial_chance']:
             self.wave_enemies += 1
-    
+
     def spawn_enemy(self):
         """Spawn a single enemy"""
         if self.wave_spawned >= self.wave_enemies:
             return
-        
+
         stage = self.current_stages[self.current_stage]
-        
+
         # Chance for industrial
-        if (self.wave_spawned == self.wave_enemies - 1 and 
+        if (self.wave_spawned == self.wave_enemies - 1 and
             random.random() < stage['industrial_chance'] * 2):
             enemy_type = 'bestower'
         else:
             enemy_type = random.choice(stage['enemies'])
-        
+
         x = random.randint(50, SCREEN_WIDTH - 50)
         y = -50
-        
+
         enemy = Enemy(enemy_type, x, y, self.difficulty_settings)
         self.enemies.add(enemy)
         self.all_sprites.add(enemy)
         self.wave_spawned += 1
-    
+
     def spawn_powerup(self, x, y):
         """Maybe spawn a powerup at location"""
         chance = self.difficulty_settings.get('powerup_chance', 0.15)
@@ -200,7 +203,7 @@ class Game:
             powerup = Powerup(x, y, powerup_type)
             self.powerups.add(powerup)
             self.all_sprites.add(powerup)
-    
+
     def handle_events(self):
         """Process input events"""
         # Controller: start frame (clears edge states)
@@ -242,7 +245,7 @@ class Game:
                             self.music_manager.stop_music()
                     elif event.key == pygame.K_s:
                         self.sound_enabled = not self.sound_enabled
-                
+
                 elif self.state == 'chapter_select':
                     if event.key == pygame.K_1:
                         self.select_chapter(0)
@@ -303,15 +306,15 @@ class Game:
                                     self.show_message(f"Ammo: {data['name']}", 60)
                                     self.play_sound('ammo_switch')
                                 break
-                
+
                 elif self.state == 'paused':
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
                         self.state = 'playing'
                         self.play_sound('menu_select')
-                
+
                 elif self.state == 'shop':
                     self.handle_shop_input(event.key)
-                
+
                 elif self.state in ['gameover', 'victory']:
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.reset_game()
@@ -488,14 +491,14 @@ class Game:
             'difficulty': self.difficulty
         }
         self.achievements.check_achievements(game_stats)
-    
+
     def handle_shop_input(self, key):
         """Handle shop menu input"""
         costs = UPGRADE_COSTS
         player = self.player
-        
+
         purchased = None
-        
+
         if key == pygame.K_1 and not player.has_gyro:
             if player.refugees >= costs['gyrostabilizer']:
                 player.refugees -= costs['gyrostabilizer']
@@ -504,7 +507,7 @@ class Game:
                 purchased = "Gyrostabilizer"
             else:
                 self.play_sound('error')
-        
+
         elif key == pygame.K_2:
             if player.refugees >= costs['armor_plate']:
                 player.refugees -= costs['armor_plate']
@@ -513,7 +516,7 @@ class Game:
                 purchased = "Armor Plate"
             else:
                 self.play_sound('error')
-        
+
         elif key == pygame.K_3 and not player.has_tracking:
             if player.refugees >= costs['tracking_enhancer']:
                 player.refugees -= costs['tracking_enhancer']
@@ -522,7 +525,7 @@ class Game:
                 purchased = "Tracking Enhancer"
             else:
                 self.play_sound('error')
-        
+
         elif key == pygame.K_4 and 'emp' not in player.unlocked_ammo:
             if player.refugees >= costs['emp_ammo']:
                 player.refugees -= costs['emp_ammo']
@@ -530,7 +533,7 @@ class Game:
                 purchased = "EMP Ammo"
             else:
                 self.play_sound('error')
-        
+
         elif key == pygame.K_5 and 'plasma' not in player.unlocked_ammo:
             if player.refugees >= costs['plasma_ammo']:
                 player.refugees -= costs['plasma_ammo']
@@ -538,7 +541,7 @@ class Game:
                 purchased = "Phased Plasma Ammo"
             else:
                 self.play_sound('error')
-        
+
         elif key == pygame.K_6 and 'fusion' not in player.unlocked_ammo:
             if player.refugees >= costs['fusion_ammo']:
                 player.refugees -= costs['fusion_ammo']
@@ -546,7 +549,7 @@ class Game:
                 purchased = "Fusion Ammo"
             else:
                 self.play_sound('error')
-        
+
         elif key == pygame.K_7 and 'barrage' not in player.unlocked_ammo:
             if player.refugees >= costs['barrage_ammo']:
                 player.refugees -= costs['barrage_ammo']
@@ -554,7 +557,7 @@ class Game:
                 purchased = "Barrage Ammo"
             else:
                 self.play_sound('error')
-        
+
         elif key == pygame.K_8 and not player.is_wolf:
             if player.refugees >= costs['wolf_upgrade']:
                 player.refugees -= costs['wolf_upgrade']
@@ -563,7 +566,7 @@ class Game:
                 self.play_sound('upgrade')
             else:
                 self.play_sound('error')
-        
+
         elif key == pygame.K_RETURN or key == pygame.K_SPACE:
             # Continue to next stage
             self.current_stage += 1
@@ -578,12 +581,12 @@ class Game:
                 self.state = 'playing'
                 self.show_message(self.current_stages[self.current_stage]['name'], 180)
                 self.play_sound('wave_start')
-        
+
         if purchased:
             self.show_message(f"Purchased: {purchased}", 90)
             if purchased != "WOLF UPGRADE!":  # Wolf has its own sound
                 self.play_sound('purchase')
-    
+
     def update(self):
         """Update game state"""
         # Controller update - MUST happen before early return so menus work!
@@ -607,7 +610,7 @@ class Game:
         keys = pygame.key.get_pressed()
         # Update player
         self.player.update(keys)
-        
+
 
         # Add controller movement on top of keyboard (analog)
         if self.controller and self.controller.connected:
@@ -632,7 +635,7 @@ class Game:
             for bullet in bullets:
                 self.player_bullets.add(bullet)
                 self.all_sprites.add(bullet)
-        
+
         # Rockets
         controller_rocket = self.controller.is_alternate_fire() if (self.controller and self.controller.connected) else False
         if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or pygame.mouse.get_pressed()[2] or controller_rocket:
@@ -641,19 +644,19 @@ class Game:
                 self.play_sound('rocket', 0.5)
                 self.player_bullets.add(rocket)
                 self.all_sprites.add(rocket)
-        
+
         # Update stars
         for star in self.stars:
             star.update()
-        
+
         # Update sprites
         self.player_bullets.update()
         self.enemy_bullets.update()
-        
+
         # Update enemies with player position for AI
         for enemy in self.enemies:
             enemy.update(self.player.rect)
-        
+
         self.pods.update()
         # Update powerups with player position for LOD
         player_pos = self.player.rect.center
@@ -663,10 +666,10 @@ class Game:
 
         # Update particle system
         self.particle_system.update()
-        
+
         # Update screen shake
         self.shake.update()
-        
+
         # Enemy shooting
         for enemy in self.enemies:
             bullets = enemy.shoot(self.player.rect)
@@ -675,7 +678,7 @@ class Game:
             for bullet in bullets:
                 self.enemy_bullets.add(bullet)
                 self.all_sprites.add(bullet)
-        
+
         # Check collisions - player bullets vs enemies
         for bullet in self.player_bullets:
             hits = pygame.sprite.spritecollide(bullet, self.enemies, False)
@@ -693,7 +696,7 @@ class Game:
                 if enemy.take_damage(bullet):
                     # Enemy destroyed
                     self.player.score += enemy.score
-                    
+
                     # Screen shake based on enemy size
                     if enemy.is_boss:
                         self.shake.add(SHAKE_LARGE)
@@ -704,14 +707,14 @@ class Game:
                     else:
                         self.shake.add(SHAKE_SMALL)
                         self.play_sound('explosion_small', 0.6)
-                    
+
                     # Create explosion
                     exp_size = 30 if not enemy.is_boss else 80
-                    explosion = Explosion(enemy.rect.centerx, enemy.rect.centery, 
+                    explosion = Explosion(enemy.rect.centerx, enemy.rect.centery,
                                         exp_size, COLOR_AMARR_ACCENT)
                     self.effects.add(explosion)
                     self.all_sprites.add(explosion)
-                    
+
                     # Drop refugees from industrials
                     if enemy.refugees > 0:
                         refugee_count = int(enemy.refugees * self.difficulty_settings['refugee_mult'])
@@ -722,13 +725,13 @@ class Game:
                             )
                             self.pods.add(pod)
                             self.all_sprites.add(pod)
-                    
+
                     # Maybe drop powerup
                     self.spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
-                    
+
                     enemy.kill()
                 break
-        
+
         # Enemy bullets vs player
         hits = pygame.sprite.spritecollide(self.player, self.enemy_bullets, True)
         for bullet in hits:
@@ -747,7 +750,7 @@ class Game:
                 self.play_sound('hull_hit', 0.6)
 
             self.shake.add(SHAKE_SMALL)
-            
+
             if self.player.take_damage(damage):
                 # Player dead
                 explosion = Explosion(self.player.rect.centerx, self.player.rect.centery,
@@ -760,7 +763,7 @@ class Game:
                 self.state = 'gameover'
                 self.music_manager.stop_music()
                 return
-        
+
         # Player collision with enemies
         hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
         for enemy in hits:
@@ -773,13 +776,13 @@ class Game:
                 self.state = 'gameover'
                 self.music_manager.stop_music()
                 return
-        
+
         # Collect refugee pods
         hits = pygame.sprite.spritecollide(self.player, self.pods, True)
         for pod in hits:
             self.player.collect_refugee(pod.count)
             self.play_sound('pickup_refugee', 0.5)
-        
+
         # Collect powerups
         hits = pygame.sprite.spritecollide(self.player, self.powerups, True)
         for powerup in hits:
@@ -800,14 +803,14 @@ class Game:
 
             self.apply_powerup(powerup)
             self.play_sound('pickup_powerup', 0.6)
-        
+
         # Wave/Stage logic
         self.update_waves()
-        
+
         # Update message timer
         if self.message_timer > 0:
             self.message_timer -= 1
-    
+
     def apply_powerup(self, powerup):
         """Apply powerup effect to player"""
         data = powerup.data
@@ -845,16 +848,16 @@ class Game:
         elif powerup.powerup_type == 'rapid_fire':
             self.player.fire_rate_mult *= 1.2
             self.show_message("Rapid Fire!", 60)
-    
+
     def update_waves(self):
         """Handle wave progression"""
         stage = self.current_stages[self.current_stage]
-        
+
         # Wave delay
         if self.wave_delay > 0:
             self.wave_delay -= 1
             return
-        
+
         # Need to spawn wave?
         if self.wave_enemies == 0 and not self.stage_complete:
             if self.current_wave < stage['waves']:
@@ -862,20 +865,20 @@ class Game:
                 if not (stage['boss'] and self.current_wave == stage['waves'] - 1):
                     self.show_message(f"Wave {self.current_wave + 1}/{stage['waves']}", 90)
                     self.play_sound('wave_start', 0.4)
-        
+
         # Spawn enemies gradually
         self.spawn_timer += 1
         if self.spawn_timer >= 45 and self.wave_spawned < self.wave_enemies:
             self.spawn_timer = 0
             self.spawn_enemy()
-        
+
         # Wave complete?
         if len(self.enemies) == 0 and self.wave_spawned >= self.wave_enemies and self.wave_enemies > 0:
             self.current_wave += 1
             self.wave_enemies = 0
             self.wave_spawned = 0
             self.wave_delay = 90
-            
+
             # Stage complete?
             if self.current_wave >= stage['waves']:
                 self.stage_complete = True
@@ -884,21 +887,21 @@ class Game:
                 self.play_sound('stage_complete')
                 # Go to shop after delay
                 pygame.time.set_timer(pygame.USEREVENT + 1, 2000, 1)
-        
+
         # Check for shop transition
         for event in pygame.event.get(pygame.USEREVENT + 1):
             if self.stage_complete:
                 self.state = 'shop'
-    
+
     def draw(self):
         """Render everything"""
         # Draw to render surface first (for screen shake)
         self.render_surface.fill((10, 10, 20))
-        
+
         # Stars
         for star in self.stars:
             star.draw(self.render_surface)
-        
+
         if self.state == 'menu':
             self.draw_menu()
         elif self.state == 'chapter_select':
@@ -923,9 +926,9 @@ class Game:
         # Apply screen shake
         shake_x, shake_y = self.shake.offset_x, self.shake.offset_y
         self.screen.blit(self.render_surface, (shake_x, shake_y))
-        
+
         pygame.display.flip()
-    
+
     def draw_difficulty(self):
         """Draw difficulty selection screen"""
         # Get current chapter info
@@ -987,7 +990,7 @@ class Game:
             hint = self.font_small.render("Use stick to navigate, A to select", True, (100, 100, 100))
             rect = hint.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
             self.render_surface.blit(hint, rect)
-    
+
     def draw_game(self):
         # Draw space background
         if hasattr(self, "space_background"):
@@ -1003,7 +1006,7 @@ class Game:
         for sprite in self.all_sprites:
             if sprite != self.player:
                 self.render_surface.blit(sprite.image, sprite.rect)
-        
+
         # Draw player last (on top)
         self.render_surface.blit(self.player.image, self.player.rect)
 
@@ -1012,13 +1015,13 @@ class Game:
 
         # Draw HUD
         self.draw_hud()
-        
+
         # Draw message
         if self.message_timer > 0:
             text = self.font_large.render(self.message, True, (255, 255, 255))
             rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 3))
             self.render_surface.blit(text, rect)
-    
+
     def draw_hud(self):
         """Draw heads-up display"""
         # Health bars
@@ -1026,60 +1029,60 @@ class Game:
         bar_height = 12
         x = 10
         y = 10
-        
+
         # Shields
         pygame.draw.rect(self.render_surface, (50, 50, 80), (x, y, bar_width, bar_height))
         shield_pct = self.player.shields / self.player.max_shields
         pygame.draw.rect(self.render_surface, COLOR_SHIELD, (x, y, int(bar_width * shield_pct), bar_height))
         pygame.draw.rect(self.render_surface, (100, 100, 150), (x, y, bar_width, bar_height), 1)
-        
+
         # Armor
         y += bar_height + 3
         pygame.draw.rect(self.render_surface, (50, 40, 30), (x, y, bar_width, bar_height))
         armor_pct = self.player.armor / self.player.max_armor
         pygame.draw.rect(self.render_surface, COLOR_ARMOR, (x, y, int(bar_width * armor_pct), bar_height))
         pygame.draw.rect(self.render_surface, (100, 80, 60), (x, y, bar_width, bar_height), 1)
-        
+
         # Hull
         y += bar_height + 3
         pygame.draw.rect(self.render_surface, (40, 40, 40), (x, y, bar_width, bar_height))
         hull_pct = self.player.hull / self.player.max_hull
         pygame.draw.rect(self.render_surface, COLOR_HULL, (x, y, int(bar_width * hull_pct), bar_height))
         pygame.draw.rect(self.render_surface, (80, 80, 80), (x, y, bar_width, bar_height), 1)
-        
+
         # Ammo indicator
         y += bar_height + 10
         ammo = AMMO_TYPES[self.player.current_ammo]
         pygame.draw.rect(self.render_surface, ammo['color'], (x, y, 20, 20))
         text = self.font_small.render(ammo['name'], True, COLOR_TEXT)
         self.render_surface.blit(text, (x + 25, y + 2))
-        
+
         # Rockets
         y += 25
         text = self.font_small.render(f"Rockets: {self.player.rockets}", True, COLOR_TEXT)
         self.render_surface.blit(text, (x, y))
-        
+
         # Right side - score and refugees
         x = SCREEN_WIDTH - 160
         y = 10
-        
+
         text = self.font.render(f"Score: {self.player.score}", True, COLOR_TEXT)
         self.render_surface.blit(text, (x, y))
-        
+
         y += 25
         text = self.font.render(f"Refugees: {self.player.refugees}", True, (100, 255, 100))
         self.render_surface.blit(text, (x, y))
-        
+
         y += 25
         text = self.font_small.render(f"Liberated: {self.player.total_refugees}", True, (150, 200, 150))
         self.render_surface.blit(text, (x, y))
-        
+
         # Stage/Wave
         if self.current_stage < len(self.current_stages):
             y += 30
             text = self.font_small.render(f"Stage {self.current_stage + 1}", True, COLOR_TEXT)
             self.render_surface.blit(text, (x, y))
-        
+
         # Difficulty indicator
         y += 20
         diff_color = (100, 255, 100) if self.difficulty == 'easy' else (
@@ -1088,7 +1091,7 @@ class Game:
         ))
         text = self.font_small.render(f"[{self.difficulty_settings['name']}]", True, diff_color)
         self.render_surface.blit(text, (x, y))
-    
+
     def draw_menu(self):
         """Draw main menu"""
         # Main Title - EVE Rebellion Collection
@@ -1209,21 +1212,21 @@ class Game:
         inst_text = self.font_small.render(inst, True, (150, 150, 150))
         rect = inst_text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(inst_text, rect)
-    
+
     def draw_pause(self):
         """Draw pause overlay"""
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         self.render_surface.blit(overlay, (0, 0))
-        
+
         text = self.font_large.render("PAUSED", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
         self.render_surface.blit(text, rect)
-        
+
         text = self.font.render("Press ESC to Resume", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50))
         self.render_surface.blit(text, rect)
-    
+
     def draw_shop(self):
         """Draw upgrade shop"""
         # Get chapter color for theming
@@ -1234,17 +1237,17 @@ class Game:
         title = self.font_large.render("SUPPLY STATION", True, chapter_color)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 50))
         self.render_surface.blit(title, rect)
-        
+
         # Refugees
         text = self.font.render(f"Refugees Available: {self.player.refugees}", True, (100, 255, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, 100))
         self.render_surface.blit(text, rect)
-        
+
         # Upgrade options
         y = 160
         costs = UPGRADE_COSTS
         player = self.player
-        
+
         upgrades = [
             ("1", "Gyrostabilizer", costs['gyrostabilizer'], player.has_gyro, "+30% Fire Rate"),
             ("2", "Armor Plate", costs['armor_plate'], False, "+30 Max Armor"),
@@ -1255,7 +1258,7 @@ class Game:
             ("7", "Barrage Ammo", costs['barrage_ammo'], 'barrage' in player.unlocked_ammo, "Fast Fire"),
             ("8", "WOLF UPGRADE", costs['wolf_upgrade'], player.is_wolf, "T2 Assault Ship!")
         ]
-        
+
         for key, name, cost, owned, desc in upgrades:
             if owned:
                 color = (80, 80, 80)
@@ -1266,23 +1269,23 @@ class Game:
             else:
                 color = (255, 100, 100)
                 status = f"[{cost} refugees]"
-            
+
             text = self.font.render(f"[{key}] {name} - {desc} {status}", True, color)
             self.render_surface.blit(text, (50, y))
             y += 35
-        
+
         # Continue prompt
         y += 30
         text = self.font.render("Press ENTER to continue to next stage", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
-    
+
     def draw_gameover(self):
         """Draw game over screen"""
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((100, 0, 0, 150))
         self.render_surface.blit(overlay, (0, 0))
-        
+
         text = self.font_large.render("SHIP DESTROYED", True, (255, 100, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 70))
         self.render_surface.blit(text, rect)
@@ -1312,7 +1315,7 @@ class Game:
         text = self.font_small.render("[L] View Leaderboard  [Y] Leaderboard", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 130))
         self.render_surface.blit(text, rect)
-    
+
     def draw_victory(self):
         """Draw victory screen"""
         # Get chapter info for dynamic victory text
@@ -1333,26 +1336,26 @@ class Game:
         text = self.font.render(faction_info['victory_text'], True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, 250))
         self.render_surface.blit(text, rect)
-        
+
         y = 350
         text = self.font.render(f"Final Score: {self.player.score}", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
-        
+
         text = self.font.render(f"Souls Liberated: {self.player.total_refugees}", True, (100, 255, 100))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 40))
         self.render_surface.blit(text, rect)
-        
+
         ship_type = "Wolf Assault Frigate" if self.player.is_wolf else "Rifter Frigate"
         text = self.font.render(f"Ship: {ship_type}", True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 80))
         self.render_surface.blit(text, rect)
-        
+
         diff_text = f"Difficulty: {self.difficulty_settings['name']}"
         text = self.font.render(diff_text, True, COLOR_TEXT)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y + 110))
         self.render_surface.blit(text, rect)
-        
+
         # Show new high score notification
         if self.is_new_high_score:
             text = self.font_large.render("NEW HIGH SCORE!", True, (255, 215, 0))
@@ -1471,7 +1474,7 @@ class Game:
             self.handle_events()
             self.update()
             self.draw()
-        
+
         pygame.quit()
 
 

@@ -3,11 +3,12 @@ Parallax Background System for EVE Rebellion
 Multi-layer starfields, nebulae, ambient traffic, and stage-specific environments.
 """
 
-import pygame
-import random
 import math
 import os
-from typing import List, Tuple, Optional
+import random
+from typing import List, Optional, Tuple
+
+import pygame
 
 # Cache for loaded ship images
 _carrier_image_cache = {}

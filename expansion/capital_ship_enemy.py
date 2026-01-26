@@ -18,6 +18,7 @@ directly in your stage logic and manage its lifecycle manually.
 """
 
 import random
+
 import pygame
 
 from sprites import Enemy, EnemyBullet

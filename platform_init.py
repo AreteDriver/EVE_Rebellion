@@ -18,7 +18,6 @@ import os
 import sys
 from typing import Optional
 
-
 # Track whether we've initialized platform settings
 _platform_initialized = False
 _detected_driver: Optional[str] = None

@@ -6,10 +6,11 @@ Triglavian roguelike extraction mode with rooms, hazards, and timer.
 import json
 import math
 import random
-import pygame
-from pathlib import Path
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import pygame
 
 
 @dataclass

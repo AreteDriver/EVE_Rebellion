@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Generate game icon for Minmatar Rebellion using actual Rifter sprite"""
-import pygame
 import math
 import os
+
+import pygame
+
 
 def create_icon(size=256):
     """Create an icon using the actual Rifter ship sprite"""

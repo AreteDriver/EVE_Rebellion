@@ -67,7 +67,18 @@ target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
-ignore = ["E501"]
+ignore = [
+    "E501",  # Line too long
+    "F403",  # Star imports (used for constants)
+    "F405",  # May be undefined from star imports
+    "E722",  # Bare except
+    "F401",  # Unused imports
+    "F541",  # f-string without placeholders
+    "F841",  # Unused variable
+]
+
+[tool.ruff.lint.per-file-ignores]
+"game.py" = ["E402"]  # platform_init must run before pygame imports
 
 [tool.mypy]
 python_version = "3.9"

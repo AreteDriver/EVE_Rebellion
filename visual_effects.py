@@ -3,10 +3,11 @@ Visual Effects Module for EVE Rebellion
 Screen-space effects, particle systems, and post-processing.
 """
 
-import pygame
 import math
 import random
 from typing import List, Tuple
+
+import pygame
 
 try:
     import numpy as np

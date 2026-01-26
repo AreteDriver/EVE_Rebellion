@@ -9,10 +9,13 @@ purchased upgrades via the progression module.
 """
 
 import json
-from typing import List, Dict
-import pygame
+from typing import Dict, List
+
 import progression
+import pygame
+
 from constants import COLOR_HUD_BG, COLOR_TEXT
+
 
 class UpgradeDefinition:
     def __init__(self, uid: str, data: Dict):

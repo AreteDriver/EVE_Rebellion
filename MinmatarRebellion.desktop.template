@@ -1,3 +1,7 @@
+# Desktop Entry Template
+# This file is a template - do not use directly
+# Run ./install_desktop.sh to generate the actual desktop entry with correct paths
+
 [Desktop Entry]
 Version=1.0
 Type=Application

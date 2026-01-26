@@ -12,10 +12,11 @@ Usage:
 
 import argparse
 import asyncio
-import httpx
-from pathlib import Path
-from typing import List, Dict, Optional
 import json
+from pathlib import Path
+from typing import Dict, List, Optional
+
+import httpx
 
 # Common ship type IDs organized by class
 SHIP_CLASSES = {
@@ -128,17 +129,17 @@ async def download_image(
 ) -> bool:
     """Download a single image from the EVE Image Server."""
     url = f"{IMAGE_SERVER}/types/{type_id}/{variation}?size={size}"
-    
+
     filename = f"{name or type_id}_{variation}_{size}.png"
     output_path = output_dir / filename
-    
+
     if output_path.exists():
         print(f"  ⏭️  Skipped (exists): {filename}")
         return True
-    
+
     try:
         response = await client.get(url, follow_redirects=True)
-        
+
         if response.status_code == 200:
             output_path.write_bytes(response.content)
             print(f"  ✅ Downloaded: {filename}")
@@ -149,7 +150,7 @@ async def download_image(
         else:
             print(f"  ❌ Failed ({response.status_code}): {filename}")
             return False
-            
+
     except Exception as e:
         print(f"  ❌ Error: {filename} - {e}")
         return False
@@ -164,31 +165,31 @@ async def download_ship_set(
 ):
     """Download images for multiple ships."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     print(f"\n📦 Downloading {len(ship_ids)} ships to {output_dir}")
     print(f"   Sizes: {sizes}")
     print(f"   Variations: {variations}")
     print("-" * 40)
-    
+
     total = len(ship_ids) * len(sizes) * len(variations)
     success = 0
     failed = 0
-    
+
     async with httpx.AsyncClient(timeout=30.0) as client:
         for ship_id in ship_ids:
             name = names.get(ship_id) if names else None
             print(f"\n🚀 {name or ship_id}:")
-            
+
             for variation in variations:
                 for size in sizes:
                     if await download_image(client, ship_id, variation, size, output_dir, name):
                         success += 1
                     else:
                         failed += 1
-    
+
     print("\n" + "=" * 40)
     print(f"📊 Results: {success} downloaded, {failed} failed, {total} total")
-    
+
     # Save manifest
     manifest = {
         "ships": {names.get(sid, str(sid)): sid for sid in ship_ids} if names else ship_ids,
@@ -222,15 +223,15 @@ def main():
         epilog="""
 Examples:
   %(prog)s --ships rifter,tristan,caracal --output ./ships
-  %(prog)s --all-frigates --sizes 64,256 --output ./frigates  
+  %(prog)s --all-frigates --sizes 64,256 --output ./frigates
   %(prog)s --class cruisers --variations render,icon --output ./cruisers
   %(prog)s --all --sizes 512 --output ./all_ships
 
-Available ship classes: frigates, destroyers, cruisers, battlecruisers, 
+Available ship classes: frigates, destroyers, cruisers, battlecruisers,
                         battleships, faction_battleships, capitals, supercapitals
         """
     )
-    
+
     ships_group = parser.add_mutually_exclusive_group(required=True)
     ships_group.add_argument("--ships", type=str, help="Comma-separated ship names or type IDs")
     ships_group.add_argument("--class", dest="ship_class", choices=SHIP_CLASSES.keys(),
@@ -238,7 +239,7 @@ Available ship classes: frigates, destroyers, cruisers, battlecruisers,
     ships_group.add_argument("--all-frigates", action="store_true", help="All T1 frigates")
     ships_group.add_argument("--all-cruisers", action="store_true", help="All T1 cruisers")
     ships_group.add_argument("--all", action="store_true", help="All defined ships")
-    
+
     parser.add_argument("--output", "-o", type=Path, default=Path("./eve_ships"),
                        help="Output directory (default: ./eve_ships)")
     parser.add_argument("--sizes", type=str, default="256,512",
@@ -246,9 +247,9 @@ Available ship classes: frigates, destroyers, cruisers, battlecruisers,
     parser.add_argument("--variations", type=str, default="render",
                        help="Comma-separated variations: render,icon,bp (default: render)")
     parser.add_argument("--list", action="store_true", help="List available ships and exit")
-    
+
     args = parser.parse_args()
-    
+
     if args.list:
         print("\n📋 Available Ships:\n")
         for class_name, ships in SHIP_CLASSES.items():
@@ -257,17 +258,17 @@ Available ship classes: frigates, destroyers, cruisers, battlecruisers,
                 print(f"    {name}: {type_id}")
             print()
         return
-    
+
     # Parse sizes
     sizes = [int(s.strip()) for s in args.sizes.split(",")]
     for s in sizes:
         if s not in VALID_SIZES:
             print(f"⚠️  Invalid size {s}, using valid sizes only")
             sizes = [s for s in sizes if s in VALID_SIZES]
-    
+
     # Parse variations
     variations = [v.strip() for v in args.variations.split(",")]
-    
+
     # Determine ships to download
     if args.ships:
         ship_ids = parse_ship_list(args.ships)
@@ -287,11 +288,11 @@ Available ship classes: frigates, destroyers, cruisers, battlecruisers,
     elif args.all:
         ship_ids = list(ALL_SHIPS.values())
         names = {v: k for k, v in ALL_SHIPS.items()}
-    
+
     if not ship_ids:
         print("❌ No valid ships specified")
         return
-    
+
     # Run download
     asyncio.run(download_ship_set(ship_ids, sizes, variations, args.output, names))
 

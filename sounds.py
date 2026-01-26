@@ -1,17 +1,18 @@
 """Procedural sound effects for Minmatar Rebellion"""
-import pygame
-import numpy as np
 import io
+
+import numpy as np
+import pygame
 
 
 class SoundGenerator:
     """Generate retro-style sound effects procedurally"""
-    
+
     def __init__(self, sample_rate=22050):
         self.sample_rate = sample_rate
         self.sounds = {}
         self.enabled = True
-        
+
         try:
             pygame.mixer.init(frequency=sample_rate, size=-16, channels=2, buffer=512)
             self._generate_all_sounds()
@@ -19,43 +20,43 @@ class SoundGenerator:
             print(f"Audio not available: {e}")
             print("Sound effects disabled.")
             self.enabled = False
-    
+
     def _generate_all_sounds(self):
         """Generate all game sound effects"""
         # Player weapons
         self.sounds['autocannon'] = self._make_autocannon()
         self.sounds['rocket'] = self._make_rocket()
-        
+
         # Ammo swap
         self.sounds['ammo_switch'] = self._make_ammo_switch()
-        
+
         # Enemy laser
         self.sounds['laser'] = self._make_laser()
-        
+
         # Explosions
         self.sounds['explosion_small'] = self._make_explosion(0.2, 200)
         self.sounds['explosion_medium'] = self._make_explosion(0.4, 150)
         self.sounds['explosion_large'] = self._make_explosion(0.7, 100)
-        
+
         # Pickups
         self.sounds['pickup_refugee'] = self._make_pickup_refugee()
         self.sounds['pickup_powerup'] = self._make_pickup_powerup()
-        
+
         # UI
         self.sounds['menu_select'] = self._make_menu_select()
         self.sounds['purchase'] = self._make_purchase()
         self.sounds['error'] = self._make_error()
-        
+
         # Player damage
         self.sounds['shield_hit'] = self._make_shield_hit()
         self.sounds['armor_hit'] = self._make_armor_hit()
         self.sounds['hull_hit'] = self._make_hull_hit()
-        
+
         # Alerts
         self.sounds['warning'] = self._make_warning()
         self.sounds['wave_start'] = self._make_wave_start()
         self.sounds['stage_complete'] = self._make_stage_complete()
-        
+
         # Wolf upgrade
         self.sounds['upgrade'] = self._make_upgrade()
 
@@ -89,20 +90,20 @@ class SoundGenerator:
         self.sounds['powerup_bomb'] = self._make_powerup_bomb()
         self.sounds['powerup_magnet'] = self._make_powerup_magnet()
         self.sounds['powerup_invuln'] = self._make_powerup_invuln()
-    
+
     def _numpy_to_sound(self, samples):
         """Convert numpy array to pygame Sound"""
         # Normalize to 16-bit range
         samples = np.clip(samples, -1, 1)
         samples = (samples * 32767).astype(np.int16)
-        
+
         # Make stereo
         stereo = np.column_stack((samples, samples))
-        
+
         # Create sound from buffer
         sound = pygame.sndarray.make_sound(stereo)
         return sound
-    
+
     def _envelope(self, samples, attack=0.01, decay=0.1, sustain=0.7, release=0.2):
         """Apply ADSR envelope to samples"""
         length = len(samples)
@@ -110,22 +111,22 @@ class SoundGenerator:
         decay_samples = int(decay * length)
         release_samples = int(release * length)
         sustain_samples = length - attack_samples - decay_samples - release_samples
-        
+
         envelope = np.concatenate([
             np.linspace(0, 1, attack_samples),
             np.linspace(1, sustain, decay_samples),
             np.ones(sustain_samples) * sustain,
             np.linspace(sustain, 0, release_samples)
         ])
-        
+
         # Pad or trim to match sample length
         if len(envelope) < length:
             envelope = np.pad(envelope, (0, length - len(envelope)))
         else:
             envelope = envelope[:length]
-        
+
         return samples * envelope
-    
+
     def _make_autocannon(self):
         """Chunky Minmatar autocannon - heavy, industrial, satisfying"""
         duration = 0.12
@@ -153,7 +154,7 @@ class SoundGenerator:
         wave *= envelope * 0.55
 
         return self._numpy_to_sound(wave)
-    
+
     def _make_rocket(self):
         """Aggressive rocket launch - ignition burst + whoosh"""
         duration = 0.3
@@ -179,21 +180,21 @@ class SoundGenerator:
         wave *= envelope * 0.55
 
         return self._numpy_to_sound(wave)
-    
+
     def _make_ammo_switch(self):
         """Quick click/beep for ammo change"""
         duration = 0.1
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Two quick tones
         wave = np.sin(2 * np.pi * 800 * t) * 0.3
         wave += np.sin(2 * np.pi * 1200 * t) * 0.2
-        
+
         envelope = np.exp(-t * 40)
         wave *= envelope * 0.3
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_laser(self):
         """Amarr golden laser - crystalline, pure, holy-sounding"""
         duration = 0.18
@@ -219,209 +220,209 @@ class SoundGenerator:
         wave *= envelope * 0.3
 
         return self._numpy_to_sound(wave)
-    
+
     def _make_explosion(self, duration, base_freq):
         """Explosion with varying size"""
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Descending frequency noise burst
         freq = base_freq * np.exp(-t * 5)
         wave = np.sin(2 * np.pi * freq * t) * 0.4
-        
+
         # Heavy noise component
         noise = np.random.uniform(-1, 1, len(t))
         noise_filtered = np.convolve(noise, np.ones(50)/50, mode='same')
         wave += noise_filtered * np.exp(-t * 8) * 0.6
-        
+
         # Envelope with punch
         envelope = np.exp(-t * (3 / duration)) * (1 - np.exp(-t * 100))
         wave *= envelope * 0.6
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_pickup_refugee(self):
         """Warm, hopeful pickup sound"""
         duration = 0.2
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Rising arpeggio feel
         wave = np.sin(2 * np.pi * 400 * t) * np.exp(-t * 15) * 0.3
         wave += np.sin(2 * np.pi * 500 * t) * np.exp(-(t - 0.05) * 15) * 0.3
         wave += np.sin(2 * np.pi * 600 * t) * np.exp(-(t - 0.1) * 15) * 0.3
-        
+
         wave *= 0.4
         return self._numpy_to_sound(wave)
-    
+
     def _make_pickup_powerup(self):
         """Bright powerup collection"""
         duration = 0.25
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Ascending sweep
         freq = 300 + t * 1500
         wave = np.sin(2 * np.pi * freq * t) * 0.3
         wave += np.sin(2 * np.pi * freq * 1.5 * t) * 0.15
-        
+
         envelope = (1 - t / duration) * (1 - np.exp(-t * 50))
         wave *= envelope * 0.4
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_menu_select(self):
         """UI selection blip"""
         duration = 0.08
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         wave = np.sin(2 * np.pi * 600 * t) * 0.3
         envelope = np.exp(-t * 50)
         wave *= envelope * 0.3
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_purchase(self):
         """Satisfying purchase confirmation"""
         duration = 0.3
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Two-tone confirmation
         wave = np.zeros_like(t)
         half = len(t) // 2
         wave[:half] = np.sin(2 * np.pi * 400 * t[:half]) * 0.3
         wave[half:] = np.sin(2 * np.pi * 600 * t[half:]) * 0.3
-        
+
         envelope = self._envelope(wave, 0.05, 0.1, 0.8, 0.3)
         wave = envelope * 0.4
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_error(self):
         """Error/can't afford buzz"""
         duration = 0.2
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Dissonant low buzz
         wave = np.sin(2 * np.pi * 150 * t) * 0.3
         wave += np.sin(2 * np.pi * 157 * t) * 0.3  # Slight detune for buzz
-        
+
         envelope = np.exp(-t * 10)
         wave *= envelope * 0.4
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_shield_hit(self):
         """Electric shield impact"""
         duration = 0.15
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # High frequency crackle
         freq = 1000 + np.random.uniform(-200, 200, len(t))
         wave = np.sin(2 * np.pi * freq * t) * 0.2
-        
+
         # Add crackle noise
         noise = np.random.uniform(-0.3, 0.3, len(t))
         wave += noise * np.exp(-t * 30) * 0.3
-        
+
         envelope = np.exp(-t * 25)
         wave *= envelope * 0.35
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_armor_hit(self):
         """Metallic armor clang"""
         duration = 0.12
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Metallic ring with decay
         wave = np.sin(2 * np.pi * 300 * t) * 0.3
         wave += np.sin(2 * np.pi * 450 * t) * 0.2
         wave += np.sin(2 * np.pi * 600 * t) * 0.1
-        
+
         envelope = np.exp(-t * 35)
         wave *= envelope * 0.4
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_hull_hit(self):
         """Deep structural damage thud"""
         duration = 0.2
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Low thump
         wave = np.sin(2 * np.pi * 80 * t) * 0.5
         wave += np.sin(2 * np.pi * 120 * t) * 0.3
-        
+
         # Noise for impact
         noise = np.random.uniform(-0.4, 0.4, len(t))
         wave += noise * np.exp(-t * 20) * 0.3
-        
+
         envelope = np.exp(-t * 15)
         wave *= envelope * 0.5
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_warning(self):
         """Boss/danger warning klaxon"""
         duration = 0.6
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Two-tone alarm
         freq = 400 + 200 * np.sign(np.sin(2 * np.pi * 4 * t))
         wave = np.sin(2 * np.pi * freq * t) * 0.4
-        
+
         envelope = 1 - 0.3 * np.sin(2 * np.pi * 4 * t)
         wave *= envelope * 0.4
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_wave_start(self):
         """New wave incoming alert"""
         duration = 0.3
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Quick rising tone
         freq = 300 + t * 500
         wave = np.sin(2 * np.pi * freq * t) * 0.3
-        
+
         envelope = (1 - np.exp(-t * 30)) * np.exp(-t * 5)
         wave *= envelope * 0.35
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_stage_complete(self):
         """Victory fanfare"""
         duration = 0.8
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         wave = np.zeros_like(t)
         notes = [400, 500, 600, 800]  # Rising arpeggio
         note_len = len(t) // len(notes)
-        
+
         for i, freq in enumerate(notes):
             start = i * note_len
             end = start + note_len
             segment = t[start:end] - t[start]
             wave[start:end] = np.sin(2 * np.pi * freq * segment) * 0.3
             wave[start:end] += np.sin(2 * np.pi * freq * 1.5 * segment) * 0.15
-        
+
         envelope = self._envelope(wave, 0.02, 0.1, 0.7, 0.4)
         wave = envelope * 0.4
-        
+
         return self._numpy_to_sound(wave)
-    
+
     def _make_upgrade(self):
         """Wolf upgrade dramatic sound"""
         duration = 1.0
         t = np.linspace(0, duration, int(self.sample_rate * duration))
-        
+
         # Building intensity sweep
         freq = 200 + t * 600
         wave = np.sin(2 * np.pi * freq * t) * 0.3
         wave += np.sin(2 * np.pi * freq * 0.5 * t) * 0.2
-        
+
         # Add power noise
         noise = np.random.uniform(-0.3, 0.3, len(t))
         wave += noise * (t / duration) * 0.3
-        
+
         envelope = t / duration * np.exp(-(t - duration) * 3)
         wave *= envelope * 0.5
 
@@ -869,7 +870,7 @@ class SoundGenerator:
             sound = self.sounds[sound_name]
             sound.set_volume(volume)
             sound.play()
-    
+
     def get_sound(self, sound_name):
         """Get a sound object for custom handling"""
         if not self.enabled:
