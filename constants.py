@@ -75,6 +75,16 @@ COLOR_AMARR_HULL = (218, 165, 32)
 COLOR_AMARR_ACCENT = (255, 215, 0)
 COLOR_AMARR_DARK = (139, 117, 0)
 
+# Colors - Caldari (steel blue/corporate)
+COLOR_CALDARI_HULL = (30, 58, 95)
+COLOR_CALDARI_ACCENT = (70, 130, 180)
+COLOR_CALDARI_DARK = (20, 40, 70)
+
+# Colors - Gallente (olive green/organic)
+COLOR_GALLENTE_HULL = (46, 93, 46)
+COLOR_GALLENTE_ACCENT = (107, 142, 35)
+COLOR_GALLENTE_DARK = (30, 60, 30)
+
 # === FACTION DEFINITIONS ===
 FACTIONS = {
     'minmatar': {
@@ -970,6 +980,51 @@ STAGES_GALLENTE = [
 
 # Default stages (Minmatar campaign for backwards compatibility)
 STAGES = STAGES_MINMATAR
+
+# === CHAPTERS - Rebellion Stories Collection ===
+# Each chapter represents a major conflict/rebellion in EVE lore
+CHAPTERS = [
+    {
+        'id': 'minmatar_rebellion',
+        'title': 'The Minmatar Rebellion',
+        'subtitle': 'Rise Against the Golden Fleet',
+        'description': 'Break free from Amarr slavery. Lead the uprising that shook the Empire.',
+        'faction': 'minmatar',
+        'stages': STAGES_MINMATAR,
+        'color': COLOR_MINMATAR_ACCENT,
+        'year': 'BYC 20',  # Before Yoiul Conference
+    },
+    {
+        'id': 'caldari_secession',
+        'title': 'The Caldari Secession',
+        'subtitle': 'Morning of Reasoning',
+        'description': 'Defend Caldari Prime from Gallente occupation. Fight for State independence.',
+        'faction': 'caldari',
+        'stages': STAGES_CALDARI,
+        'color': COLOR_CALDARI_ACCENT,
+        'year': 'BYC 187',
+    },
+    {
+        'id': 'amarr_reclaiming',
+        'title': 'The Amarr Reclaiming',
+        'subtitle': 'Righteous Fury of God',
+        'description': 'Crush the Minmatar uprising. Restore divine order to the Empire.',
+        'faction': 'amarr',
+        'stages': STAGES_AMARR,
+        'color': COLOR_AMARR_ACCENT,
+        'year': 'BYC 20',
+    },
+    {
+        'id': 'gallente_liberation',
+        'title': 'The Gallente Liberation',
+        'subtitle': 'For Freedom and Democracy',
+        'description': 'Liberate oppressed systems from Caldari corporate tyranny.',
+        'faction': 'gallente',
+        'stages': STAGES_GALLENTE,
+        'color': COLOR_GALLENTE_ACCENT,
+        'year': 'YC 110',
+    },
+]
 
 
 def _convert_json_stage_to_stage_format(stage_data):

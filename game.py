@@ -66,7 +66,7 @@ class Game:
         self.particle_system = ParticleSystem()
 
         # Game state
-        self.state = 'menu'  # menu, difficulty, playing, shop, paused, gameover, victory
+        self.state = 'menu'  # menu, chapter_select, difficulty, playing, shop, paused, gameover, victory
         self.running = True
         self.difficulty = 'normal'
         self.difficulty_settings = DIFFICULTY_SETTINGS['normal']
@@ -74,6 +74,10 @@ class Game:
         # Menu navigation for controller
         self.menu_selection = 0
         self.menu_cooldown = 0  # Prevent rapid scrolling
+
+        # Chapter selection - EVE Rebellion Collection
+        self.selected_chapter = 0  # Index into CHAPTERS
+        self.current_stages = STAGES_MINMATAR  # Active campaign stages
         
         # Background stars
         self.stars = [Star() for _ in range(100)]
@@ -123,7 +127,7 @@ class Game:
     
     def spawn_wave(self):
         """Spawn enemies for current wave"""
-        stage = STAGES[self.current_stage]
+        stage = self.current_stages[self.current_stage]
         
         # Determine wave composition
         num_enemies = 3 + self.current_wave + self.current_stage
@@ -160,7 +164,7 @@ class Game:
         if self.wave_spawned >= self.wave_enemies:
             return
         
-        stage = STAGES[self.current_stage]
+        stage = self.current_stages[self.current_stage]
         
         # Chance for industrial
         if (self.wave_spawned == self.wave_enemies - 1 and 
@@ -213,7 +217,8 @@ class Game:
 
                 if self.state == 'menu':
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                        self.state = 'difficulty'
+                        self.state = 'chapter_select'
+                        self.menu_selection = 0
                         self.play_sound('menu_select')
                     elif event.key == pygame.K_m:
                         self.music_enabled = not self.music_enabled
@@ -224,6 +229,27 @@ class Game:
                     elif event.key == pygame.K_s:
                         self.sound_enabled = not self.sound_enabled
                 
+                elif self.state == 'chapter_select':
+                    if event.key == pygame.K_1:
+                        self.select_chapter(0)
+                    elif event.key == pygame.K_2:
+                        self.select_chapter(1)
+                    elif event.key == pygame.K_3:
+                        self.select_chapter(2)
+                    elif event.key == pygame.K_4:
+                        self.select_chapter(3)
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        self.select_chapter(self.menu_selection)
+                    elif event.key == pygame.K_UP:
+                        self.menu_selection = max(0, self.menu_selection - 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_DOWN:
+                        self.menu_selection = min(len(CHAPTERS) - 1, self.menu_selection + 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_ESCAPE:
+                        self.state = 'menu'
+                        self.play_sound('menu_select')
+
                 elif self.state == 'difficulty':
                     if event.key == pygame.K_1:
                         self.set_difficulty('easy')
@@ -234,9 +260,10 @@ class Game:
                     elif event.key == pygame.K_4:
                         self.set_difficulty('nightmare')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = 'menu'
+                        self.state = 'chapter_select'
+                        self.menu_selection = self.selected_chapter  # Restore chapter selection
                         self.play_sound('menu_select')
-                
+
                 elif self.state == 'playing':
                     if event.key == pygame.K_ESCAPE:
                         self.state = 'paused'
@@ -273,8 +300,27 @@ class Game:
 
             if self.state == 'menu':
                 if self.controller.is_button_just_pressed(XboxButton.A):
-                    self.state = 'difficulty'
-                    self.menu_selection = 1  # Default to 'normal'
+                    self.state = 'chapter_select'
+                    self.menu_selection = 0
+                    self.play_sound('menu_select')
+
+            elif self.state == 'chapter_select':
+                # Navigate with stick
+                if self.menu_cooldown <= 0:
+                    if move_y < -0.5:  # Up
+                        self.menu_selection = max(0, self.menu_selection - 1)
+                        self.menu_cooldown = 15
+                        self.play_sound('menu_select')
+                    elif move_y > 0.5:  # Down
+                        self.menu_selection = min(len(CHAPTERS) - 1, self.menu_selection + 1)
+                        self.menu_cooldown = 15
+                        self.play_sound('menu_select')
+                # Select with A
+                if self.controller.is_button_just_pressed(XboxButton.A):
+                    self.select_chapter(self.menu_selection)
+                # Back with B
+                if self.controller.is_button_just_pressed(XboxButton.B):
+                    self.state = 'menu'
                     self.play_sound('menu_select')
 
             elif self.state == 'difficulty':
@@ -294,7 +340,8 @@ class Game:
                     self.set_difficulty(difficulties[self.menu_selection])
                 # Back with B
                 if self.controller.is_button_just_pressed(XboxButton.B):
-                    self.state = 'menu'
+                    self.state = 'chapter_select'
+                    self.menu_selection = self.selected_chapter  # Restore chapter selection
                     self.play_sound('menu_select')
 
             elif self.state == 'playing':
@@ -337,13 +384,23 @@ class Game:
                     self.state = 'menu'
                     self.play_sound('menu_select')
 
+    def select_chapter(self, chapter_index):
+        """Select a chapter/campaign from the collection"""
+        if 0 <= chapter_index < len(CHAPTERS):
+            self.selected_chapter = chapter_index
+            chapter = CHAPTERS[chapter_index]
+            self.current_stages = chapter['stages']
+            self.state = 'difficulty'
+            self.menu_selection = 1  # Default to 'normal'
+            self.play_sound('menu_select')
+
     def set_difficulty(self, difficulty):
         """Set game difficulty and start"""
         self.difficulty = difficulty
         self.difficulty_settings = DIFFICULTY_SETTINGS[difficulty]
         self.reset_game()
         self.state = 'playing'
-        self.show_message(STAGES[0]['name'], 180)
+        self.show_message(self.current_stages[0]['name'], 180)
         self.play_sound('wave_start')
         if self.music_enabled:
             self.music_manager.start_music()
@@ -434,7 +491,7 @@ class Game:
                 self.wave_delay = 60
                 self.stage_complete = False
                 self.state = 'playing'
-                self.show_message(STAGES[self.current_stage]['name'], 180)
+                self.show_message(self.current_stages[self.current_stage]['name'], 180)
                 self.play_sound('wave_start')
         
         if purchased:
@@ -673,7 +730,7 @@ class Game:
     
     def update_waves(self):
         """Handle wave progression"""
-        stage = STAGES[self.current_stage]
+        stage = self.current_stages[self.current_stage]
         
         # Wave delay
         if self.wave_delay > 0:
@@ -726,6 +783,8 @@ class Game:
         
         if self.state == 'menu':
             self.draw_menu()
+        elif self.state == 'chapter_select':
+            self.draw_chapter_select()
         elif self.state == 'difficulty':
             self.draw_difficulty()
         elif self.state == 'playing':
@@ -749,12 +808,21 @@ class Game:
     
     def draw_difficulty(self):
         """Draw difficulty selection screen"""
-        # Title
-        title = self.font_large.render("SELECT DIFFICULTY", True, COLOR_MINMATAR_ACCENT)
+        # Get current chapter info
+        chapter = CHAPTERS[self.selected_chapter]
+        chapter_color = chapter['color']
+
+        # Chapter title
+        chapter_title = self.font_large.render(chapter['title'].upper(), True, chapter_color)
+        rect = chapter_title.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        self.render_surface.blit(chapter_title, rect)
+
+        # Difficulty title
+        title = self.font.render("SELECT DIFFICULTY", True, (180, 180, 180))
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
         self.render_surface.blit(title, rect)
 
-        y = 250
+        y = 220
         difficulties = [
             ('1', 'easy', 'Easy', 'Reduced enemy health and damage, more powerups'),
             ('2', 'normal', 'Normal', 'Standard experience'),
@@ -772,7 +840,7 @@ class Game:
                 color = (255, 100, 100)
                 prefix = ""
             elif diff_id == 'normal':
-                color = COLOR_MINMATAR_ACCENT
+                color = chapter_color
                 prefix = ""
             else:
                 color = COLOR_TEXT
@@ -789,7 +857,7 @@ class Game:
 
         # Back option
         y += 30
-        back_text = "[B] Back" if self.controller and self.controller.connected else "[ESC] Back to Menu"
+        back_text = "[B] Back" if self.controller and self.controller.connected else "[ESC] Back to Chapters"
         text = self.font.render(back_text, True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
@@ -882,9 +950,8 @@ class Game:
         self.render_surface.blit(text, (x, y))
         
         # Stage/Wave
-        if self.current_stage < len(STAGES):
+        if self.current_stage < len(self.current_stages):
             y += 30
-            _stage = STAGES[self.current_stage]  # Reserved for future use
             text = self.font_small.render(f"Stage {self.current_stage + 1}", True, COLOR_TEXT)
             self.render_surface.blit(text, (x, y))
         
@@ -899,16 +966,21 @@ class Game:
     
     def draw_menu(self):
         """Draw main menu"""
-        # Title
-        title = self.font_large.render("MINMATAR REBELLION", True, COLOR_MINMATAR_ACCENT)
-        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 200))
+        # Main Title - EVE Rebellion Collection
+        title = self.font_large.render("EVE REBELLION COLLECTION", True, (200, 180, 100))
+        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 180))
         self.render_surface.blit(title, rect)
-        
+
         # Subtitle
-        sub = self.font.render("A Top-Down Space Shooter", True, COLOR_TEXT)
-        rect = sub.get_rect(center=(SCREEN_WIDTH // 2, 250))
+        sub = self.font.render("Stories of Conflict and Uprising", True, COLOR_TEXT)
+        rect = sub.get_rect(center=(SCREEN_WIDTH // 2, 230))
         self.render_surface.blit(sub, rect)
-        
+
+        # Tagline
+        tagline = self.font_small.render("A Top-Down Space Shooter", True, (150, 150, 150))
+        rect = tagline.get_rect(center=(SCREEN_WIDTH // 2, 260))
+        self.render_surface.blit(tagline, rect)
+
         # Instructions - show controller or keyboard based on what's connected
         y = 340
         if self.controller and self.controller.connected:
@@ -918,7 +990,7 @@ class Game:
                 "LT / X - Fire Rockets",
                 "RB - Switch Ammo",
                 "",
-                "Press A to Start"
+                "Press A to Begin"
             ]
         else:
             instructions = [
@@ -927,24 +999,75 @@ class Game:
                 "Shift or Right Click - Fire Rockets",
                 "1-5 or Q/Tab - Switch Ammo",
                 "",
-                "Press ENTER to Start"
+                "Press ENTER to Begin"
             ]
         for line in instructions:
             text = self.font.render(line, True, COLOR_TEXT)
             rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
             self.render_surface.blit(text, rect)
             y += 32
-        
+
         # Sound options
         y += 30
         sound_status = "ON" if self.sound_enabled else "OFF"
         music_status = "ON" if self.music_enabled else "OFF"
         _sound_color = (100, 255, 100) if self.sound_enabled else (255, 100, 100)  # Reserved
         _music_color = (100, 255, 100) if self.music_enabled else (255, 100, 100)  # Reserved
-        
+
         text = self.font_small.render(f"[S] Sound: {sound_status}  [M] Music: {music_status}", True, (150, 150, 150))
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
         self.render_surface.blit(text, rect)
+
+    def draw_chapter_select(self):
+        """Draw chapter selection screen"""
+        # Title
+        title = self.font_large.render("SELECT YOUR STORY", True, (200, 180, 100))
+        rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        self.render_surface.blit(title, rect)
+
+        # Draw chapters
+        y = 180
+        for i, chapter in enumerate(CHAPTERS):
+            is_selected = (i == self.menu_selection)
+
+            # Selection highlight
+            if is_selected:
+                # Draw selection box
+                box_rect = pygame.Rect(SCREEN_WIDTH // 2 - 350, y - 10, 700, 100)
+                pygame.draw.rect(self.render_surface, (40, 40, 60), box_rect)
+                pygame.draw.rect(self.render_surface, chapter['color'], box_rect, 2)
+
+            # Chapter number and title
+            number_color = chapter['color'] if is_selected else (100, 100, 100)
+            title_color = chapter['color'] if is_selected else (150, 150, 150)
+
+            number_text = self.font.render(f"[{i + 1}]", True, number_color)
+            self.render_surface.blit(number_text, (SCREEN_WIDTH // 2 - 330, y))
+
+            title_text = self.font_large.render(chapter['title'], True, title_color)
+            self.render_surface.blit(title_text, (SCREEN_WIDTH // 2 - 280, y - 5))
+
+            # Subtitle
+            subtitle_color = (180, 180, 180) if is_selected else (100, 100, 100)
+            subtitle_text = self.font.render(chapter['subtitle'], True, subtitle_color)
+            self.render_surface.blit(subtitle_text, (SCREEN_WIDTH // 2 - 280, y + 30))
+
+            # Description (only for selected)
+            if is_selected:
+                desc_text = self.font_small.render(chapter['description'], True, (200, 200, 200))
+                self.render_surface.blit(desc_text, (SCREEN_WIDTH // 2 - 280, y + 55))
+
+            y += 120
+
+        # Instructions
+        y = SCREEN_HEIGHT - 80
+        if self.controller and self.controller.connected:
+            inst = "Up/Down to navigate  |  A to select  |  B to go back"
+        else:
+            inst = "Up/Down or 1-4 to select  |  ENTER to confirm  |  ESC to go back"
+        inst_text = self.font_small.render(inst, True, (150, 150, 150))
+        rect = inst_text.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.render_surface.blit(inst_text, rect)
     
     def draw_pause(self):
         """Draw pause overlay"""
@@ -962,8 +1085,12 @@ class Game:
     
     def draw_shop(self):
         """Draw upgrade shop"""
+        # Get chapter color for theming
+        chapter = CHAPTERS[self.selected_chapter]
+        chapter_color = chapter['color']
+
         # Title
-        title = self.font_large.render("REBEL STATION", True, COLOR_MINMATAR_ACCENT)
+        title = self.font_large.render("SUPPLY STATION", True, chapter_color)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 50))
         self.render_surface.blit(title, rect)
         
@@ -1033,16 +1160,23 @@ class Game:
     
     def draw_victory(self):
         """Draw victory screen"""
-        title = self.font_large.render("VICTORY!", True, COLOR_MINMATAR_ACCENT)
+        # Get chapter info for dynamic victory text
+        chapter = CHAPTERS[self.selected_chapter]
+        chapter_color = chapter['color']
+        faction_info = FACTIONS.get(chapter['faction'], FACTIONS['minmatar'])
+
+        title = self.font_large.render("VICTORY!", True, chapter_color)
         rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
         self.render_surface.blit(title, rect)
-        
-        text = self.font.render("The Amarr station has fallen.", True, COLOR_TEXT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 220))
+
+        # Chapter title
+        text = self.font.render(chapter['title'], True, chapter_color)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 200))
         self.render_surface.blit(text, rect)
-        
-        text = self.font.render("The Minmatar Rebellion grows stronger!", True, COLOR_MINMATAR_ACCENT)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 260))
+
+        # Faction victory text
+        text = self.font.render(faction_info['victory_text'], True, COLOR_TEXT)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 250))
         self.render_surface.blit(text, rect)
         
         y = 350
