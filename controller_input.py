@@ -22,13 +22,50 @@ class ControllerConfig:
     trigger_deadzone: float = 0.10
     movement_sensitivity: float = 1.0
     aim_sensitivity: float = 0.8
-    
+
     # Haptic intensities (0.0 to 1.0)
     haptic_heat_base: float = 0.3
     haptic_heat_max: float = 0.8
     haptic_lock: float = 0.6
     haptic_decision: float = 0.9
     haptic_death: float = 1.0
+
+    # Steam Deck back button actions (configurable)
+    # Maps button indices to action names
+    back_button_l4: str = 'ammo_prev'     # L4 = previous ammo
+    back_button_l5: str = 'boost'         # L5 = speed boost
+    back_button_r4: str = 'ammo_next'     # R4 = next ammo
+    back_button_r5: str = 'quick_rocket'  # R5 = quick rocket
+
+
+# Preset configurations for different controllers
+STEAM_DECK_CONFIG = ControllerConfig(
+    left_stick_deadzone=0.12,     # Steam Deck sticks are precise
+    right_stick_deadzone=0.15,    # Slightly tighter for aiming
+    trigger_deadzone=0.08,        # Steam Deck triggers are responsive
+    movement_sensitivity=1.0,
+    aim_sensitivity=0.9,          # Slightly higher for twin-stick
+    haptic_heat_base=0.4,         # Steam Deck haptics are subtle
+    haptic_heat_max=0.9,
+)
+
+XBOX_CONFIG = ControllerConfig(
+    left_stick_deadzone=0.15,
+    right_stick_deadzone=0.20,
+    trigger_deadzone=0.10,
+    movement_sensitivity=1.0,
+    aim_sensitivity=0.8,
+)
+
+DUALSENSE_CONFIG = ControllerConfig(
+    left_stick_deadzone=0.12,
+    right_stick_deadzone=0.18,
+    trigger_deadzone=0.05,        # DualSense triggers are very precise
+    movement_sensitivity=1.0,
+    aim_sensitivity=0.85,
+    haptic_heat_base=0.25,        # DualSense haptics are strong
+    haptic_heat_max=0.7,
+)
 
 
 class ControllerInput:
@@ -60,11 +97,12 @@ class ControllerInput:
         self.config = config or ControllerConfig()
         self.joystick: Optional[pygame.joystick.Joystick] = None
         self.connected = False
-        
+        self.controller_type = 'unknown'  # 'steam_deck', 'xbox', 'playstation', 'unknown'
+
         # Initialize pygame joystick system
         pygame.joystick.init()
         self._connect_controller()
-        
+
         # Input state
         self.movement_x = 0.0
         self.movement_y = 0.0
@@ -76,12 +114,20 @@ class ControllerInput:
         self.right_stick_fire = False  # Right stick firing
         self.fire_dir_x = 0.0  # Normalized fire direction
         self.fire_dir_y = -1.0  # Default: up
-        
+
         # Button state (edge detection)
         self.buttons_pressed = set()
         self.buttons_just_pressed = set()
         self.buttons_just_released = set()
-        
+
+        # Back button actions (for Steam Deck)
+        self.back_button_actions = {
+            'ammo_next': False,
+            'ammo_prev': False,
+            'boost': False,
+            'quick_rocket': False,
+        }
+
         # Haptic state
         self.current_rumble = 0.0
         self.heat_level = 0.0  # 0.0 to 1.0
@@ -98,22 +144,55 @@ class ControllerInput:
             self.joystick = pygame.joystick.Joystick(0)
             self.joystick.init()
             self.connected = True
+
+            # Detect controller type and apply optimized config
+            controller_name = self.joystick.get_name().lower()
+            self._detect_controller_type(controller_name)
+
             print(f"Controller connected: {self.joystick.get_name()}")
-            
+            print(f"Controller type: {self.controller_type}")
+
             # Enable haptics if supported
             if hasattr(self.joystick, 'rumble'):
                 print("Haptic feedback enabled")
         else:
             print("No controller detected - keyboard/mouse active")
+
+    def _detect_controller_type(self, name: str):
+        """Detect controller type and apply optimized configuration"""
+        name = name.lower()
+
+        # Steam Deck detection
+        if 'steam' in name or 'deck' in name or 'valve' in name:
+            self.controller_type = 'steam_deck'
+            self.config = STEAM_DECK_CONFIG
+            print("Steam Deck detected - applying optimized controls")
+        # PlayStation detection
+        elif 'playstation' in name or 'dualshock' in name or 'dualsense' in name or 'ps4' in name or 'ps5' in name:
+            self.controller_type = 'playstation'
+            self.config = DUALSENSE_CONFIG
+            print("PlayStation controller detected - applying optimized controls")
+        # Xbox detection
+        elif 'xbox' in name or 'microsoft' in name or 'xinput' in name:
+            self.controller_type = 'xbox'
+            self.config = XBOX_CONFIG
+            print("Xbox controller detected - applying optimized controls")
+        else:
+            self.controller_type = 'unknown'
+            # Keep default config
     
+    def start_frame(self):
+        """Call at the start of each frame to clear edge-detection states"""
+        self.buttons_just_pressed.clear()
+        self.buttons_just_released.clear()
+        # Clear back button actions each frame
+        for key in self.back_button_actions:
+            self.back_button_actions[key] = False
+
     def update(self, dt: float):
         """Update controller state - call once per frame"""
         if not self.connected or self.joystick is None:
             return
-        
-        # Clear just-pressed state from last frame
-        self.buttons_just_pressed.clear()
-        self.buttons_just_released.clear()
         
         # Update input lock timer
         if self.input_locked:
@@ -193,21 +272,57 @@ class ControllerInput:
         """Handle pygame joystick events for button presses"""
         if not self.connected or self.input_locked:
             return
-        
+
         if event.type == pygame.JOYBUTTONDOWN:
             button = event.button
             self.buttons_pressed.add(button)
             self.buttons_just_pressed.add(button)
-            
+
+            # Handle back buttons (Steam Deck: buttons 15-18 typically)
+            self._handle_back_button(button, pressed=True)
+
             # Haptic spike on important buttons
             if button in [0, 1, 2, 3]:  # Face buttons
                 self._haptic_spike(self.config.haptic_decision)
-        
+
         elif event.type == pygame.JOYBUTTONUP:
             button = event.button
             if button in self.buttons_pressed:
                 self.buttons_pressed.remove(button)
             self.buttons_just_released.add(button)
+
+            # Handle back button release
+            self._handle_back_button(button, pressed=False)
+
+    def _handle_back_button(self, button: int, pressed: bool):
+        """Handle Steam Deck back button mappings"""
+        # Steam Deck back buttons are typically buttons 15-18
+        # L4=15, R4=16, L5=17, R5=18 (may vary)
+        back_button_map = {
+            15: self.config.back_button_l4,  # L4
+            16: self.config.back_button_r4,  # R4
+            17: self.config.back_button_l5,  # L5
+            18: self.config.back_button_r5,  # R5
+            # Alternative mappings some controllers use
+            13: self.config.back_button_l4,
+            14: self.config.back_button_r4,
+        }
+
+        if button in back_button_map:
+            action = back_button_map[button]
+            if action in self.back_button_actions:
+                self.back_button_actions[action] = pressed
+                if pressed:
+                    self._haptic_spike(0.3)  # Light feedback for back buttons
+
+    def get_back_button_action(self, action: str) -> bool:
+        """Check if a back button action was just triggered"""
+        return self.back_button_actions.get(action, False)
+
+    def clear_back_button_actions(self):
+        """Clear back button action states (call after processing)"""
+        for key in self.back_button_actions:
+            self.back_button_actions[key] = False
     
     def _apply_deadzone(self, value: float, deadzone: float) -> float:
         """Apply circular deadzone to analog input"""
@@ -369,6 +484,32 @@ class PlayStationButton:
     OPTIONS = 7
     L3 = 8
     R3 = 9
+
+
+class SteamDeckButton:
+    """
+    Steam Deck controller button mapping.
+    Steam Deck appears as an Xbox controller + back buttons.
+    """
+    A = 0
+    B = 1
+    X = 2
+    Y = 3
+    LB = 4
+    RB = 5
+    BACK = 6      # View button (left menu)
+    START = 7     # Menu button (right menu)
+    L_STICK = 8
+    R_STICK = 9
+    GUIDE = 10    # Steam button
+    # Back grip buttons (may vary by SDL version)
+    L4 = 15
+    R4 = 16
+    L5 = 17
+    R5 = 18
+    # Touchpad buttons
+    LEFT_TRACKPAD_CLICK = 13
+    RIGHT_TRACKPAD_CLICK = 14
 
 
 # Example integration with EVE Rebellion's Player class

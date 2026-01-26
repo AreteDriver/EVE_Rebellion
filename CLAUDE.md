@@ -44,7 +44,7 @@ pytest
 - [x] Improve powerup visuals (rarity system, orbital effects, pickup animations)
 - [x] Improve weapon/damage visuals (animated glow, bullet trails, rocket exhaust)
 - [x] Add ships flying in background with random space backdrops
-- [ ] Steam Deck optimized controls
+- [x] Steam Deck optimized controls (auto-detection, back buttons, tuned deadzones)
 - [ ] Leaderboard system
 
 ---

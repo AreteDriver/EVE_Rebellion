@@ -132,10 +132,13 @@ class Player(pygame.sprite.Sprite):
             return True
         return False
     
-    def cycle_ammo(self):
-        """Cycle to next unlocked ammo type"""
+    def cycle_ammo(self, forward: bool = True):
+        """Cycle to next/previous unlocked ammo type"""
         idx = self.unlocked_ammo.index(self.current_ammo)
-        idx = (idx + 1) % len(self.unlocked_ammo)
+        if forward:
+            idx = (idx + 1) % len(self.unlocked_ammo)
+        else:
+            idx = (idx - 1) % len(self.unlocked_ammo)
         self.current_ammo = self.unlocked_ammo[idx]
     
     def update(self, keys):

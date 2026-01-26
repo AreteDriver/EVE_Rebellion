@@ -349,7 +349,18 @@ class Game:
                     self.state = 'paused'
                     self.play_sound('menu_select')
                 if self.controller.is_button_just_pressed(XboxButton.RB):
-                    self.player.cycle_ammo()
+                    self.player.cycle_ammo(forward=True)
+                    self.play_sound('ammo_switch')
+                if self.controller.is_button_just_pressed(XboxButton.LB):
+                    self.player.cycle_ammo(forward=False)
+                    self.play_sound('ammo_switch')
+
+                # Steam Deck back button support
+                if self.controller.get_back_button_action('ammo_next'):
+                    self.player.cycle_ammo(forward=True)
+                    self.play_sound('ammo_switch')
+                if self.controller.get_back_button_action('ammo_prev'):
+                    self.player.cycle_ammo(forward=False)
                     self.play_sound('ammo_switch')
 
             elif self.state == 'paused':
