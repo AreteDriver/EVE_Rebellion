@@ -42,7 +42,7 @@ pytest
 
 ## Current Priorities
 - [x] Improve powerup visuals (rarity system, orbital effects, pickup animations)
-- [ ] Improve weapon/damage visuals (especially upgraded)
+- [x] Improve weapon/damage visuals (animated glow, bullet trails, rocket exhaust)
 - [ ] Add ships flying in background with random space backdrops
 - [ ] Steam Deck optimized controls
 - [ ] Leaderboard system

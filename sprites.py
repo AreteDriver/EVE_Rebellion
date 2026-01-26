@@ -269,78 +269,203 @@ class Player(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    """Projectile sprite with upgrade-based visuals"""
+    """Projectile sprite with upgrade-based animated visuals"""
 
     def __init__(self, x, y, dx, dy, color, damage, shield_mult=1.0, armor_mult=1.0, upgrade_level=0):
         super().__init__()
         self.upgrade_level = upgrade_level
+        self.color = color
+        self.anim_timer = random.uniform(0, math.pi * 2)
 
-        # Scale bullet size with upgrades (4x12 base -> up to 7x18 at level 3)
-        width = 4 + upgrade_level
-        height = 12 + upgrade_level * 2
+        # Scale bullet size with upgrades (4x12 base -> up to 8x20 at level 3)
+        self.width = 4 + upgrade_level * 1.5
+        self.height = 12 + upgrade_level * 3
 
-        # Create surface with glow space for upgraded bullets
-        glow_pad = upgrade_level * 3 if upgrade_level > 0 else 0
-        surf_w = width + glow_pad * 2
-        surf_h = height + glow_pad * 2
+        # Trail tracking for upgraded bullets
+        self.trail_positions = []
+        self.max_trail = 4 + upgrade_level * 2 if upgrade_level > 0 else 0
 
-        self.image = pygame.Surface((surf_w, surf_h), pygame.SRCALPHA)
-
-        # Draw glow for upgraded bullets
-        if upgrade_level > 0:
-            glow_alpha = 40 + upgrade_level * 25
-            glow_color = (*color[:3], glow_alpha)
-            # Outer glow ellipse
-            pygame.draw.ellipse(self.image, glow_color, (0, 0, surf_w, surf_h))
-            # Inner brighter glow
-            inner_pad = glow_pad // 2
-            inner_glow = (*color[:3], glow_alpha + 30)
-            pygame.draw.ellipse(self.image, inner_glow,
-                              (inner_pad, inner_pad, surf_w - inner_pad * 2, surf_h - inner_pad * 2))
-
-        # Draw core bullet
-        cx, cy = glow_pad, glow_pad
-        pygame.draw.rect(self.image, color, (cx, cy, width, height))
-
-        # Bright tip (scales with upgrades)
-        tip_width = max(2, width - 2)
-        tip_height = 4 + upgrade_level
-        pygame.draw.rect(self.image, (255, 255, 255), (cx + 1, cy, tip_width, tip_height))
-
-        self.rect = self.image.get_rect(center=(x, y))
+        self.rect = pygame.Rect(x - self.width // 2, y - self.height // 2,
+                                int(self.width) + 10, int(self.height) + 10)
         self.dx = dx
         self.dy = dy
         self.damage = damage
         self.shield_mult = shield_mult
         self.armor_mult = armor_mult
-    
+
+        self._update_image()
+
+    def _update_image(self):
+        """Render bullet with animated glow"""
+        # Pulsing effect for upgrades
+        pulse = 0.7 + 0.3 * math.sin(self.anim_timer) if self.upgrade_level > 0 else 1.0
+
+        glow_pad = int(self.upgrade_level * 4) if self.upgrade_level > 0 else 2
+        surf_w = int(self.width + glow_pad * 2)
+        surf_h = int(self.height + glow_pad * 2)
+
+        self.image = pygame.Surface((surf_w, surf_h), pygame.SRCALPHA)
+
+        # Draw glow for upgraded bullets
+        if self.upgrade_level > 0:
+            glow_alpha = int((50 + self.upgrade_level * 30) * pulse)
+            glow_color = (*self.color[:3], glow_alpha)
+
+            # Outer glow
+            pygame.draw.ellipse(self.image, glow_color, (0, 0, surf_w, surf_h))
+
+            # Inner brighter glow
+            inner_pad = glow_pad // 2
+            inner_alpha = int((glow_alpha + 40) * pulse)
+            inner_glow = (*self.color[:3], min(200, inner_alpha))
+            pygame.draw.ellipse(self.image, inner_glow,
+                              (inner_pad, inner_pad, surf_w - inner_pad * 2, surf_h - inner_pad * 2))
+
+            # Hot core for level 2+
+            if self.upgrade_level >= 2:
+                core_alpha = int(60 * pulse)
+                core_color = (255, 255, 255, core_alpha)
+                core_w = surf_w // 2
+                core_h = surf_h // 2
+                pygame.draw.ellipse(self.image, core_color,
+                                  (surf_w // 4, surf_h // 4, core_w, core_h))
+
+        # Draw core bullet
+        cx, cy = glow_pad, glow_pad
+        w, h = int(self.width), int(self.height)
+        pygame.draw.rect(self.image, self.color, (cx, cy, w, h))
+
+        # Bright tip (scales with upgrades)
+        tip_width = max(2, w - 2)
+        tip_height = 4 + self.upgrade_level * 2
+        tip_color = (255, 255, 255) if self.upgrade_level < 2 else (255, 255, 200)
+        pygame.draw.rect(self.image, tip_color, (cx + 1, cy, tip_width, tip_height))
+
+        # Energy lines for level 3
+        if self.upgrade_level >= 3:
+            line_alpha = int(150 * pulse)
+            pygame.draw.line(self.image, (*self.color[:3], line_alpha),
+                           (cx + w // 2, cy), (cx + w // 2, cy + h), 1)
+
+        # Update rect to match image center
+        old_center = self.rect.center
+        self.rect = self.image.get_rect(center=old_center)
+
+    def draw_trail(self, surface):
+        """Draw bullet trail for upgraded bullets"""
+        if self.upgrade_level == 0 or len(self.trail_positions) < 2:
+            return
+
+        # Draw fading trail
+        for i, (tx, ty) in enumerate(self.trail_positions):
+            alpha = int(120 * (i / len(self.trail_positions)) * (self.upgrade_level / 3))
+            size = max(1, int(self.width * 0.5 * (i / len(self.trail_positions))))
+
+            trail_surf = pygame.Surface((size * 2 + 2, size * 2 + 2), pygame.SRCALPHA)
+            pygame.draw.circle(trail_surf, (*self.color[:3], alpha), (size + 1, size + 1), size)
+            surface.blit(trail_surf, (tx - size - 1, ty - size - 1))
+
     def update(self):
+        # Store position for trail
+        if self.upgrade_level > 0:
+            self.trail_positions.append(self.rect.center)
+            if len(self.trail_positions) > self.max_trail:
+                self.trail_positions.pop(0)
+
         self.rect.x += self.dx
         self.rect.y += self.dy
+
+        # Animate glow
+        if self.upgrade_level > 0:
+            self.anim_timer += 0.2 + self.upgrade_level * 0.05
+            self._update_image()
+
         if (self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or
             self.rect.right < 0 or self.rect.left > SCREEN_WIDTH):
             self.kill()
 
 
 class Rocket(pygame.sprite.Sprite):
-    """Rocket projectile"""
-    
+    """Rocket projectile with animated exhaust"""
+
     def __init__(self, x, y):
         super().__init__()
-        self.image = pygame.Surface((8, 20), pygame.SRCALPHA)
-        # Rocket body
-        pygame.draw.rect(self.image, (150, 150, 150), (2, 5, 4, 15))
-        # Nose cone
-        pygame.draw.polygon(self.image, (200, 50, 50), [(4, 0), (0, 8), (8, 8)])
-        # Exhaust
-        pygame.draw.polygon(self.image, (255, 200, 50), [(2, 18), (4, 22), (6, 18)])
+        self.anim_timer = 0
+        self.trail_positions = []
+        self.max_trail = 8
+
+        self._update_image()
         self.rect = self.image.get_rect(center=(x, y))
         self.damage = ROCKET_DAMAGE
         self.shield_mult = 1.2
         self.armor_mult = 1.2
-    
+
+    def _update_image(self):
+        """Render rocket with animated exhaust"""
+        flame_flicker = 0.7 + 0.3 * math.sin(self.anim_timer * 0.5)
+        flame_size = int(6 + 4 * flame_flicker)
+
+        self.image = pygame.Surface((12, 24 + flame_size), pygame.SRCALPHA)
+
+        # Rocket body
+        pygame.draw.rect(self.image, (140, 140, 150), (4, 6, 4, 14))
+        pygame.draw.rect(self.image, (180, 180, 190), (5, 6, 2, 14))
+
+        # Nose cone
+        pygame.draw.polygon(self.image, (200, 60, 60), [(6, 0), (2, 8), (10, 8)])
+        pygame.draw.polygon(self.image, (255, 100, 100), [(6, 2), (4, 7), (8, 7)])
+
+        # Fins
+        pygame.draw.polygon(self.image, (120, 120, 130), [(2, 18), (4, 12), (4, 18)])
+        pygame.draw.polygon(self.image, (120, 120, 130), [(10, 18), (8, 12), (8, 18)])
+
+        # Animated exhaust flame
+        flame_y = 20
+        # Outer flame (orange/red)
+        flame_alpha = int(200 * flame_flicker)
+        outer_flame = [(4, flame_y), (6, flame_y + flame_size), (8, flame_y)]
+        pygame.draw.polygon(self.image, (255, 150, 50, flame_alpha), outer_flame)
+
+        # Inner flame (yellow/white)
+        inner_size = int(flame_size * 0.6)
+        inner_flame = [(5, flame_y), (6, flame_y + inner_size), (7, flame_y)]
+        pygame.draw.polygon(self.image, (255, 255, 150, flame_alpha), inner_flame)
+
+        # Hot core
+        core_size = max(2, int(flame_size * 0.3))
+        pygame.draw.circle(self.image, (255, 255, 255, flame_alpha), (6, flame_y + 2), core_size)
+
+    def draw_trail(self, surface):
+        """Draw rocket exhaust trail"""
+        if len(self.trail_positions) < 2:
+            return
+
+        for i, (tx, ty) in enumerate(self.trail_positions):
+            progress = i / len(self.trail_positions)
+            alpha = int(100 * progress)
+            size = max(1, int(4 * progress))
+
+            # Orange to red trail
+            r = 255
+            g = int(200 * (1 - progress) + 50 * progress)
+            b = int(50 * (1 - progress))
+
+            trail_surf = pygame.Surface((size * 2 + 2, size * 2 + 2), pygame.SRCALPHA)
+            pygame.draw.circle(trail_surf, (r, g, b, alpha), (size + 1, size + 1), size)
+            surface.blit(trail_surf, (tx - size - 1, ty - size - 1))
+
     def update(self):
+        # Store position for trail
+        self.trail_positions.append(self.rect.center)
+        if len(self.trail_positions) > self.max_trail:
+            self.trail_positions.pop(0)
+
         self.rect.y -= ROCKET_SPEED
+
+        # Animate exhaust
+        self.anim_timer += 1
+        self._update_image()
+
         if self.rect.bottom < 0:
             self.kill()
 

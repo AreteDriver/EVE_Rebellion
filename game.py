@@ -892,6 +892,11 @@ class Game:
             self.space_background.draw(self.render_surface)
 
         """Draw gameplay elements"""
+        # Draw bullet trails (behind bullets)
+        for bullet in self.player_bullets:
+            if hasattr(bullet, 'draw_trail'):
+                bullet.draw_trail(self.render_surface)
+
         # Draw sprites
         for sprite in self.all_sprites:
             if sprite != self.player:
