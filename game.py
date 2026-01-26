@@ -269,6 +269,16 @@ class Game:
                         self.set_difficulty('hard')
                     elif event.key == pygame.K_4:
                         self.set_difficulty('nightmare')
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        # Select difficulty based on menu_selection
+                        difficulties = ['easy', 'normal', 'hard', 'nightmare']
+                        self.set_difficulty(difficulties[self.menu_selection])
+                    elif event.key == pygame.K_UP:
+                        self.menu_selection = max(0, self.menu_selection - 1)
+                        self.play_sound('menu_select')
+                    elif event.key == pygame.K_DOWN:
+                        self.menu_selection = min(3, self.menu_selection + 1)
+                        self.play_sound('menu_select')
                     elif event.key == pygame.K_ESCAPE:
                         self.state = 'chapter_select'
                         self.menu_selection = self.selected_chapter  # Restore chapter selection
@@ -798,20 +808,33 @@ class Game:
         """Apply powerup effect to player"""
         data = powerup.data
         now = pygame.time.get_ticks()
-        
+
         if powerup.powerup_type == 'nanite':
-            self.player.heal(data['heal'])
+            # Nanite paste - repairs hull
+            self.player.hull = min(self.player.hull + 25, self.player.max_hull)
             self.show_message("Hull Repaired!", 60)
-        elif powerup.powerup_type == 'capacitor':
-            self.player.add_rockets(data['rockets'])
-            self.show_message("Rockets Loaded!", 60)
+        elif powerup.powerup_type == 'shield_recharger':
+            heal = data.get('shield_heal', 40)
+            self.player.shields = min(self.player.shields + heal, self.player.max_shields)
+            self.show_message("Shields Recharged!", 60)
+        elif powerup.powerup_type == 'armor_repairer':
+            heal = data.get('armor_heal', 35)
+            self.player.armor = min(self.player.armor + heal, self.player.max_armor)
+            self.show_message("Armor Repaired!", 60)
+        elif powerup.powerup_type == 'hull_repairer':
+            heal = data.get('hull_heal', 30)
+            self.player.hull = min(self.player.hull + heal, self.player.max_hull)
+            self.show_message("Hull Repaired!", 60)
         elif powerup.powerup_type == 'overdrive':
-            self.player.overdrive_until = now + data['duration']
+            self.player.overdrive_until = now + data.get('duration', 5000)
             self.show_message("OVERDRIVE!", 60)
-        elif powerup.powerup_type == 'shield_boost':
-            self.player.shield_boost_until = now + data['duration']
-            self.player.shields = min(self.player.shields + 30, self.player.max_shields)
-            self.show_message("Shields Boosted!", 60)
+        elif powerup.powerup_type == 'magnet':
+            # Tractor beam - could pull in nearby powerups
+            self.show_message("Tractor Beam Active!", 60)
+        elif powerup.powerup_type == 'invulnerability':
+            self.player.shield_boost_until = now + data.get('duration', 5000)
+            self.player.shields = self.player.max_shields
+            self.show_message("Damage Control Active!", 60)
         elif powerup.powerup_type == 'weapon_upgrade':
             self.player.spread_bonus = min(3, self.player.spread_bonus + 1)
             self.show_message("Weapons Upgraded!", 60)

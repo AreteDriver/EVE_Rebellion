@@ -6,108 +6,190 @@ Adds dynamic space backgrounds with asteroids, rings, nebulae, and distant ships
 import pygame
 import random
 import math
-import os
 
-# Background ship sprites (scaled down and dimmed for distance effect)
-BACKGROUND_SHIP_TYPES = [
-    'apocalypse', 'abaddon', 'harbinger', 'prophecy',  # Amarr
-    'rifter', 'wolf', 'jaguar',  # Minmatar
-    'bestower', 'omen', 'maller',  # Various
+
+# Ship silhouette definitions (side profile shapes)
+# Each is a list of (x, y) points normalized to 0-1 range
+SHIP_SILHOUETTES = {
+    # Minmatar style - angular, aggressive
+    'frigate_minmatar': [
+        (0.0, 0.5), (0.2, 0.3), (0.4, 0.2), (0.7, 0.15),
+        (1.0, 0.5),  # nose
+        (0.7, 0.85), (0.4, 0.8), (0.2, 0.7)
+    ],
+    'cruiser_minmatar': [
+        (0.0, 0.4), (0.1, 0.25), (0.3, 0.2), (0.5, 0.15), (0.8, 0.2),
+        (1.0, 0.5),  # nose
+        (0.8, 0.8), (0.5, 0.85), (0.3, 0.8), (0.1, 0.75), (0.0, 0.6)
+    ],
+    'battleship_minmatar': [
+        (0.0, 0.35), (0.05, 0.2), (0.2, 0.15), (0.4, 0.1), (0.6, 0.15), (0.85, 0.25),
+        (1.0, 0.5),  # nose
+        (0.85, 0.75), (0.6, 0.85), (0.4, 0.9), (0.2, 0.85), (0.05, 0.8), (0.0, 0.65)
+    ],
+    # Amarr style - sleek, golden curves
+    'frigate_amarr': [
+        (0.0, 0.5), (0.15, 0.35), (0.4, 0.25), (0.7, 0.3),
+        (1.0, 0.5),  # nose
+        (0.7, 0.7), (0.4, 0.75), (0.15, 0.65)
+    ],
+    'cruiser_amarr': [
+        (0.0, 0.5), (0.1, 0.3), (0.25, 0.2), (0.5, 0.18), (0.75, 0.25),
+        (1.0, 0.5),  # nose
+        (0.75, 0.75), (0.5, 0.82), (0.25, 0.8), (0.1, 0.7)
+    ],
+    'battleship_amarr': [
+        (0.0, 0.5), (0.08, 0.3), (0.2, 0.18), (0.4, 0.12), (0.6, 0.15), (0.8, 0.3),
+        (1.0, 0.5),  # nose
+        (0.8, 0.7), (0.6, 0.85), (0.4, 0.88), (0.2, 0.82), (0.08, 0.7)
+    ],
+}
+
+# Faction colors
+MINMATAR_COLORS = [
+    (180, 100, 60),   # Rust orange
+    (150, 80, 50),    # Dark rust
+    (200, 120, 70),   # Light rust
+]
+AMARR_COLORS = [
+    (200, 170, 80),   # Gold
+    (180, 150, 60),   # Dark gold
+    (220, 190, 100),  # Bright gold
 ]
 
 
 class BackgroundShip:
-    """A distant ship flying in the background"""
+    """A distant ship silhouette flying in the background"""
 
-    def __init__(self, width, height, sprite_cache):
+    def __init__(self, width, height, sprite_cache=None):
         self.width = width
         self.height = height
-        self.sprite_cache = sprite_cache
 
-        # Pick a random ship type
-        self.ship_type = random.choice(BACKGROUND_SHIP_TYPES)
+        # Pick faction - determines direction and color
+        self.faction = random.choice(['minmatar', 'amarr'])
 
-        # Scale and appearance (smaller = more distant)
-        self.scale = random.uniform(0.08, 0.2)
-        self.alpha = int(40 + self.scale * 150)  # More distant = more transparent
+        # Pick ship class (affects size)
+        self.ship_class = random.choices(
+            ['frigate', 'cruiser', 'battleship'],
+            weights=[0.5, 0.35, 0.15]  # More frigates than battleships
+        )[0]
 
-        # Position - spawn from top or sides
-        spawn_side = random.choice(['top', 'left', 'right'])
-        if spawn_side == 'top':
-            self.x = random.randint(0, width)
-            self.y = -50
-            self.vx = random.uniform(-0.3, 0.3)
-            self.vy = random.uniform(0.3, 1.0) * (1 + self.scale * 2)
-        elif spawn_side == 'left':
-            self.x = -50
-            self.y = random.randint(0, height)
-            self.vx = random.uniform(0.5, 1.2) * (1 + self.scale * 2)
-            self.vy = random.uniform(-0.2, 0.5)
-        else:  # right
-            self.x = width + 50
-            self.y = random.randint(0, height)
-            self.vx = random.uniform(-1.2, -0.5) * (1 + self.scale * 2)
-            self.vy = random.uniform(-0.2, 0.5)
+        # Size based on class and distance
+        base_sizes = {'frigate': 25, 'cruiser': 45, 'battleship': 70}
+        self.base_size = base_sizes[self.ship_class]
 
-        # Load and prepare sprite
-        self.image = self._load_ship_sprite()
+        # Distance factor (0.3 = far, 1.0 = close)
+        self.distance = random.uniform(0.3, 0.8)
+        self.size = int(self.base_size * self.distance)
+        self.alpha = int(60 + self.distance * 120)  # Closer = more visible
 
-    def _load_ship_sprite(self):
-        """Load ship sprite, scaled and dimmed for background"""
-        # Try to load from eve_renders first
-        paths_to_try = [
-            f'assets/eve_renders/{self.ship_type}.png',
-            f'assets/ship_sprites/{self.ship_type}_render_256.png',
-        ]
+        # Color based on faction
+        if self.faction == 'minmatar':
+            self.color = random.choice(MINMATAR_COLORS)
+            # Minmatar fly left to right (retreating/flanking)
+            self.x = -self.size
+            self.y = random.randint(50, height - 50)
+            self.vx = random.uniform(0.8, 1.5) * self.distance
+            self.vy = random.uniform(-0.15, 0.15)
+            self.facing_right = True
+        else:
+            self.color = random.choice(AMARR_COLORS)
+            # Amarr fly right to left (attacking)
+            self.x = width + self.size
+            self.y = random.randint(50, height - 50)
+            self.vx = random.uniform(-1.5, -0.8) * self.distance
+            self.vy = random.uniform(-0.15, 0.15)
+            self.facing_right = False
 
-        original = None
-        for path in paths_to_try:
-            if os.path.exists(path):
-                try:
-                    original = pygame.image.load(path).convert_alpha()
-                    break
-                except pygame.error:
-                    continue
+        # Engine glow
+        self.engine_flicker = random.uniform(0, math.pi * 2)
 
-        if original is None:
-            # Fallback: create a simple ship shape
-            size = int(30 * self.scale)
-            surf = pygame.Surface((size, size), pygame.SRCALPHA)
-            color = (100, 100, 120, self.alpha)
-            points = [(size//2, 0), (size, size), (size//2, size*3//4), (0, size)]
-            pygame.draw.polygon(surf, color, points)
-            return surf
+        # Create the ship silhouette
+        self.image = self._create_silhouette()
 
-        # Scale down
-        orig_w, orig_h = original.get_size()
-        new_w = int(orig_w * self.scale)
-        new_h = int(orig_h * self.scale)
-        if new_w < 5 or new_h < 5:
-            new_w, new_h = max(5, new_w), max(5, new_h)
+    def _create_silhouette(self):
+        """Create a ship silhouette sprite"""
+        silhouette_key = f'{self.ship_class}_{self.faction}'
+        points_normalized = SHIP_SILHOUETTES.get(silhouette_key)
 
-        scaled = pygame.transform.smoothscale(original, (new_w, new_h))
+        if not points_normalized:
+            # Fallback simple shape
+            points_normalized = [(0, 0.5), (0.3, 0.2), (1, 0.5), (0.3, 0.8)]
 
-        # Apply transparency/dimming
-        scaled.set_alpha(self.alpha)
+        # Scale points to actual size
+        ship_width = self.size
+        ship_height = int(self.size * 0.5)
 
-        return scaled
+        points = []
+        for px, py in points_normalized:
+            x = int(px * ship_width)
+            y = int(py * ship_height)
+            points.append((x, y))
+
+        # Flip if facing left
+        if not self.facing_right:
+            points = [(ship_width - x, y) for x, y in points]
+
+        # Create surface
+        surf = pygame.Surface((ship_width + 10, ship_height + 10), pygame.SRCALPHA)
+
+        # Offset points for padding
+        offset_points = [(x + 5, y + 5) for x, y in points]
+
+        # Draw glow/outline
+        glow_color = (*self.color, self.alpha // 3)
+        pygame.draw.polygon(surf, glow_color, offset_points)
+
+        # Draw main hull
+        hull_color = (*self.color, self.alpha)
+        pygame.draw.polygon(surf, hull_color, offset_points)
+
+        # Draw darker outline
+        outline_color = (self.color[0] // 2, self.color[1] // 2, self.color[2] // 2, self.alpha)
+        pygame.draw.polygon(surf, outline_color, offset_points, 1)
+
+        return surf
 
     def update(self, speed_mult=1.0):
         """Move the ship"""
         self.x += self.vx * speed_mult
         self.y += self.vy * speed_mult
+        self.engine_flicker += 0.2
 
     def is_offscreen(self):
         """Check if ship has left the screen"""
-        margin = 100
+        margin = self.size + 50
         return (self.x < -margin or self.x > self.width + margin or
                 self.y < -margin or self.y > self.height + margin)
 
     def draw(self, surface):
-        """Draw the ship"""
+        """Draw the ship with engine glow"""
         if self.image:
             rect = self.image.get_rect(center=(int(self.x), int(self.y)))
             surface.blit(self.image, rect)
+
+            # Draw engine glow
+            engine_intensity = 0.5 + 0.5 * math.sin(self.engine_flicker)
+            glow_alpha = int(self.alpha * 0.6 * engine_intensity)
+
+            # Engine position (rear of ship)
+            if self.facing_right:
+                engine_x = int(self.x - self.size // 2)
+            else:
+                engine_x = int(self.x + self.size // 2)
+            engine_y = int(self.y)
+
+            # Draw engine glow
+            glow_size = int(4 + self.distance * 6)
+            glow_surf = pygame.Surface((glow_size * 2, glow_size * 2), pygame.SRCALPHA)
+
+            if self.faction == 'minmatar':
+                glow_color = (255, 150, 50, glow_alpha)  # Orange exhaust
+            else:
+                glow_color = (255, 220, 100, glow_alpha)  # Yellow exhaust
+
+            pygame.draw.circle(glow_surf, glow_color, (glow_size, glow_size), glow_size)
+            surface.blit(glow_surf, (engine_x - glow_size, engine_y - glow_size))
 
 
 class SpaceBackground:
