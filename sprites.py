@@ -747,25 +747,268 @@ class RefugeePod(pygame.sprite.Sprite):
 
 
 class Powerup(pygame.sprite.Sprite):
-    """Powerup pickup - simple and readable"""
+    """Enhanced powerup with rarity-based visual effects"""
+
+    # Rarity system
+    POWERUP_RARITY = {
+        'shield_recharger': 'common',
+        'armor_repairer': 'common',
+        'hull_repairer': 'common',
+        'nanite': 'uncommon',
+        'capacitor': 'uncommon',
+        'weapon_upgrade': 'rare',
+        'rapid_fire': 'rare',
+        'overdrive': 'epic',
+        'magnet': 'epic',
+        'invulnerability': 'epic',
+        'shield_boost': 'uncommon',
+    }
+
+    RARITY_CONFIG = {
+        'common':   {'glow_mult': 0.6, 'orbitals': 4,  'pulse_speed': 0.10, 'has_corona': False, 'has_arcs': False},
+        'uncommon': {'glow_mult': 0.8, 'orbitals': 6,  'pulse_speed': 0.12, 'has_corona': False, 'has_arcs': False},
+        'rare':     {'glow_mult': 1.0, 'orbitals': 8,  'pulse_speed': 0.15, 'has_corona': False, 'has_arcs': True},
+        'epic':     {'glow_mult': 1.3, 'orbitals': 12, 'pulse_speed': 0.18, 'has_corona': True,  'has_arcs': True},
+    }
 
     def __init__(self, x, y, powerup_type):
         super().__init__()
         self.powerup_type = powerup_type
         self.data = POWERUP_TYPES[powerup_type]
-        self.speed = 2
+        self.color = self.data['color']
+        self.size = 24
+        self.speed = 1.5
 
-        # Simple 20x20 powerup with colored core
-        self.image = pygame.Surface((20, 20), pygame.SRCALPHA)
-        pygame.draw.rect(self.image, self.data['color'], (2, 2, 16, 16))
-        pygame.draw.rect(self.image, (255, 255, 255), (2, 2, 16, 16), 2)
+        # Rarity system
+        self.rarity = self.POWERUP_RARITY.get(powerup_type, 'common')
+        self.rarity_config = self.RARITY_CONFIG[self.rarity]
 
+        # Animation state
+        self.pulse_timer = random.uniform(0, math.pi * 2)
+        self.bob_offset = 0
+        self.corona_angle = 0
+
+        # Create base icon
+        self._create_base_image()
+
+        # Initialize animated image
+        self.image = pygame.Surface((self.size + 20, self.size + 20), pygame.SRCALPHA)
         self.rect = self.image.get_rect(center=(x, y))
 
-    def update(self):
+        # Orbital particles based on rarity
+        self.orbitals = []
+        num_orbitals = self.rarity_config['orbitals']
+        for i in range(num_orbitals):
+            self.orbitals.append({
+                'angle': i * (2 * math.pi / num_orbitals),
+                'radius': 14,
+                'speed': 0.08 + random.uniform(-0.01, 0.01),
+                'size': random.randint(2, 3)
+            })
+
+        # Energy arcs for rare/epic
+        self.arc_angles = []
+        if self.rarity_config['has_arcs']:
+            num_arcs = 3 if self.rarity == 'epic' else 2
+            for _ in range(num_arcs):
+                self.arc_angles.append({
+                    'angle': random.uniform(0, math.pi * 2),
+                    'length': random.uniform(0.3, 0.6),
+                    'speed': random.uniform(0.02, 0.04) * random.choice([-1, 1])
+                })
+
+    def _create_base_image(self):
+        """Create the core powerup icon"""
+        self.base_surface = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        cx, cy = self.size // 2, self.size // 2
+
+        # Draw icon based on type
+        pygame.draw.circle(self.base_surface, self.color, (cx, cy), self.size // 3)
+        pygame.draw.circle(self.base_surface, (255, 255, 255), (cx, cy), self.size // 3, 2)
+
+    def update(self, player_pos=None):
         self.rect.y += self.speed
+        self.pulse_timer += self.rarity_config['pulse_speed']
+        self.bob_offset = math.sin(self.pulse_timer * 2) * 2
+        self.corona_angle += 0.03 if self.rarity_config['has_corona'] else 0
+
         if self.rect.top > SCREEN_HEIGHT:
             self.kill()
+            return
+
+        # LOD based on distance to player
+        lod_level = 'full'
+        if player_pos:
+            dx = self.rect.centerx - player_pos[0]
+            dy = self.rect.centery - player_pos[1]
+            dist = math.sqrt(dx * dx + dy * dy)
+            if dist > 400:
+                lod_level = 'minimal'
+            elif dist > 200:
+                lod_level = 'reduced'
+
+        # Render animated image
+        glow_mult = self.rarity_config['glow_mult']
+        pulse = 0.7 + 0.3 * math.sin(self.pulse_timer)
+        glow_size = int((6 + 3 * math.sin(self.pulse_timer)) * glow_mult)
+
+        extra_size = 12 if self.rarity == 'epic' else 6 if self.rarity == 'rare' else 0
+        size = self.size + 20 + extra_size
+        self.image = pygame.Surface((size, size), pygame.SRCALPHA)
+        cx, cy = size // 2, size // 2
+
+        # Corona for epic
+        if self.rarity_config['has_corona'] and lod_level != 'minimal':
+            corona_radius = self.size // 2 + 10
+            corona_alpha = int(40 * pulse * glow_mult)
+            num_segments = 6
+            for i in range(num_segments):
+                angle = self.corona_angle + i * (math.pi * 2 / num_segments)
+                px = cx + math.cos(angle) * corona_radius
+                py = cy + math.sin(angle) * corona_radius
+                pygame.draw.circle(self.image, (*self.color, corona_alpha), (int(px), int(py)), 3)
+
+        # Energy arcs for rare/epic
+        if self.rarity_config['has_arcs'] and lod_level == 'full':
+            for arc in self.arc_angles:
+                arc['angle'] += arc['speed']
+                arc_radius = self.size // 2 + 6
+                points = []
+                for i in range(6):
+                    t = i / 5
+                    angle = arc['angle'] + t * arc['length']
+                    r = arc_radius + math.sin(self.pulse_timer * 3 + t * 5) * 3
+                    px = cx + math.cos(angle) * r
+                    py = cy + math.sin(angle) * r
+                    points.append((int(px), int(py)))
+                if len(points) >= 2:
+                    arc_alpha = int(100 * pulse * glow_mult)
+                    pygame.draw.lines(self.image, (*self.color, arc_alpha), False, points, 2)
+
+        # Outer glow
+        glow_alpha = int(50 * pulse * glow_mult)
+        pygame.draw.circle(self.image, (*self.color, glow_alpha), (cx, cy), self.size // 2 + glow_size)
+
+        # Draw orbitals (count based on LOD)
+        orbitals_to_draw = self.orbitals
+        if lod_level == 'minimal':
+            orbitals_to_draw = self.orbitals[:2]
+        elif lod_level == 'reduced':
+            orbitals_to_draw = self.orbitals[:4]
+
+        for orb in orbitals_to_draw:
+            orb['angle'] += orb['speed']
+            ox = cx + math.cos(orb['angle']) * orb['radius']
+            oy = cy + math.sin(orb['angle']) * orb['radius']
+            pygame.draw.circle(self.image, (*self.color, int(80 * glow_mult)), (int(ox), int(oy)), orb['size'] + 1)
+            pygame.draw.circle(self.image, (255, 255, 255), (int(ox), int(oy)), orb['size'])
+
+        # Core
+        pygame.draw.circle(self.image, (30, 30, 40), (cx, cy), self.size // 2)
+        pygame.draw.circle(self.image, self.color, (cx, cy), self.size // 2, 2)
+
+        # Icon
+        icon_rect = self.base_surface.get_rect(center=(cx, cy))
+        self.image.blit(self.base_surface, icon_rect)
+
+        # Sparkles for higher rarity
+        sparkle_chance = 0.08 + (0.06 if self.rarity in ('rare', 'epic') else 0)
+        if lod_level == 'full' and random.random() < sparkle_chance:
+            sx = cx + random.randint(-10, 10)
+            sy = cy + random.randint(-10, 10)
+            pygame.draw.circle(self.image, (255, 255, 255, 180), (sx, sy), random.randint(1, 2))
+
+        self.rect = self.image.get_rect(center=(self.rect.centerx, self.rect.centery + int(self.bob_offset)))
+
+
+class PowerupPickupEffect(pygame.sprite.Sprite):
+    """Enhanced pickup effect with rarity scaling"""
+
+    RARITY_SCALE = {
+        'common':   {'intensity': 0.7, 'particles': 10, 'duration': 20, 'shake': 0},
+        'uncommon': {'intensity': 0.85, 'particles': 14, 'duration': 24, 'shake': 0},
+        'rare':     {'intensity': 1.0, 'particles': 18, 'duration': 28, 'shake': 5},
+        'epic':     {'intensity': 1.4, 'particles': 24, 'duration': 32, 'shake': 8},
+    }
+
+    def __init__(self, x, y, color, powerup_type=None):
+        super().__init__()
+        self.x = x
+        self.y = y
+        self.color = color
+        self.frame = 0
+
+        rarity = Powerup.POWERUP_RARITY.get(powerup_type, 'common')
+        self.scale = self.RARITY_SCALE[rarity]
+        self.intensity = self.scale['intensity']
+        self.max_frames = self.scale['duration']
+        self.shake_intensity = self.scale['shake']
+
+        # Particles
+        self.particles = []
+        num_particles = self.scale['particles']
+        for i in range(num_particles):
+            angle = i * (2 * math.pi / num_particles) + random.uniform(-0.2, 0.2)
+            speed = random.uniform(3, 6) * self.intensity
+            self.particles.append({
+                'x': 0, 'y': 0,
+                'vx': math.cos(angle) * speed,
+                'vy': math.sin(angle) * speed,
+                'size': random.randint(2, 5),
+                'life': random.randint(12, 22),
+            })
+
+        self._update_image()
+
+    def _update_image(self):
+        progress = self.frame / self.max_frames
+        size = int(50 * self.intensity)
+        self.image = pygame.Surface((size, size), pygame.SRCALPHA)
+        cx, cy = size // 2, size // 2
+
+        # Flash
+        if progress < 0.2:
+            flash_progress = progress / 0.2
+            flash_size = int(15 * self.intensity * (1 - flash_progress))
+            flash_alpha = int(255 * (1 - flash_progress))
+            pygame.draw.circle(self.image, (255, 255, 255, flash_alpha), (cx, cy), flash_size)
+
+        # Ring
+        if progress < 0.6:
+            ring_progress = progress / 0.6
+            ring_radius = int((5 + 25 * ring_progress) * self.intensity)
+            ring_alpha = int(180 * (1 - ring_progress))
+            ring_width = max(1, int(4 * (1 - ring_progress)))
+            pygame.draw.circle(self.image, (*self.color, ring_alpha), (cx, cy), ring_radius, ring_width)
+
+        # Particles
+        for p in self.particles:
+            if p['life'] > 0:
+                px = cx + p['x']
+                py = cy + p['y']
+                alpha = int(200 * (p['life'] / 22))
+                pygame.draw.circle(self.image, (*self.color, alpha // 2), (int(px), int(py)), p['size'] + 1)
+                pygame.draw.circle(self.image, (255, 255, 255, alpha), (int(px), int(py)), p['size'])
+
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+
+    def update(self):
+        self.frame += 1
+        if self.frame >= self.max_frames:
+            self.kill()
+            return
+
+        for p in self.particles:
+            p['x'] += p['vx']
+            p['y'] += p['vy']
+            p['vx'] *= 0.94
+            p['vy'] *= 0.94
+            p['life'] -= 1
+
+        self._update_image()
+
+    def get_shake_intensity(self):
+        return self.shake_intensity
 
 
 class Explosion(pygame.sprite.Sprite):

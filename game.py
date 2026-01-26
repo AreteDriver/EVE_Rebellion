@@ -2,7 +2,7 @@
 import pygame
 import random
 from constants import *
-from sprites import (Player, Enemy, RefugeePod, Powerup, Explosion, Star)
+from sprites import (Player, Enemy, RefugeePod, Powerup, PowerupPickupEffect, Explosion, Star)
 from sounds import get_sound_manager, get_music_manager
 from controller_input import ControllerInput, XboxButton
 from space_background import SpaceBackground
@@ -570,7 +570,10 @@ class Game:
             enemy.update(self.player.rect)
         
         self.pods.update()
-        self.powerups.update()
+        # Update powerups with player position for LOD
+        player_pos = self.player.rect.center
+        for powerup in self.powerups:
+            powerup.update(player_pos)
         self.effects.update()
 
         # Update particle system
@@ -693,6 +696,21 @@ class Game:
         # Collect powerups
         hits = pygame.sprite.spritecollide(self.player, self.powerups, True)
         for powerup in hits:
+            # Spawn pickup effect
+            effect = PowerupPickupEffect(
+                powerup.rect.centerx,
+                powerup.rect.centery,
+                powerup.color,
+                powerup.powerup_type
+            )
+            self.effects.add(effect)
+            self.all_sprites.add(effect)
+
+            # Screen shake for rare/epic
+            shake_intensity = effect.get_shake_intensity()
+            if shake_intensity > 0:
+                self.shake.add(shake_intensity)
+
             self.apply_powerup(powerup)
             self.play_sound('pickup_powerup', 0.6)
         
