@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 .venv/
 *.egg-info/
+
+# Secrets
+.env
+.env.*
+!.env.example
