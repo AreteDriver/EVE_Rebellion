@@ -1,45 +1,58 @@
 name: CI
-
 on:
   push:
     branches: [main]
+    paths-ignore:
+    - '*.md'
+    - docs/**
+    - LICENSE
+    - .gitignore
+    - .github/dependabot.yml
   pull_request:
     branches: [main]
-
+    paths-ignore:
+    - '*.md'
+    - docs/**
+    - LICENSE
+    - .gitignore
+    - .github/dependabot.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+    - uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          pip install ruff pygame
+    - name: Install dependencies
+      run: |
+        pip install ruff pygame
 
-      - name: Lint with ruff
-        run: ruff check . --ignore E501,F403,F405,E722,F401,F541,F841 --statistics
+    - name: Lint with ruff
+      run: ruff check . --ignore E501,F403,F405,E722,F401,F541,F841 --statistics
 
   type-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+    - uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          pip install mypy pygame numpy
+    - name: Install dependencies
+      run: |
+        pip install mypy pygame numpy
 
-      - name: Type check with mypy
-        run: mypy . --exclude 'assets/|eve-esi-skill/|eve-project-updater/'
+    - name: Type check with mypy
+      run: mypy . --exclude 'assets/|eve-esi-skill/|eve-project-updater/'
 
   test:
     runs-on: ubuntu-latest
@@ -47,60 +60,60 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v6
+    - uses: actions/checkout@v6
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python-version }}
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: |
-          pip install pytest pytest-cov pygame numpy
+    - name: Install dependencies
+      run: |
+        pip install pytest pytest-cov pygame numpy
 
-      - name: Run tests with coverage
-        run: pytest --cov=. --cov-report=xml --cov-report=term-missing
+    - name: Run tests with coverage
+      run: pytest --cov=. --cov-report=xml --cov-report=term-missing
 
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.11'
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.xml
-          fail_ci_if_error: false
-          verbose: true
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: false
+        verbose: true
 
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+    - uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
 
-      - name: Install Bandit
-        run: pip install bandit
+    - name: Install Bandit
+      run: pip install bandit
 
-      - name: Run security scan
-        run: bandit -r . -x ./tests,./assets,./eve-esi-skill,./eve-project-updater -lll
+    - name: Run security scan
+      run: bandit -r . -x ./tests,./assets,./eve-esi-skill,./eve-project-updater -lll
 
   syntax-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+    - uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          pip install pygame
+    - name: Install dependencies
+      run: |
+        pip install pygame
 
-      - name: Check Python syntax
-        run: |
-          python -m py_compile *.py
-          python -m py_compile core/*.py || true
-          python -m py_compile enemies/*.py || true
+    - name: Check Python syntax
+      run: |
+        python -m py_compile *.py
+        python -m py_compile core/*.py || true
+        python -m py_compile enemies/*.py || true
