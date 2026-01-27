@@ -16,62 +16,53 @@ import urllib.request
 # EVE Type IDs for ships used in the game
 SHIP_TYPE_IDS = {
     # Minmatar (Player ships)
-    'rifter': 587,
-    'wolf': 11379,
-    'jaguar': 11377,
-
+    "rifter": 587,
+    "wolf": 11379,
+    "jaguar": 11377,
     # Amarr Frigates
-    'executioner': 589,
-    'punisher': 597,
-    'tormentor': 591,
-    'crucifier': 2161,
-    'magnate': 29248,
-    'inquisitor': 594,
-
+    "executioner": 589,
+    "punisher": 597,
+    "tormentor": 591,
+    "crucifier": 2161,
+    "magnate": 29248,
+    "inquisitor": 594,
     # Amarr Destroyers
-    'coercer': 2015,
-    'dragoon': 3756,
-
+    "coercer": 2015,
+    "dragoon": 3756,
     # Amarr Cruisers
-    'omen': 2006,
-    'maller': 624,
-    'arbitrator': 628,
-    'augoror': 625,
-
+    "omen": 2006,
+    "maller": 624,
+    "arbitrator": 628,
+    "augoror": 625,
     # Amarr Battlecruisers
-    'harbinger': 24696,
-    'prophecy': 24700,
-
+    "harbinger": 24696,
+    "prophecy": 24700,
     # Amarr Battleships
-    'apocalypse': 642,
-    'abaddon': 24690,
-    'armageddon': 643,
-
+    "apocalypse": 642,
+    "abaddon": 24690,
+    "armageddon": 643,
     # Amarr Industrial
-    'bestower': 1944,
-
+    "bestower": 1944,
     # Amarr HAC/T2
-    'zealot': 12003,
-    'sacrilege': 12004,
-
+    "zealot": 12003,
+    "sacrilege": 12004,
     # Drones
-    'drone': 2173,  # Warrior I
-    'heavy_drone': 2175,  # Hammerhead I
-
+    "drone": 2173,  # Warrior I
+    "heavy_drone": 2175,  # Hammerhead I
     # Interceptors
-    'interceptor': 11184,  # Crusader
-
+    "interceptor": 11184,  # Crusader
     # Bombers
-    'bomber': 12034,  # Purifier
+    "bomber": 12034,  # Purifier
 }
 
 # Additional boss/capital ships
 CAPITAL_TYPE_IDS = {
-    'avatar': 11567,  # Titan
-    'archon': 23757,  # Carrier
-    'aeon': 23913,   # Supercarrier
-    'revelation': 19720,  # Dreadnought
+    "avatar": 11567,  # Titan
+    "archon": 23757,  # Carrier
+    "aeon": 23913,  # Supercarrier
+    "revelation": 19720,  # Dreadnought
 }
+
 
 def download_ship_render(ship_name, type_id, output_dir, size=512):
     """Download a ship render from CCP's image server"""
@@ -92,6 +83,7 @@ def download_ship_render(ship_name, type_id, output_dir, size=512):
         print(f"  [ERROR] {ship_name}: {e}")
         return False
 
+
 def download_ship_icon(ship_name, type_id, output_dir, size=64):
     """Download a ship icon from CCP's image server"""
     url = f"https://images.evetech.net/types/{type_id}/icon?size={size}"
@@ -109,6 +101,7 @@ def download_ship_icon(ship_name, type_id, output_dir, size=64):
     except urllib.error.URLError as e:
         print(f"  [ERROR] {ship_name} icon: {e}")
         return False
+
 
 def main():
     print("=" * 60)
@@ -145,7 +138,7 @@ def main():
 
     # Download icons for player ships
     print("\n--- Downloading player ship icons ---")
-    player_ships = ['rifter', 'wolf', 'jaguar']
+    player_ships = ["rifter", "wolf", "jaguar"]
     for ship_name in player_ships:
         type_id = SHIP_TYPE_IDS[ship_name]
         download_ship_icon(ship_name, type_id, icons_dir)
@@ -159,6 +152,7 @@ def main():
     print("\nNote: These are official CCP assets for fan projects.")
     print("See: https://developers.eveonline.com/license-agreement")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

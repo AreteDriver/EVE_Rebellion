@@ -39,28 +39,22 @@ class BerserkSystem:
     FAR = 400
 
     # Multipliers for each range
-    MULTIPLIERS = {
-        'EXTREME': 5.0,
-        'CLOSE': 3.0,
-        'MEDIUM': 1.5,
-        'FAR': 1.0,
-        'VERY_FAR': 0.5
-    }
+    MULTIPLIERS = {"EXTREME": 5.0, "CLOSE": 3.0, "MEDIUM": 1.5, "FAR": 1.0, "VERY_FAR": 0.5}
 
     # Colors for range indicators
     RANGE_COLORS = {
-        'EXTREME': (255, 50, 50),      # Bright red - DANGER
-        'CLOSE': (255, 150, 50),       # Orange - WARNING
-        'MEDIUM': (255, 255, 50),      # Yellow - RISKY
-        'FAR': (100, 200, 100),        # Green - SAFE
-        'VERY_FAR': (100, 100, 200)    # Blue - TOO FAR
+        "EXTREME": (255, 50, 50),  # Bright red - DANGER
+        "CLOSE": (255, 150, 50),  # Orange - WARNING
+        "MEDIUM": (255, 255, 50),  # Yellow - RISKY
+        "FAR": (100, 200, 100),  # Green - SAFE
+        "VERY_FAR": (100, 100, 200),  # Blue - TOO FAR
     }
 
     def __init__(self):
         self.total_score = 0
         self.session_score = 0
         self.current_multiplier = 1.0
-        self.current_range = 'FAR'
+        self.current_range = "FAR"
 
         # Combo system
         self.combo_count = 0
@@ -68,10 +62,10 @@ class BerserkSystem:
         self.combo_timeout = 120  # 2 seconds at 60fps to chain kills
         self.max_combo = 0
         self.combo_bonus_thresholds = {
-            5: 1.2,    # 5 kills = 20% bonus
-            10: 1.5,   # 10 kills = 50% bonus
-            20: 2.0,   # 20 kills = 100% bonus
-            50: 3.0    # 50 kills = 200% bonus
+            5: 1.2,  # 5 kills = 20% bonus
+            10: 1.5,  # 10 kills = 50% bonus
+            20: 2.0,  # 20 kills = 100% bonus
+            50: 3.0,  # 50 kills = 200% bonus
         }
 
         # Visual feedback
@@ -80,17 +74,12 @@ class BerserkSystem:
         self.extreme_close_time = 0  # Frames spent in extreme danger
 
         # Statistics
-        self.kills_by_range = {
-            'EXTREME': 0,
-            'CLOSE': 0,
-            'MEDIUM': 0,
-            'FAR': 0,
-            'VERY_FAR': 0
-        }
+        self.kills_by_range = {"EXTREME": 0, "CLOSE": 0, "MEDIUM": 0, "FAR": 0, "VERY_FAR": 0}
         self.total_kills = 0
 
-    def calculate_multiplier(self, player_pos: Tuple[float, float],
-                           enemy_pos: Tuple[float, float]) -> Tuple[float, str]:
+    def calculate_multiplier(
+        self, player_pos: Tuple[float, float], enemy_pos: Tuple[float, float]
+    ) -> Tuple[float, str]:
         """
         Calculate score multiplier based on distance at moment of kill
 
@@ -103,15 +92,15 @@ class BerserkSystem:
 
         # Determine range and multiplier
         if distance < self.EXTREME_CLOSE:
-            return (self.MULTIPLIERS['EXTREME'], 'EXTREME')
+            return (self.MULTIPLIERS["EXTREME"], "EXTREME")
         elif distance < self.CLOSE:
-            return (self.MULTIPLIERS['CLOSE'], 'CLOSE')
+            return (self.MULTIPLIERS["CLOSE"], "CLOSE")
         elif distance < self.MEDIUM:
-            return (self.MULTIPLIERS['MEDIUM'], 'MEDIUM')
+            return (self.MULTIPLIERS["MEDIUM"], "MEDIUM")
         elif distance < self.FAR:
-            return (self.MULTIPLIERS['FAR'], 'FAR')
+            return (self.MULTIPLIERS["FAR"], "FAR")
         else:
-            return (self.MULTIPLIERS['VERY_FAR'], 'VERY_FAR')
+            return (self.MULTIPLIERS["VERY_FAR"], "VERY_FAR")
 
     def get_combo_bonus(self) -> float:
         """Get current combo bonus multiplier"""
@@ -121,8 +110,13 @@ class BerserkSystem:
                 bonus = mult
         return bonus
 
-    def register_kill(self, base_score: int, player_pos: Tuple[float, float],
-                     enemy_pos: Tuple[float, float], enemy_type: str = "default") -> int:
+    def register_kill(
+        self,
+        base_score: int,
+        player_pos: Tuple[float, float],
+        enemy_pos: Tuple[float, float],
+        enemy_type: str = "default",
+    ) -> int:
         """
         Register an enemy kill and calculate berserked score
 
@@ -155,22 +149,23 @@ class BerserkSystem:
         self.create_score_popup(enemy_pos, final_score, multiplier, range_name)
 
         # Visual feedback for extreme close kills
-        if range_name == 'EXTREME':
+        if range_name == "EXTREME":
             self.danger_pulse = 30  # Flash screen
 
         return final_score
 
-    def create_score_popup(self, pos: Tuple[float, float], score: int,
-                          multiplier: float, range_name: str):
+    def create_score_popup(
+        self, pos: Tuple[float, float], score: int, multiplier: float, range_name: str
+    ):
         """Create floating score indicator"""
         popup = {
-            'pos': list(pos),
-            'score': score,
-            'multiplier': multiplier,
-            'range': range_name,
-            'lifetime': 90,  # 1.5 seconds at 60fps
-            'velocity': [0, -2],  # Float upward
-            'alpha': 255
+            "pos": list(pos),
+            "score": score,
+            "multiplier": multiplier,
+            "range": range_name,
+            "lifetime": 90,  # 1.5 seconds at 60fps
+            "velocity": [0, -2],  # Float upward
+            "alpha": 255,
         }
         self.score_popups.append(popup)
 
@@ -184,30 +179,31 @@ class BerserkSystem:
 
         # Update score popups
         for popup in self.score_popups[:]:
-            popup['lifetime'] -= 1
-            popup['pos'][0] += popup['velocity'][0]
-            popup['pos'][1] += popup['velocity'][1]
+            popup["lifetime"] -= 1
+            popup["pos"][0] += popup["velocity"][0]
+            popup["pos"][1] += popup["velocity"][1]
 
             # Fade out in last 30 frames
-            if popup['lifetime'] < 30:
-                popup['alpha'] = int((popup['lifetime'] / 30) * 255)
+            if popup["lifetime"] < 30:
+                popup["alpha"] = int((popup["lifetime"] / 30) * 255)
 
-            if popup['lifetime'] <= 0:
+            if popup["lifetime"] <= 0:
                 self.score_popups.remove(popup)
 
         # Update danger pulse
         if self.danger_pulse > 0:
             self.danger_pulse -= 1
 
-    def draw_popups(self, surface: pygame.Surface, font_small: pygame.font.Font,
-                   font_large: pygame.font.Font):
+    def draw_popups(
+        self, surface: pygame.Surface, font_small: pygame.font.Font, font_large: pygame.font.Font
+    ):
         """Draw score popups on screen"""
         for popup in self.score_popups:
-            x, y = popup['pos']
-            score = popup['score']
-            multiplier = popup['multiplier']
-            range_name = popup['range']
-            alpha = popup['alpha']
+            x, y = popup["pos"]
+            score = popup["score"]
+            multiplier = popup["multiplier"]
+            range_name = popup["range"]
+            alpha = popup["alpha"]
 
             # Choose font based on multiplier
             font = font_large if multiplier >= 3.0 else font_small
@@ -230,15 +226,21 @@ class BerserkSystem:
                 surface.blit(mult_surf, mult_rect)
 
                 # Range name for extreme kills
-                if range_name == 'EXTREME':
+                if range_name == "EXTREME":
                     danger_text = "BERSERK!"
                     danger_surf = font_small.render(danger_text, True, (255, 100, 100))
                     danger_surf.set_alpha(alpha)
                     danger_rect = danger_surf.get_rect(center=(int(x), int(y + 35)))
                     surface.blit(danger_surf, danger_rect)
 
-    def draw_hud(self, surface: pygame.Surface, x: int, y: int,
-                font_small: pygame.font.Font, font_large: pygame.font.Font):
+    def draw_hud(
+        self,
+        surface: pygame.Surface,
+        x: int,
+        y: int,
+        font_small: pygame.font.Font,
+        font_large: pygame.font.Font,
+    ):
         """
         Draw Berserk HUD element (minimal, Devil Blade style)
         Shows current multiplier and risk level
@@ -249,14 +251,13 @@ class BerserkSystem:
             color = self.RANGE_COLORS[self.current_range]
 
             # Pulsing effect for extreme danger
-            if self.current_range == 'EXTREME' and self.danger_pulse > 0:
+            if self.current_range == "EXTREME" and self.danger_pulse > 0:
                 pulse_scale = 1.0 + (self.danger_pulse / 30.0) * 0.3
                 # Scale the font rendering
                 temp_surf = font_large.render(mult_text, True, color)
                 w, h = temp_surf.get_size()
                 scaled_surf = pygame.transform.scale(
-                    temp_surf,
-                    (int(w * pulse_scale), int(h * pulse_scale))
+                    temp_surf, (int(w * pulse_scale), int(h * pulse_scale))
                 )
                 rect = scaled_surf.get_rect(topright=(x, y))
                 surface.blit(scaled_surf, rect)
@@ -270,8 +271,9 @@ class BerserkSystem:
             label_rect = label_surf.get_rect(topright=(x, y + 30))
             surface.blit(label_surf, label_rect)
 
-    def draw_danger_zones(self, surface: pygame.Surface, player_pos: Tuple[int, int],
-                         alpha: int = 60):
+    def draw_danger_zones(
+        self, surface: pygame.Surface, player_pos: Tuple[int, int], alpha: int = 60
+    ):
         """
         Draw danger zone rings around player (optional visual aid)
         Can be toggled on/off in settings
@@ -280,10 +282,10 @@ class BerserkSystem:
 
         # Draw range circles (from outermost to innermost)
         ranges = [
-            (self.FAR, self.RANGE_COLORS['FAR']),
-            (self.MEDIUM, self.RANGE_COLORS['MEDIUM']),
-            (self.CLOSE, self.RANGE_COLORS['CLOSE']),
-            (self.EXTREME_CLOSE, self.RANGE_COLORS['EXTREME'])
+            (self.FAR, self.RANGE_COLORS["FAR"]),
+            (self.MEDIUM, self.RANGE_COLORS["MEDIUM"]),
+            (self.CLOSE, self.RANGE_COLORS["CLOSE"]),
+            (self.EXTREME_CLOSE, self.RANGE_COLORS["EXTREME"]),
         ]
 
         for radius, color in ranges:
@@ -305,14 +307,14 @@ class BerserkSystem:
             avg_multiplier = weighted_sum / self.total_kills
 
         return {
-            'total_score': self.total_score,
-            'session_score': self.session_score,
-            'total_kills': self.total_kills,
-            'kills_by_range': self.kills_by_range.copy(),
-            'avg_multiplier': avg_multiplier,
-            'extreme_kills': self.kills_by_range['EXTREME'],
-            'safe_kills': self.kills_by_range['FAR'] + self.kills_by_range['VERY_FAR'],
-            'max_combo': self.max_combo
+            "total_score": self.total_score,
+            "session_score": self.session_score,
+            "total_kills": self.total_kills,
+            "kills_by_range": self.kills_by_range.copy(),
+            "avg_multiplier": avg_multiplier,
+            "extreme_kills": self.kills_by_range["EXTREME"],
+            "safe_kills": self.kills_by_range["FAR"] + self.kills_by_range["VERY_FAR"],
+            "max_combo": self.max_combo,
         }
 
     def reset_session(self):
@@ -323,7 +325,7 @@ class BerserkSystem:
         self.score_popups.clear()
         self.danger_pulse = 0
         self.current_multiplier = 1.0
-        self.current_range = 'FAR'
+        self.current_range = "FAR"
         self.combo_count = 0
         self.combo_timer = 0
 
@@ -339,8 +341,9 @@ class DangerIndicator:
         self.height = height
         self.current_danger = 0.0  # 0.0 to 1.0
 
-    def update_danger(self, player_pos: Tuple[float, float],
-                     enemies: list, berserk_system: BerserkSystem):
+    def update_danger(
+        self, player_pos: Tuple[float, float], enemies: list, berserk_system: BerserkSystem
+    ):
         """
         Calculate current danger level based on nearby enemies
         """
@@ -349,7 +352,7 @@ class DangerIndicator:
             return
 
         # Find closest enemy
-        min_dist = float('inf')
+        min_dist = float("inf")
         for enemy in enemies:
             dx = enemy.rect.centerx - player_pos[0]
             dy = enemy.rect.centery - player_pos[1]

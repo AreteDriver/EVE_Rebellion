@@ -1,4 +1,5 @@
 """Tests for the Berserk scoring system"""
+
 import os
 import sys
 from unittest.mock import MagicMock
@@ -11,7 +12,7 @@ pygame_mock = MagicMock()
 pygame_mock.Surface = MagicMock
 pygame_mock.font = MagicMock()
 pygame_mock.font.Font = MagicMock
-sys.modules['pygame'] = pygame_mock
+sys.modules["pygame"] = pygame_mock
 
 from berserk_system import BerserkSystem  # noqa: E402
 
@@ -36,7 +37,7 @@ class TestBerserkSystem:
         enemy_pos = (150, 100)  # 50 pixels away
         multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
         assert multiplier == 5.0
-        assert range_name == 'EXTREME'
+        assert range_name == "EXTREME"
 
     def test_calculate_multiplier_close(self):
         """Test close range multiplier (80-150 pixels)"""
@@ -44,7 +45,7 @@ class TestBerserkSystem:
         enemy_pos = (200, 100)  # 100 pixels away
         multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
         assert multiplier == 3.0
-        assert range_name == 'CLOSE'
+        assert range_name == "CLOSE"
 
     def test_calculate_multiplier_medium(self):
         """Test medium range multiplier (150-250 pixels)"""
@@ -52,7 +53,7 @@ class TestBerserkSystem:
         enemy_pos = (300, 100)  # 200 pixels away
         multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
         assert multiplier == 1.5
-        assert range_name == 'MEDIUM'
+        assert range_name == "MEDIUM"
 
     def test_calculate_multiplier_far(self):
         """Test far range multiplier (250-400 pixels)"""
@@ -60,7 +61,7 @@ class TestBerserkSystem:
         enemy_pos = (400, 100)  # 300 pixels away
         multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
         assert multiplier == 1.0
-        assert range_name == 'FAR'
+        assert range_name == "FAR"
 
     def test_calculate_multiplier_very_far(self):
         """Test very far range multiplier (400+ pixels)"""
@@ -68,7 +69,7 @@ class TestBerserkSystem:
         enemy_pos = (600, 100)  # 500 pixels away
         multiplier, range_name = self.berserk.calculate_multiplier(player_pos, enemy_pos)
         assert multiplier == 0.5
-        assert range_name == 'VERY_FAR'
+        assert range_name == "VERY_FAR"
 
     def test_distance_thresholds(self):
         """Test that distance thresholds are correctly defined"""

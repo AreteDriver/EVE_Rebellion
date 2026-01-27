@@ -17,81 +17,81 @@ Free your people. Burn their ships. Take back your future.
 # Story Phases - Each carrier represents a stage of the rebellion
 REBELLION_PHASES = [
     {
-        'phase': 1,
-        'name': "THE SIGNAL",
-        'carrier': "Archon",
-        'briefing': [
+        "phase": 1,
+        "name": "THE SIGNAL",
+        "carrier": "Archon",
+        "briefing": [
             "The signal has been sent.",
             "Amarr forces are in disarray after Vak'Atioth.",
             "Strike the carrier 'Divine Judgment' - free the slaves aboard.",
             "This is the moment we've waited 800 years for.",
         ],
-        'victory': "The first carrier falls. The rebellion has begun.",
+        "victory": "The first carrier falls. The rebellion has begun.",
     },
     {
-        'phase': 2,
-        'name': "BLOOD AND FIRE",
-        'carrier': "Archon",
-        'briefing': [
+        "phase": 2,
+        "name": "BLOOD AND FIRE",
+        "carrier": "Archon",
+        "briefing": [
             "Word spreads like wildfire across Amarr space.",
             "Thousands of Holders die in the first hours.",
             "The carrier 'Righteous Purpose' guards a slave colony.",
             "Destroy it. Let our people see the Amarr burn.",
         ],
-        'victory': "Another symbol of oppression destroyed. The slaves rise.",
+        "victory": "Another symbol of oppression destroyed. The slaves rise.",
     },
     {
-        'phase': 3,
-        'name': "THE EMPIRE RESPONDS",
-        'carrier': "Aeon",
-        'briefing': [
+        "phase": 3,
+        "name": "THE EMPIRE RESPONDS",
+        "carrier": "Aeon",
+        "briefing": [
             "The Empire deploys heavier forces.",
             "A supercarrier - the 'Throne of God' - moves to crush us.",
             "We cannot match its firepower directly.",
             "Strike fast. Strike hard. Vanish before their fleet arrives.",
         ],
-        'victory': "Even their mightiest ships can fall. The Republic will rise.",
+        "victory": "Even their mightiest ships can fall. The Republic will rise.",
     },
     {
-        'phase': 4,
-        'name': "LIBERATION",
-        'carrier': "Avatar",
-        'briefing': [
+        "phase": 4,
+        "name": "LIBERATION",
+        "carrier": "Avatar",
+        "briefing": [
             "The Amarr sue for peace with the Jove.",
             "Their attention turns fully to us now.",
             "The Titan 'God's Wrath' leads their counter-offensive.",
             "This is our final stand. Victory or death.",
         ],
-        'victory': "The Minmatar Republic is born. We are free.",
+        "victory": "The Minmatar Republic is born. We are free.",
     },
 ]
 
 # Environmental story elements
 STORY_ELEMENTS = {
-    'slave_transport': {
-        'name': "Bestower Slave Transport",
-        'description': "Amarr transport carrying enslaved Minmatar",
-        'event': "SLAVE SHIP SPOTTED - Destroy escorts, free our people!",
+    "slave_transport": {
+        "name": "Bestower Slave Transport",
+        "description": "Amarr transport carrying enslaved Minmatar",
+        "event": "SLAVE SHIP SPOTTED - Destroy escorts, free our people!",
     },
-    'escape_pods': {
-        'name': "Escape Pods",
-        'description': "Minmatar slaves fleeing in stolen pods",
-        'event': "ESCAPE PODS DETECTED - Protect them!",
+    "escape_pods": {
+        "name": "Escape Pods",
+        "description": "Minmatar slaves fleeing in stolen pods",
+        "event": "ESCAPE PODS DETECTED - Protect them!",
     },
-    'burning_station': {
-        'name': "Burning Amarr Station",
-        'description': "Holder estate in flames",
-        'event': "The Holders pay for their crimes.",
+    "burning_station": {
+        "name": "Burning Amarr Station",
+        "description": "Holder estate in flames",
+        "event": "The Holders pay for their crimes.",
     },
-    'rebel_fleet': {
-        'name': "Rebel Fleet",
-        'description': "Minmatar frigates joining the fight",
-        'event': "REINFORCEMENTS ARRIVING - Fight on!",
+    "rebel_fleet": {
+        "name": "Rebel Fleet",
+        "description": "Minmatar frigates joining the fight",
+        "event": "REINFORCEMENTS ARRIVING - Fight on!",
     },
-    'jovian_echo': {
-        'name': "Jovian Signal",
-        'description': "Distant Jove ships observing",
-        'event': "The Jove watch. They will not intervene.",
+    "jovian_echo": {
+        "name": "Jovian Signal",
+        "description": "Distant Jove ships observing",
+        "event": "The Jove watch. They will not intervene.",
     },
 }
 
@@ -142,24 +142,24 @@ The slaves have fangs.
 # Wave composition by phase (enemy types)
 WAVE_COMPOSITION = {
     1: {  # Early rebellion - light resistance
-        'waves': 5,
-        'enemies': ['drone', 'fighter', 'fighter', 'drone', 'interceptor'],
-        'boss': 'Omen Navy Issue',
+        "waves": 5,
+        "enemies": ["drone", "fighter", "fighter", "drone", "interceptor"],
+        "boss": "Omen Navy Issue",
     },
     2: {  # Amarr responding
-        'waves': 5,
-        'enemies': ['fighter', 'bomber', 'fighter', 'cruiser', 'fighter'],
-        'boss': 'Harbinger',
+        "waves": 5,
+        "enemies": ["fighter", "bomber", "fighter", "cruiser", "fighter"],
+        "boss": "Harbinger",
     },
     3: {  # Heavy resistance
-        'waves': 6,
-        'enemies': ['interceptor', 'fighter', 'bomber', 'cruiser', 'battlecruiser'],
-        'boss': 'Abaddon',
+        "waves": 6,
+        "enemies": ["interceptor", "fighter", "bomber", "cruiser", "battlecruiser"],
+        "boss": "Abaddon",
     },
     4: {  # Final stand
-        'waves': 7,
-        'enemies': ['elite_fighter', 'bomber', 'cruiser', 'battlecruiser', 'battleship'],
-        'boss': 'Avatar Titan',
+        "waves": 7,
+        "enemies": ["elite_fighter", "bomber", "cruiser", "battlecruiser", "battleship"],
+        "boss": "Avatar Titan",
     },
 }
 

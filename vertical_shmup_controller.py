@@ -17,16 +17,17 @@ import pygame
 
 class XboxButton(IntEnum):
     """Xbox controller button indices"""
-    A = 0          # Primary action
-    B = 1          # Emergency/Cancel
-    X = 2          # Secondary action
-    Y = 3          # Tertiary action
-    LB = 4         # Left bumper
-    RB = 5         # Right bumper
-    BACK = 6       # Back/Select
-    START = 7      # Start/Menu
-    L_STICK = 8    # Left stick press
-    R_STICK = 9    # Right stick press
+
+    A = 0  # Primary action
+    B = 1  # Emergency/Cancel
+    X = 2  # Secondary action
+    Y = 3  # Tertiary action
+    LB = 4  # Left bumper
+    RB = 5  # Right bumper
+    BACK = 6  # Back/Select
+    START = 7  # Start/Menu
+    L_STICK = 8  # Left stick press
+    R_STICK = 9  # Right stick press
     DPAD_UP = 11
     DPAD_DOWN = 12
     DPAD_LEFT = 13
@@ -35,16 +36,17 @@ class XboxButton(IntEnum):
 
 class PlayStationButton(IntEnum):
     """PlayStation controller button indices"""
-    CROSS = 0      # × (Cross)
-    CIRCLE = 1     # ○ (Circle)
-    SQUARE = 2     # □ (Square)
-    TRIANGLE = 3   # △ (Triangle)
-    L1 = 4         # Left bumper
-    R1 = 5         # Right bumper
-    SHARE = 6      # Share/Back
-    OPTIONS = 7    # Options/Start
-    L3 = 8         # Left stick press
-    R3 = 9         # Right stick press
+
+    CROSS = 0  # × (Cross)
+    CIRCLE = 1  # ○ (Circle)
+    SQUARE = 2  # □ (Square)
+    TRIANGLE = 3  # △ (Triangle)
+    L1 = 4  # Left bumper
+    R1 = 5  # Right bumper
+    SHARE = 6  # Share/Back
+    OPTIONS = 7  # Options/Start
+    L3 = 8  # Left stick press
+    R3 = 9  # Right stick press
     DPAD_UP = 11
     DPAD_DOWN = 12
     DPAD_LEFT = 13
@@ -235,7 +237,7 @@ class VerticalShmupController:
 
     def _set_rumble(self, intensity: float):
         """Set controller rumble motors"""
-        if not hasattr(self.joystick, 'rumble'):
+        if not hasattr(self.joystick, "rumble"):
             return
         try:
             # Dual motor: low frequency (left), high frequency (right)
@@ -250,11 +252,11 @@ class VerticalShmupController:
         if not self.haptic_enabled:
             return
         try:
-            if hasattr(self.joystick, 'rumble'):
+            if hasattr(self.joystick, "rumble"):
                 self.joystick.rumble(
                     intensity * self.haptic_intensity,
                     intensity * self.haptic_intensity,
-                    duration_ms
+                    duration_ms,
                 )
         except Exception:
             pass
@@ -384,24 +386,24 @@ class VerticalShmupController:
         - haptic_intensity: float (0.0 to 1.0)
         - focused_speed_mult: float (0.3 to 0.8)
         """
-        if 'deadzone_move' in kwargs:
-            self.deadzone_move = max(0.05, min(0.30, kwargs['deadzone_move']))
-        if 'sensitivity_move' in kwargs:
-            self.sensitivity_move = max(0.5, min(2.0, kwargs['sensitivity_move']))
-        if 'invert_y' in kwargs:
-            self.invert_y = bool(kwargs['invert_y'])
-        if 'haptic_enabled' in kwargs:
-            self.haptic_enabled = bool(kwargs['haptic_enabled'])
-        if 'haptic_intensity' in kwargs:
-            self.haptic_intensity = max(0.0, min(1.0, kwargs['haptic_intensity']))
-        if 'focused_speed_mult' in kwargs:
-            self.focused_speed_mult = max(0.3, min(0.8, kwargs['focused_speed_mult']))
+        if "deadzone_move" in kwargs:
+            self.deadzone_move = max(0.05, min(0.30, kwargs["deadzone_move"]))
+        if "sensitivity_move" in kwargs:
+            self.sensitivity_move = max(0.5, min(2.0, kwargs["sensitivity_move"]))
+        if "invert_y" in kwargs:
+            self.invert_y = bool(kwargs["invert_y"])
+        if "haptic_enabled" in kwargs:
+            self.haptic_enabled = bool(kwargs["haptic_enabled"])
+        if "haptic_intensity" in kwargs:
+            self.haptic_intensity = max(0.0, min(1.0, kwargs["haptic_intensity"]))
+        if "focused_speed_mult" in kwargs:
+            self.focused_speed_mult = max(0.3, min(0.8, kwargs["focused_speed_mult"]))
 
 
 # === INTEGRATION EXAMPLE ===
 
-def apply_vertical_shmup_movement(controller: VerticalShmupController,
-                                   player, dt: float):
+
+def apply_vertical_shmup_movement(controller: VerticalShmupController, player, dt: float):
     """
     Example integration with Player sprite.
 

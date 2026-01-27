@@ -12,7 +12,7 @@ from mathutils import Vector
 
 def clear_scene():
     """Remove all objects from the scene."""
-    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
 
     # Clear orphan data
@@ -40,7 +40,7 @@ def setup_object(obj, rotate_180=False):
     obj.select_set(True)
 
     # Set origin to geometry center
-    bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+    bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
 
     # Move to world origin
     obj.location = (0, 0, 0)
@@ -58,16 +58,19 @@ def setup_object(obj, rotate_180=False):
     if height > width and height > depth:
         # Ship is standing up (Z is longest), rotate to lay flat
         # Rotate 90 degrees around X to make Z become Y
-        obj.rotation_euler = (math.pi/2, 0, 0)
+        obj.rotation_euler = (math.pi / 2, 0, 0)
     elif width > depth and width > height:
         # Ship is along X axis, rotate to point along Y
-        obj.rotation_euler = (0, 0, math.pi/2)  # Rotate 90 around Z
+        obj.rotation_euler = (0, 0, math.pi / 2)  # Rotate 90 around Z
     # else: depth (Y) is longest, which is what we want - no rotation needed
 
     # Apply the 180 degree flip if requested (for models that render nose-down)
     if rotate_180:
-        obj.rotation_euler = (obj.rotation_euler[0], obj.rotation_euler[1],
-                              obj.rotation_euler[2] + math.pi)
+        obj.rotation_euler = (
+            obj.rotation_euler[0],
+            obj.rotation_euler[1],
+            obj.rotation_euler[2] + math.pi,
+        )
 
     # Apply rotation to get accurate dimensions
     bpy.context.view_layer.update()
@@ -97,17 +100,17 @@ def create_material():
     nodes.clear()
 
     # Create nodes
-    output = nodes.new('ShaderNodeOutputMaterial')
-    principled = nodes.new('ShaderNodeBsdfPrincipled')
+    output = nodes.new("ShaderNodeOutputMaterial")
+    principled = nodes.new("ShaderNodeBsdfPrincipled")
 
     # EVE-like settings - darker metallic with Gallente olive/grey tint
-    principled.inputs['Base Color'].default_value = (0.08, 0.10, 0.06, 1.0)  # Darker green-grey
-    principled.inputs['Metallic'].default_value = 0.9
-    principled.inputs['Roughness'].default_value = 0.3
-    principled.inputs['Specular IOR Level'].default_value = 0.8
+    principled.inputs["Base Color"].default_value = (0.08, 0.10, 0.06, 1.0)  # Darker green-grey
+    principled.inputs["Metallic"].default_value = 0.9
+    principled.inputs["Roughness"].default_value = 0.3
+    principled.inputs["Specular IOR Level"].default_value = 0.8
 
     # Connect
-    links.new(principled.outputs['BSDF'], output.inputs['Surface'])
+    links.new(principled.outputs["BSDF"], output.inputs["Surface"])
 
     output.location = (300, 0)
     principled.location = (0, 0)
@@ -118,8 +121,8 @@ def create_material():
 def setup_camera(obj_size, render_size):
     """Create orthographic camera looking down."""
     # Create camera
-    cam_data = bpy.data.cameras.new(name='TopDownCam')
-    cam_obj = bpy.data.objects.new('TopDownCam', cam_data)
+    cam_data = bpy.data.cameras.new(name="TopDownCam")
+    cam_obj = bpy.data.objects.new("TopDownCam", cam_data)
     bpy.context.collection.objects.link(cam_obj)
 
     # Position above looking down
@@ -127,7 +130,7 @@ def setup_camera(obj_size, render_size):
     cam_obj.rotation_euler = (0, 0, 0)  # Looking down -Z
 
     # Orthographic for clean 2D look
-    cam_data.type = 'ORTHO'
+    cam_data.type = "ORTHO"
     cam_data.ortho_scale = obj_size * 1.2  # Padding
 
     # Set as active camera
@@ -139,28 +142,28 @@ def setup_camera(obj_size, render_size):
 def setup_lighting(obj_size):
     """Create dramatic EVE-style lighting."""
     # Key light - from above-front (strong main light)
-    key = bpy.data.lights.new(name='KeyLight', type='SUN')
+    key = bpy.data.lights.new(name="KeyLight", type="SUN")
     key.energy = 8.0  # Stronger
     key.color = (1.0, 0.95, 0.9)
-    key_obj = bpy.data.objects.new('KeyLight', key)
+    key_obj = bpy.data.objects.new("KeyLight", key)
     bpy.context.collection.objects.link(key_obj)
     key_obj.location = (obj_size, -obj_size, obj_size * 2)
     key_obj.rotation_euler = (math.radians(45), math.radians(30), 0)
 
     # Rim light - from behind for edge definition
-    rim = bpy.data.lights.new(name='RimLight', type='SUN')
+    rim = bpy.data.lights.new(name="RimLight", type="SUN")
     rim.energy = 5.0  # Stronger
     rim.color = (0.7, 0.8, 1.0)  # Slight blue
-    rim_obj = bpy.data.objects.new('RimLight', rim)
+    rim_obj = bpy.data.objects.new("RimLight", rim)
     bpy.context.collection.objects.link(rim_obj)
     rim_obj.location = (-obj_size, obj_size, obj_size)
     rim_obj.rotation_euler = (math.radians(135), math.radians(-30), 0)
 
     # Fill light - softer ambient
-    fill = bpy.data.lights.new(name='FillLight', type='SUN')
+    fill = bpy.data.lights.new(name="FillLight", type="SUN")
     fill.energy = 3.0  # Stronger
     fill.color = (0.9, 0.9, 1.0)
-    fill_obj = bpy.data.objects.new('FillLight', fill)
+    fill_obj = bpy.data.objects.new("FillLight", fill)
     bpy.context.collection.objects.link(fill_obj)
     fill_obj.location = (-obj_size, -obj_size, obj_size * 1.5)
 
@@ -170,8 +173,8 @@ def setup_render(output_path, size=256):
     scene = bpy.context.scene
 
     # Render engine
-    scene.render.engine = 'CYCLES'
-    scene.cycles.device = 'CPU'
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
     scene.cycles.samples = 64  # Good quality, reasonable speed
 
     # Output settings
@@ -183,15 +186,15 @@ def setup_render(output_path, size=256):
     scene.render.film_transparent = True
 
     # Output format
-    scene.render.image_settings.file_format = 'PNG'
-    scene.render.image_settings.color_mode = 'RGBA'
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGBA"
     scene.render.filepath = output_path
 
     # World - dark background (for non-transparent preview)
     if not scene.world:
         scene.world = bpy.data.worlds.new("World")
     scene.world.use_nodes = True
-    bg = scene.world.node_tree.nodes.get('Background')
+    bg = scene.world.node_tree.nodes.get("Background")
     if bg:
         bg.inputs[0].default_value = (0.01, 0.01, 0.02, 1.0)
 
@@ -235,14 +238,18 @@ def main():
     """Parse arguments and render."""
     # Get arguments after '--'
     argv = sys.argv
-    if '--' in argv:
-        argv = argv[argv.index('--') + 1:]
+    if "--" in argv:
+        argv = argv[argv.index("--") + 1 :]
     else:
-        print("Usage: blender --background --python render_stl_topdown.py -- input.stl output.png [size] [--flip]")
+        print(
+            "Usage: blender --background --python render_stl_topdown.py -- input.stl output.png [size] [--flip]"
+        )
         sys.exit(1)
 
     if len(argv) < 2:
-        print("Usage: blender --background --python render_stl_topdown.py -- input.stl output.png [size] [--flip]")
+        print(
+            "Usage: blender --background --python render_stl_topdown.py -- input.stl output.png [size] [--flip]"
+        )
         sys.exit(1)
 
     input_path = argv[0]
@@ -253,7 +260,7 @@ def main():
     rotate_180 = False
 
     for arg in argv[2:]:
-        if arg == '--flip':
+        if arg == "--flip":
             rotate_180 = True
         elif arg.isdigit():
             size = int(arg)

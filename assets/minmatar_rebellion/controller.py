@@ -1,4 +1,5 @@
 """Controller/Gamepad support for Minmatar Rebellion"""
+
 import pygame
 
 
@@ -71,10 +72,10 @@ class Controller:
             return 0.0
 
         # On most controllers, triggers are axes 4 and 5
-        if trigger_id == 'left' and self.joystick.get_numaxes() > 4:
+        if trigger_id == "left" and self.joystick.get_numaxes() > 4:
             value = self.joystick.get_axis(4)
             return (value + 1) / 2  # Convert from -1..1 to 0..1
-        elif trigger_id == 'right' and self.joystick.get_numaxes() > 5:
+        elif trigger_id == "right" and self.joystick.get_numaxes() > 5:
             value = self.joystick.get_axis(5)
             return (value + 1) / 2
 
@@ -93,11 +94,11 @@ class Controller:
 
     def fire_pressed(self):
         """Check if fire button is pressed (A or Right Trigger)"""
-        return self.is_button_pressed(self.BUTTON_A) or self.get_trigger('right') > 0.3
+        return self.is_button_pressed(self.BUTTON_A) or self.get_trigger("right") > 0.3
 
     def rocket_pressed(self):
         """Check if rocket button is pressed (B or Left Trigger)"""
-        return self.is_button_pressed(self.BUTTON_B) or self.get_trigger('left') > 0.3
+        return self.is_button_pressed(self.BUTTON_B) or self.get_trigger("left") > 0.3
 
     def cycle_ammo_pressed(self):
         """Check if cycle ammo button is pressed (X or LB)"""

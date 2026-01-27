@@ -22,8 +22,8 @@ from typing import List, Optional
 
 class Severity(Enum):
     CRITICAL = "CRITICAL"  # Bannable offense
-    WARNING = "WARNING"    # Best practice violation
-    INFO = "INFO"          # Suggestion
+    WARNING = "WARNING"  # Best practice violation
+    INFO = "INFO"  # Suggestion
 
 
 @dataclass
@@ -72,34 +72,29 @@ class ComplianceReport:
 # Patterns to check
 PATTERNS = {
     # ESI Base URLs
-    "esi_url": re.compile(r'esi\.evetech\.net|esi\.tech\.ccp\.is'),
-
+    "esi_url": re.compile(r"esi\.evetech\.net|esi\.tech\.ccp\.is"),
     # Image server
-    "image_server": re.compile(r'images\.evetech\.net|image\.eveonline\.com'),
-
+    "image_server": re.compile(r"images\.evetech\.net|image\.eveonline\.com"),
     # SSO
-    "sso_url": re.compile(r'login\.eveonline\.com'),
-
+    "sso_url": re.compile(r"login\.eveonline\.com"),
     # User-Agent header
     "user_agent_set": re.compile(r'["\']User-Agent["\']|user.?agent|UserAgent', re.IGNORECASE),
-
     # Cache header handling
-    "cache_handling": re.compile(r'Expires|Cache-Control|ETag|If-None-Match', re.IGNORECASE),
-
+    "cache_handling": re.compile(r"Expires|Cache-Control|ETag|If-None-Match", re.IGNORECASE),
     # Error limit handling
-    "error_limit": re.compile(r'X-ESI-Error-Limit|error.?limit|420', re.IGNORECASE),
-
+    "error_limit": re.compile(r"X-ESI-Error-Limit|error.?limit|420", re.IGNORECASE),
     # Discovery patterns (BAD)
-    "discovery_loop": re.compile(r'for.*in.*range.*get.*character|for.*in.*range.*get.*corporation', re.IGNORECASE),
-    "search_abuse": re.compile(r'/search/.*strict=false.*categories=character', re.IGNORECASE),
-
+    "discovery_loop": re.compile(
+        r"for.*in.*range.*get.*character|for.*in.*range.*get.*corporation", re.IGNORECASE
+    ),
+    "search_abuse": re.compile(r"/search/.*strict=false.*categories=character", re.IGNORECASE),
     # Rate limiting
-    "rate_limit": re.compile(r'rate.?limit|throttle|sleep|asyncio\.sleep|time\.sleep', re.IGNORECASE),
-
+    "rate_limit": re.compile(
+        r"rate.?limit|throttle|sleep|asyncio\.sleep|time\.sleep", re.IGNORECASE
+    ),
     # Versioned endpoints
-    "versioned_endpoint": re.compile(r'/v\d+/|/latest/|/dev/|/legacy/'),
-    "unversioned_endpoint": re.compile(r'esi\.evetech\.net/[a-z]+/[a-z]+'),
-
+    "versioned_endpoint": re.compile(r"/v\d+/|/latest/|/dev/|/legacy/"),
+    "unversioned_endpoint": re.compile(r"esi\.evetech\.net/[a-z]+/[a-z]+"),
     # Token storage (potential issue)
     "plaintext_token": re.compile(r'access_token\s*=\s*["\'][^"\']+["\']'),
     "hardcoded_secret": re.compile(r'client_secret\s*=\s*["\'][^"\']+["\']'),
@@ -111,8 +106,8 @@ def scan_file(filepath: Path) -> List[Finding]:
     findings = []
 
     try:
-        content = filepath.read_text(encoding='utf-8', errors='ignore')
-        lines = content.split('\n')
+        content = filepath.read_text(encoding="utf-8", errors="ignore")
+        lines = content.split("\n")
     except Exception as e:
         return [Finding(Severity.INFO, f"Could not read file: {e}", filepath)]
 
@@ -122,86 +117,106 @@ def scan_file(filepath: Path) -> List[Finding]:
 
     # Check for User-Agent header
     if not PATTERNS["user_agent_set"].search(content):
-        findings.append(Finding(
-            Severity.WARNING,
-            "ESI usage detected but no User-Agent header found",
-            filepath,
-            suggestion="Add User-Agent header: 'User-Agent': 'YourApp/1.0 (contact@email.com)'"
-        ))
+        findings.append(
+            Finding(
+                Severity.WARNING,
+                "ESI usage detected but no User-Agent header found",
+                filepath,
+                suggestion="Add User-Agent header: 'User-Agent': 'YourApp/1.0 (contact@email.com)'",
+            )
+        )
 
     # Check for cache header handling
     if not PATTERNS["cache_handling"].search(content):
-        findings.append(Finding(
-            Severity.WARNING,
-            "No cache header handling detected",
-            filepath,
-            suggestion="Respect ESI's Expires header to avoid unnecessary requests"
-        ))
+        findings.append(
+            Finding(
+                Severity.WARNING,
+                "No cache header handling detected",
+                filepath,
+                suggestion="Respect ESI's Expires header to avoid unnecessary requests",
+            )
+        )
 
     # Check for error limit handling
     if not PATTERNS["error_limit"].search(content):
-        findings.append(Finding(
-            Severity.WARNING,
-            "No error limit handling detected",
-            filepath,
-            suggestion="Monitor X-ESI-Error-Limit-Remain header to avoid bans"
-        ))
+        findings.append(
+            Finding(
+                Severity.WARNING,
+                "No error limit handling detected",
+                filepath,
+                suggestion="Monitor X-ESI-Error-Limit-Remain header to avoid bans",
+            )
+        )
 
     # Check for discovery abuse patterns
     for i, line in enumerate(lines, 1):
         if PATTERNS["discovery_loop"].search(line):
-            findings.append(Finding(
-                Severity.CRITICAL,
-                "Potential discovery abuse pattern detected",
-                filepath,
-                i,
-                "Iterating over IDs to discover entities is against TOS"
-            ))
+            findings.append(
+                Finding(
+                    Severity.CRITICAL,
+                    "Potential discovery abuse pattern detected",
+                    filepath,
+                    i,
+                    "Iterating over IDs to discover entities is against TOS",
+                )
+            )
 
         if PATTERNS["search_abuse"].search(line):
-            findings.append(Finding(
-                Severity.CRITICAL,
-                "Potential search endpoint abuse",
-                filepath,
-                i,
-                "Using search to discover entities is bannable"
-            ))
+            findings.append(
+                Finding(
+                    Severity.CRITICAL,
+                    "Potential search endpoint abuse",
+                    filepath,
+                    i,
+                    "Using search to discover entities is bannable",
+                )
+            )
 
         if PATTERNS["hardcoded_secret"].search(line):
-            findings.append(Finding(
-                Severity.CRITICAL,
-                "Hardcoded client secret detected",
-                filepath,
-                i,
-                "Move secrets to environment variables"
-            ))
+            findings.append(
+                Finding(
+                    Severity.CRITICAL,
+                    "Hardcoded client secret detected",
+                    filepath,
+                    i,
+                    "Move secrets to environment variables",
+                )
+            )
 
         if PATTERNS["plaintext_token"].search(line):
-            findings.append(Finding(
-                Severity.WARNING,
-                "Potential plaintext token storage",
-                filepath,
-                i,
-                "Consider encrypting stored tokens"
-            ))
+            findings.append(
+                Finding(
+                    Severity.WARNING,
+                    "Potential plaintext token storage",
+                    filepath,
+                    i,
+                    "Consider encrypting stored tokens",
+                )
+            )
 
     # Check for rate limiting
     if not PATTERNS["rate_limit"].search(content):
-        findings.append(Finding(
-            Severity.INFO,
-            "No rate limiting implementation detected",
-            filepath,
-            suggestion="Consider adding rate limiting for bulk operations"
-        ))
+        findings.append(
+            Finding(
+                Severity.INFO,
+                "No rate limiting implementation detected",
+                filepath,
+                suggestion="Consider adding rate limiting for bulk operations",
+            )
+        )
 
     # Check for versioned endpoints
-    if PATTERNS["unversioned_endpoint"].search(content) and not PATTERNS["versioned_endpoint"].search(content):
-        findings.append(Finding(
-            Severity.WARNING,
-            "Unversioned ESI endpoints detected",
-            filepath,
-            suggestion="Use /latest/ or /v{n}/ prefixed endpoints for stability"
-        ))
+    if PATTERNS["unversioned_endpoint"].search(content) and not PATTERNS[
+        "versioned_endpoint"
+    ].search(content):
+        findings.append(
+            Finding(
+                Severity.WARNING,
+                "Unversioned ESI endpoints detected",
+                filepath,
+                suggestion="Use /latest/ or /v{n}/ prefixed endpoints for stability",
+            )
+        )
 
     return findings
 
@@ -211,12 +226,12 @@ def scan_project(project_path: Path, verbose: bool = False) -> ComplianceReport:
     report = ComplianceReport()
 
     # File extensions to scan
-    extensions = {'.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.cs', '.go', '.rs', '.rb', '.php'}
+    extensions = {".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".cs", ".go", ".rs", ".rb", ".php"}
 
     # Also check config files
-    config_files = {'package.json', 'requirements.txt', 'Cargo.toml', 'go.mod', 'pom.xml'}
+    config_files = {"package.json", "requirements.txt", "Cargo.toml", "go.mod", "pom.xml"}
 
-    for filepath in project_path.rglob('*'):
+    for filepath in project_path.rglob("*"):
         if filepath.is_file():
             if filepath.suffix in extensions or filepath.name in config_files:
                 if verbose:
@@ -225,7 +240,7 @@ def scan_project(project_path: Path, verbose: bool = False) -> ComplianceReport:
                 report.files_scanned += 1
 
                 try:
-                    content = filepath.read_text(encoding='utf-8', errors='ignore')
+                    content = filepath.read_text(encoding="utf-8", errors="ignore")
                 except Exception:
                     continue
 
@@ -317,22 +332,28 @@ def main():
 
     if args.json:
         import json
-        print(json.dumps({
-            "score": report.score,
-            "grade": report.grade,
-            "files_scanned": report.files_scanned,
-            "esi_usage": report.esi_usage_detected,
-            "findings": [
+
+        print(
+            json.dumps(
                 {
-                    "severity": f.severity.value,
-                    "message": f.message,
-                    "file": str(f.file) if f.file else None,
-                    "line": f.line,
-                    "suggestion": f.suggestion
-                }
-                for f in report.findings
-            ]
-        }, indent=2))
+                    "score": report.score,
+                    "grade": report.grade,
+                    "files_scanned": report.files_scanned,
+                    "esi_usage": report.esi_usage_detected,
+                    "findings": [
+                        {
+                            "severity": f.severity.value,
+                            "message": f.message,
+                            "file": str(f.file) if f.file else None,
+                            "line": f.line,
+                            "suggestion": f.suggestion,
+                        }
+                        for f in report.findings
+                    ],
+                },
+                indent=2,
+            )
+        )
     else:
         print_report(report, args.path.name)
 

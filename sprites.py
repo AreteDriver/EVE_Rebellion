@@ -1,4 +1,5 @@
 """Game sprites for Minmatar Rebellion"""
+
 import math
 import random
 
@@ -11,6 +12,7 @@ from visual_enhancements import add_colored_tint, add_ship_glow, add_strong_outl
 try:
     from platform_init import get_resource_path
 except ImportError:
+
     def get_resource_path(path: str) -> str:
         return path
 
@@ -37,8 +39,8 @@ class Player(pygame.sprite.Sprite):
         self.hull = self.max_hull
 
         # Weapons
-        self.current_ammo = 'sabot'
-        self.unlocked_ammo = ['sabot']
+        self.current_ammo = "sabot"
+        self.unlocked_ammo = ["sabot"]
         self.rockets = PLAYER_MAX_ROCKETS
         self.max_rockets = PLAYER_MAX_ROCKETS
 
@@ -72,17 +74,19 @@ class Player(pygame.sprite.Sprite):
 
         # Map ship types to SVG files
         ship_svgs = {
-            'Rifter': get_resource_path('assets/minmatar_rebellion/svg/top/rifter.svg'),
-            'Wolf': get_resource_path('assets/minmatar_rebellion/svg/top/Wolf.svg'),
-            'Jaguar': get_resource_path('assets/minmatar_rebellion/svg/top/jaguar.svg')
+            "Rifter": get_resource_path("assets/minmatar_rebellion/svg/top/rifter.svg"),
+            "Wolf": get_resource_path("assets/minmatar_rebellion/svg/top/Wolf.svg"),
+            "Jaguar": get_resource_path("assets/minmatar_rebellion/svg/top/jaguar.svg"),
         }
 
-        ship_type = getattr(self, 'ship_class', 'Rifter')
-        svg_path = ship_svgs.get(ship_type, ship_svgs['Rifter'])
+        ship_type = getattr(self, "ship_class", "Rifter")
+        svg_path = ship_svgs.get(ship_type, ship_svgs["Rifter"])
 
         try:
             # Convert SVG to PNG in memory
-            png_data = cairosvg.svg2png(url=svg_path, output_width=self.width, output_height=self.height)
+            png_data = cairosvg.svg2png(
+                url=svg_path, output_width=self.width, output_height=self.height
+            )
 
             # Load PNG into pygame surface
             image = pygame.image.load(BytesIO(png_data))
@@ -94,7 +98,9 @@ class Player(pygame.sprite.Sprite):
             image = pygame.transform.rotate(image, 90)
 
             # Add strong white outline for visibility
-            image = add_strong_outline(image, outline_color=(255, 255, 255), glow_color=(200, 150, 255), thickness=2)
+            image = add_strong_outline(
+                image, outline_color=(255, 255, 255), glow_color=(200, 150, 255), thickness=2
+            )
             # Add Minmatar glow (rust/orange)
             image = add_ship_glow(image, (200, 100, 50), intensity=0.3)
 
@@ -111,14 +117,19 @@ class Player(pygame.sprite.Sprite):
         color = (200, 100, 100)
 
         # Simple triangle ship
-        pygame.draw.polygon(surf, color, [
-            (self.width//2, 0),
-            (self.width-5, self.height-10),
-            (self.width//2, self.height-5),
-            (5, self.height-10)
-        ])
+        pygame.draw.polygon(
+            surf,
+            color,
+            [
+                (self.width // 2, 0),
+                (self.width - 5, self.height - 10),
+                (self.width // 2, self.height - 5),
+                (5, self.height - 10),
+            ],
+        )
 
         return surf
+
     def upgrade_to_wolf(self):
         """Upgrade to Wolf assault frigate"""
         self.is_wolf = True
@@ -173,7 +184,7 @@ class Player(pygame.sprite.Sprite):
         """Check if enough time has passed to fire"""
         now = pygame.time.get_ticks()
         ammo = AMMO_TYPES[self.current_ammo]
-        cooldown = PLAYER_BASE_FIRE_RATE / (ammo['fire_rate'] * self.fire_rate_mult)
+        cooldown = PLAYER_BASE_FIRE_RATE / (ammo["fire_rate"] * self.fire_rate_mult)
         return now - self.last_shot > cooldown
 
     def shoot(self, fire_dir=(0, -1)):
@@ -214,12 +225,13 @@ class Player(pygame.sprite.Sprite):
             bullet = Bullet(
                 muzzle_x,
                 muzzle_y,
-                dx, dy,
-                ammo['tracer'],
+                dx,
+                dy,
+                ammo["tracer"],
                 BULLET_DAMAGE,
-                ammo['shield_mult'],
-                ammo['armor_mult'],
-                upgrade_level
+                ammo["shield_mult"],
+                ammo["armor_mult"],
+                upgrade_level,
             )
             bullets.append(bullet)
             muzzle_positions.append((muzzle_x, muzzle_y))
@@ -284,7 +296,9 @@ class Player(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     """Projectile sprite with upgrade-based animated visuals"""
 
-    def __init__(self, x, y, dx, dy, color, damage, shield_mult=1.0, armor_mult=1.0, upgrade_level=0):
+    def __init__(
+        self, x, y, dx, dy, color, damage, shield_mult=1.0, armor_mult=1.0, upgrade_level=0
+    ):
         super().__init__()
         self.upgrade_level = upgrade_level
         self.color = color
@@ -298,8 +312,9 @@ class Bullet(pygame.sprite.Sprite):
         self.trail_positions = []
         self.max_trail = 4 + upgrade_level * 2 if upgrade_level > 0 else 0
 
-        self.rect = pygame.Rect(x - self.width // 2, y - self.height // 2,
-                                int(self.width) + 10, int(self.height) + 10)
+        self.rect = pygame.Rect(
+            x - self.width // 2, y - self.height // 2, int(self.width) + 10, int(self.height) + 10
+        )
         self.dx = dx
         self.dy = dy
         self.damage = damage
@@ -331,8 +346,11 @@ class Bullet(pygame.sprite.Sprite):
             inner_pad = glow_pad // 2
             inner_alpha = int((glow_alpha + 40) * pulse)
             inner_glow = (*self.color[:3], min(200, inner_alpha))
-            pygame.draw.ellipse(self.image, inner_glow,
-                              (inner_pad, inner_pad, surf_w - inner_pad * 2, surf_h - inner_pad * 2))
+            pygame.draw.ellipse(
+                self.image,
+                inner_glow,
+                (inner_pad, inner_pad, surf_w - inner_pad * 2, surf_h - inner_pad * 2),
+            )
 
             # Hot core for level 2+
             if self.upgrade_level >= 2:
@@ -340,8 +358,9 @@ class Bullet(pygame.sprite.Sprite):
                 core_color = (255, 255, 255, core_alpha)
                 core_w = surf_w // 2
                 core_h = surf_h // 2
-                pygame.draw.ellipse(self.image, core_color,
-                                  (surf_w // 4, surf_h // 4, core_w, core_h))
+                pygame.draw.ellipse(
+                    self.image, core_color, (surf_w // 4, surf_h // 4, core_w, core_h)
+                )
 
         # Draw core bullet
         cx, cy = glow_pad, glow_pad
@@ -357,8 +376,13 @@ class Bullet(pygame.sprite.Sprite):
         # Energy lines for level 3
         if self.upgrade_level >= 3:
             line_alpha = int(150 * pulse)
-            pygame.draw.line(self.image, (*self.color[:3], line_alpha),
-                           (cx + w // 2, cy), (cx + w // 2, cy + h), 1)
+            pygame.draw.line(
+                self.image,
+                (*self.color[:3], line_alpha),
+                (cx + w // 2, cy),
+                (cx + w // 2, cy + h),
+                1,
+            )
 
         # Update rect to match image center
         old_center = self.rect.center
@@ -393,8 +417,12 @@ class Bullet(pygame.sprite.Sprite):
             self.anim_timer += 0.2 + self.upgrade_level * 0.05
             self._update_image()
 
-        if (self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or
-            self.rect.right < 0 or self.rect.left > SCREEN_WIDTH):
+        if (
+            self.rect.bottom < 0
+            or self.rect.top > SCREEN_HEIGHT
+            or self.rect.right < 0
+            or self.rect.left > SCREEN_WIDTH
+        ):
             self.kill()
 
 
@@ -500,8 +528,12 @@ class EnemyBullet(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += self.dx
         self.rect.y += self.dy
-        if (self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or
-            self.rect.right < 0 or self.rect.left > SCREEN_WIDTH):
+        if (
+            self.rect.bottom < 0
+            or self.rect.top > SCREEN_HEIGHT
+            or self.rect.right < 0
+            or self.rect.left > SCREEN_WIDTH
+        ):
             self.kill()
 
 
@@ -509,12 +541,12 @@ class Enemy(pygame.sprite.Sprite):
     """Base enemy class"""
 
     # Movement pattern types
-    PATTERN_DRIFT = 0      # Basic side-to-side drift
-    PATTERN_SINE = 1       # Sine wave movement
-    PATTERN_ZIGZAG = 2     # Sharp zigzag
-    PATTERN_CIRCLE = 3     # Circular strafing
-    PATTERN_SWOOP = 4      # Dive toward player then retreat
-    PATTERN_FLANK = 5      # Move to screen edge then track player
+    PATTERN_DRIFT = 0  # Basic side-to-side drift
+    PATTERN_SINE = 1  # Sine wave movement
+    PATTERN_ZIGZAG = 2  # Sharp zigzag
+    PATTERN_CIRCLE = 3  # Circular strafing
+    PATTERN_SWOOP = 4  # Dive toward player then retreat
+    PATTERN_FLANK = 5  # Move to screen edge then track player
 
     def __init__(self, enemy_type, x, y, difficulty=None):
         super().__init__()
@@ -522,27 +554,27 @@ class Enemy(pygame.sprite.Sprite):
         self.stats = ENEMY_STATS[enemy_type]
         self.difficulty = difficulty or {}
 
-        self.width, self.height = self.stats['size']
+        self.width, self.height = self.stats["size"]
 
         # Apply difficulty scaling
-        health_mult = self.difficulty.get('enemy_health_mult', 1.0)
+        health_mult = self.difficulty.get("enemy_health_mult", 1.0)
 
         # Combat stats
-        self.shields = int(self.stats['shields'] * health_mult)
-        self.armor = int(self.stats['armor'] * health_mult)
-        self.hull = int(self.stats['hull'] * health_mult)
+        self.shields = int(self.stats["shields"] * health_mult)
+        self.armor = int(self.stats["armor"] * health_mult)
+        self.hull = int(self.stats["hull"] * health_mult)
         self.max_shields = self.shields
         self.max_armor = self.armor
         self.max_hull = self.hull
 
         # Behavior
-        self.speed = self.stats['speed']
-        fire_rate_mult = self.difficulty.get('enemy_fire_rate_mult', 1.0)
-        self.fire_rate = int(self.stats['fire_rate'] * fire_rate_mult)
+        self.speed = self.stats["speed"]
+        fire_rate_mult = self.difficulty.get("enemy_fire_rate_mult", 1.0)
+        self.fire_rate = int(self.stats["fire_rate"] * fire_rate_mult)
         self.last_shot = pygame.time.get_ticks() + random.randint(0, 1000)
-        self.score = self.stats['score']
-        self.refugees = self.stats.get('refugees', 0)
-        self.is_boss = self.stats.get('boss', False)
+        self.score = self.stats["score"]
+        self.refugees = self.stats.get("refugees", 0)
+        self.is_boss = self.stats.get("boss", False)
 
         # Create image after all attributes are set
         self.image = self._create_image()
@@ -555,7 +587,7 @@ class Enemy(pygame.sprite.Sprite):
         self.pattern_timer = random.uniform(0, math.pi * 2)
         self.target_y = self._get_target_y()
         self.entered = False  # Has reached initial position
-        self.swoop_state = 'enter'  # For swoop pattern
+        self.swoop_state = "enter"  # For swoop pattern
         self.flank_side = random.choice([-1, 1])  # For flank pattern
         self.circle_center_x = x
         self.circle_radius = random.randint(50, 100)
@@ -569,23 +601,22 @@ class Enemy(pygame.sprite.Sprite):
         """Select movement pattern based on enemy type"""
         if self.is_boss:
             self.pattern = self.PATTERN_DRIFT  # Bosses use simple patterns
-        elif self.enemy_type == 'executioner':
+        elif self.enemy_type == "executioner":
             # Fast ships use aggressive patterns
-            self.pattern = random.choice([
-                self.PATTERN_SINE, self.PATTERN_ZIGZAG,
-                self.PATTERN_SWOOP, self.PATTERN_FLANK
-            ])
-        elif self.enemy_type == 'punisher':
+            self.pattern = random.choice(
+                [self.PATTERN_SINE, self.PATTERN_ZIGZAG, self.PATTERN_SWOOP, self.PATTERN_FLANK]
+            )
+        elif self.enemy_type == "punisher":
             # Heavy ships use steady patterns
-            self.pattern = random.choice([
-                self.PATTERN_DRIFT, self.PATTERN_SINE, self.PATTERN_CIRCLE
-            ])
-        elif self.enemy_type in ['omen', 'maller']:
+            self.pattern = random.choice(
+                [self.PATTERN_DRIFT, self.PATTERN_SINE, self.PATTERN_CIRCLE]
+            )
+        elif self.enemy_type in ["omen", "maller"]:
             # Cruisers use tactical patterns
-            self.pattern = random.choice([
-                self.PATTERN_CIRCLE, self.PATTERN_FLANK, self.PATTERN_DRIFT
-            ])
-        elif self.enemy_type == 'bestower':
+            self.pattern = random.choice(
+                [self.PATTERN_CIRCLE, self.PATTERN_FLANK, self.PATTERN_DRIFT]
+            )
+        elif self.enemy_type == "bestower":
             # Industrials try to escape
             self.pattern = self.PATTERN_DRIFT
             self.speed *= 0.8  # Slightly slower
@@ -596,7 +627,7 @@ class Enemy(pygame.sprite.Sprite):
         """Get target Y position based on enemy type"""
         if self.is_boss:
             return 120
-        elif self.enemy_type == 'bestower':
+        elif self.enemy_type == "bestower":
             return random.randint(80, 180)
         else:
             return random.randint(80, 300)
@@ -609,30 +640,51 @@ class Enemy(pygame.sprite.Sprite):
         import cairosvg
 
         # Map enemy types to ship classes
-        frigate_ships = ['punisher', 'tormentor', 'crucifier', 'executioner', 'inquisitor', 'magnate']
-        destroyer_ships = ['coercer', 'dragoon', 'heretic', 'confessor']
-        cruiser_ships = ['maller', 'omen', 'arbitrator', 'augoror', 'zealot', 'sacrilege', 'curse', 'pilgrim', 'absolution']
+        frigate_ships = [
+            "punisher",
+            "tormentor",
+            "crucifier",
+            "executioner",
+            "inquisitor",
+            "magnate",
+        ]
+        destroyer_ships = ["coercer", "dragoon", "heretic", "confessor"]
+        cruiser_ships = [
+            "maller",
+            "omen",
+            "arbitrator",
+            "augoror",
+            "zealot",
+            "sacrilege",
+            "curse",
+            "pilgrim",
+            "absolution",
+        ]
 
         # Determine ship class based on enemy type
         if self.is_boss:
             ship_name = random.choice(cruiser_ships)
-        elif self.stats.get('tough', False) or self.max_hull > 150:
+        elif self.stats.get("tough", False) or self.max_hull > 150:
             ship_name = random.choice(destroyer_ships)
         else:
             ship_name = random.choice(frigate_ships)
 
-        svg_path = get_resource_path(f'assets/minmatar_rebellion/svg/top/{ship_name}.svg')
+        svg_path = get_resource_path(f"assets/minmatar_rebellion/svg/top/{ship_name}.svg")
 
         try:
             # Convert SVG to PNG
-            png_data = cairosvg.svg2png(url=svg_path, output_width=self.width, output_height=self.height)
+            png_data = cairosvg.svg2png(
+                url=svg_path, output_width=self.width, output_height=self.height
+            )
             image = pygame.image.load(BytesIO(png_data)).convert_alpha()
 
             # Rotate to face downward (enemies come from top)
             image = pygame.transform.rotate(image, -90)
 
             # Add gold outline for Amarr ships
-            image = add_strong_outline(image, outline_color=(255, 215, 0), glow_color=(255, 180, 50), thickness=2)
+            image = add_strong_outline(
+                image, outline_color=(255, 215, 0), glow_color=(255, 180, 50), thickness=2
+            )
             # Add Amarr gold tint and glow
             image = add_colored_tint(image, (255, 215, 0), alpha=40)
             image = add_ship_glow(image, (255, 215, 100), intensity=0.25)
@@ -648,23 +700,22 @@ class Enemy(pygame.sprite.Sprite):
         surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         # Gold Amarr color
         color = (200, 180, 100)
-        pygame.draw.polygon(surf, color, [
-            (self.width//2, self.height),
-            (self.width-5, 10),
-            (self.width//2, 5),
-            (5, 10)
-        ])
+        pygame.draw.polygon(
+            surf,
+            color,
+            [(self.width // 2, self.height), (self.width - 5, 10), (self.width // 2, 5), (5, 10)],
+        )
         return surf
 
         # Gold Amarr color
         color = (200, 180, 100)
-        pygame.draw.polygon(surf, color, [
-            (self.width//2, self.height),
-            (self.width-5, 10),
-            (self.width//2, 5),
-            (5, 10)
-        ])
+        pygame.draw.polygon(
+            surf,
+            color,
+            [(self.width // 2, self.height), (self.width - 5, 10), (self.width // 2, 5), (5, 10)],
+        )
         return surf
+
     def update(self, player_rect=None):
         """Update enemy position and behavior with advanced patterns"""
         self.pattern_timer += 0.05
@@ -727,39 +778,41 @@ class Enemy(pygame.sprite.Sprite):
     def _move_circle(self):
         """Circular strafing pattern"""
         self.rect.centerx = self.circle_center_x + math.cos(self.pattern_timer) * self.circle_radius
-        self.rect.centery = self.target_y + math.sin(self.pattern_timer) * (self.circle_radius * 0.5)
+        self.rect.centery = self.target_y + math.sin(self.pattern_timer) * (
+            self.circle_radius * 0.5
+        )
         # Slowly drift the center
         self.circle_center_x += math.sin(self.pattern_timer * 0.2) * 0.5
         self.circle_center_x = max(100, min(SCREEN_WIDTH - 100, self.circle_center_x))
 
     def _move_swoop(self, player_rect):
         """Dive toward player then retreat"""
-        if self.swoop_state == 'enter':
+        if self.swoop_state == "enter":
             if self.rect.centery >= self.target_y:
-                self.swoop_state = 'aim'
-        elif self.swoop_state == 'aim':
+                self.swoop_state = "aim"
+        elif self.swoop_state == "aim":
             # Wait and aim at player
             if self.pattern_timer % (math.pi * 2) < 0.1:
-                self.swoop_state = 'dive'
+                self.swoop_state = "dive"
                 if player_rect:
                     self.swoop_target_x = player_rect.centerx
                 else:
                     self.swoop_target_x = SCREEN_WIDTH // 2
-        elif self.swoop_state == 'dive':
+        elif self.swoop_state == "dive":
             # Dive toward player position
             self.rect.y += self.speed * 3
             dx = self.swoop_target_x - self.rect.centerx
             self.rect.x += max(-self.speed * 2, min(self.speed * 2, dx * 0.1))
             if self.rect.centery > SCREEN_HEIGHT * 0.6:
-                self.swoop_state = 'retreat'
-        elif self.swoop_state == 'retreat':
+                self.swoop_state = "retreat"
+        elif self.swoop_state == "retreat":
             # Retreat back up
             self.rect.y -= self.speed * 2
             if self.rect.centery < self.target_y:
-                self.swoop_state = 'aim'
+                self.swoop_state = "aim"
 
         # Horizontal drift while aiming
-        if self.swoop_state == 'aim':
+        if self.swoop_state == "aim":
             self.rect.x += math.sin(self.pattern_timer * 2) * self.speed
 
     def _move_flank(self, player_rect):
@@ -787,7 +840,9 @@ class Enemy(pygame.sprite.Sprite):
         self.boss_phase_timer += 1
 
         # Phase changes based on health
-        health_pct = (self.shields + self.armor + self.hull) / (self.max_shields + self.max_armor + self.max_hull)
+        health_pct = (self.shields + self.armor + self.hull) / (
+            self.max_shields + self.max_armor + self.max_hull
+        )
 
         if health_pct < 0.3 and self.boss_phase < 2:
             self.boss_phase = 2
@@ -814,7 +869,7 @@ class Enemy(pygame.sprite.Sprite):
         # Calculate direction to player
         dx = player_rect.centerx - self.rect.centerx
         dy = player_rect.centery - self.rect.centery
-        dist = math.sqrt(dx*dx + dy*dy)
+        dist = math.sqrt(dx * dx + dy * dy)
         if dist > 0:
             dx = dx / dist * 5
             dy = dy / dist * 5
@@ -890,36 +945,60 @@ class Powerup(pygame.sprite.Sprite):
 
     # Rarity system
     POWERUP_RARITY = {
-        'shield_recharger': 'common',
-        'armor_repairer': 'common',
-        'hull_repairer': 'common',
-        'nanite': 'uncommon',
-        'capacitor': 'uncommon',
-        'weapon_upgrade': 'rare',
-        'rapid_fire': 'rare',
-        'overdrive': 'epic',
-        'magnet': 'epic',
-        'invulnerability': 'epic',
-        'shield_boost': 'uncommon',
+        "shield_recharger": "common",
+        "armor_repairer": "common",
+        "hull_repairer": "common",
+        "nanite": "uncommon",
+        "capacitor": "uncommon",
+        "weapon_upgrade": "rare",
+        "rapid_fire": "rare",
+        "overdrive": "epic",
+        "magnet": "epic",
+        "invulnerability": "epic",
+        "shield_boost": "uncommon",
     }
 
     RARITY_CONFIG = {
-        'common':   {'glow_mult': 0.6, 'orbitals': 4,  'pulse_speed': 0.10, 'has_corona': False, 'has_arcs': False},
-        'uncommon': {'glow_mult': 0.8, 'orbitals': 6,  'pulse_speed': 0.12, 'has_corona': False, 'has_arcs': False},
-        'rare':     {'glow_mult': 1.0, 'orbitals': 8,  'pulse_speed': 0.15, 'has_corona': False, 'has_arcs': True},
-        'epic':     {'glow_mult': 1.3, 'orbitals': 12, 'pulse_speed': 0.18, 'has_corona': True,  'has_arcs': True},
+        "common": {
+            "glow_mult": 0.6,
+            "orbitals": 4,
+            "pulse_speed": 0.10,
+            "has_corona": False,
+            "has_arcs": False,
+        },
+        "uncommon": {
+            "glow_mult": 0.8,
+            "orbitals": 6,
+            "pulse_speed": 0.12,
+            "has_corona": False,
+            "has_arcs": False,
+        },
+        "rare": {
+            "glow_mult": 1.0,
+            "orbitals": 8,
+            "pulse_speed": 0.15,
+            "has_corona": False,
+            "has_arcs": True,
+        },
+        "epic": {
+            "glow_mult": 1.3,
+            "orbitals": 12,
+            "pulse_speed": 0.18,
+            "has_corona": True,
+            "has_arcs": True,
+        },
     }
 
     def __init__(self, x, y, powerup_type):
         super().__init__()
         self.powerup_type = powerup_type
         self.data = POWERUP_TYPES[powerup_type]
-        self.color = self.data['color']
+        self.color = self.data["color"]
         self.size = 24
         self.speed = 1.5
 
         # Rarity system
-        self.rarity = self.POWERUP_RARITY.get(powerup_type, 'common')
+        self.rarity = self.POWERUP_RARITY.get(powerup_type, "common")
         self.rarity_config = self.RARITY_CONFIG[self.rarity]
 
         # Animation state
@@ -936,25 +1015,29 @@ class Powerup(pygame.sprite.Sprite):
 
         # Orbital particles based on rarity
         self.orbitals = []
-        num_orbitals = self.rarity_config['orbitals']
+        num_orbitals = self.rarity_config["orbitals"]
         for i in range(num_orbitals):
-            self.orbitals.append({
-                'angle': i * (2 * math.pi / num_orbitals),
-                'radius': 14,
-                'speed': 0.08 + random.uniform(-0.01, 0.01),
-                'size': random.randint(2, 3)
-            })
+            self.orbitals.append(
+                {
+                    "angle": i * (2 * math.pi / num_orbitals),
+                    "radius": 14,
+                    "speed": 0.08 + random.uniform(-0.01, 0.01),
+                    "size": random.randint(2, 3),
+                }
+            )
 
         # Energy arcs for rare/epic
         self.arc_angles = []
-        if self.rarity_config['has_arcs']:
-            num_arcs = 3 if self.rarity == 'epic' else 2
+        if self.rarity_config["has_arcs"]:
+            num_arcs = 3 if self.rarity == "epic" else 2
             for _ in range(num_arcs):
-                self.arc_angles.append({
-                    'angle': random.uniform(0, math.pi * 2),
-                    'length': random.uniform(0.3, 0.6),
-                    'speed': random.uniform(0.02, 0.04) * random.choice([-1, 1])
-                })
+                self.arc_angles.append(
+                    {
+                        "angle": random.uniform(0, math.pi * 2),
+                        "length": random.uniform(0.3, 0.6),
+                        "speed": random.uniform(0.02, 0.04) * random.choice([-1, 1]),
+                    }
+                )
 
     def _create_base_image(self):
         """Create the core powerup icon"""
@@ -967,37 +1050,37 @@ class Powerup(pygame.sprite.Sprite):
 
     def update(self, player_pos=None):
         self.rect.y += self.speed
-        self.pulse_timer += self.rarity_config['pulse_speed']
+        self.pulse_timer += self.rarity_config["pulse_speed"]
         self.bob_offset = math.sin(self.pulse_timer * 2) * 2
-        self.corona_angle += 0.03 if self.rarity_config['has_corona'] else 0
+        self.corona_angle += 0.03 if self.rarity_config["has_corona"] else 0
 
         if self.rect.top > SCREEN_HEIGHT:
             self.kill()
             return
 
         # LOD based on distance to player
-        lod_level = 'full'
+        lod_level = "full"
         if player_pos:
             dx = self.rect.centerx - player_pos[0]
             dy = self.rect.centery - player_pos[1]
             dist = math.sqrt(dx * dx + dy * dy)
             if dist > 400:
-                lod_level = 'minimal'
+                lod_level = "minimal"
             elif dist > 200:
-                lod_level = 'reduced'
+                lod_level = "reduced"
 
         # Render animated image
-        glow_mult = self.rarity_config['glow_mult']
+        glow_mult = self.rarity_config["glow_mult"]
         pulse = 0.7 + 0.3 * math.sin(self.pulse_timer)
         glow_size = int((6 + 3 * math.sin(self.pulse_timer)) * glow_mult)
 
-        extra_size = 12 if self.rarity == 'epic' else 6 if self.rarity == 'rare' else 0
+        extra_size = 12 if self.rarity == "epic" else 6 if self.rarity == "rare" else 0
         size = self.size + 20 + extra_size
         self.image = pygame.Surface((size, size), pygame.SRCALPHA)
         cx, cy = size // 2, size // 2
 
         # Corona for epic
-        if self.rarity_config['has_corona'] and lod_level != 'minimal':
+        if self.rarity_config["has_corona"] and lod_level != "minimal":
             corona_radius = self.size // 2 + 10
             corona_alpha = int(40 * pulse * glow_mult)
             num_segments = 6
@@ -1008,14 +1091,14 @@ class Powerup(pygame.sprite.Sprite):
                 pygame.draw.circle(self.image, (*self.color, corona_alpha), (int(px), int(py)), 3)
 
         # Energy arcs for rare/epic
-        if self.rarity_config['has_arcs'] and lod_level == 'full':
+        if self.rarity_config["has_arcs"] and lod_level == "full":
             for arc in self.arc_angles:
-                arc['angle'] += arc['speed']
+                arc["angle"] += arc["speed"]
                 arc_radius = self.size // 2 + 6
                 points = []
                 for i in range(6):
                     t = i / 5
-                    angle = arc['angle'] + t * arc['length']
+                    angle = arc["angle"] + t * arc["length"]
                     r = arc_radius + math.sin(self.pulse_timer * 3 + t * 5) * 3
                     px = cx + math.cos(angle) * r
                     py = cy + math.sin(angle) * r
@@ -1026,21 +1109,25 @@ class Powerup(pygame.sprite.Sprite):
 
         # Outer glow
         glow_alpha = int(50 * pulse * glow_mult)
-        pygame.draw.circle(self.image, (*self.color, glow_alpha), (cx, cy), self.size // 2 + glow_size)
+        pygame.draw.circle(
+            self.image, (*self.color, glow_alpha), (cx, cy), self.size // 2 + glow_size
+        )
 
         # Draw orbitals (count based on LOD)
         orbitals_to_draw = self.orbitals
-        if lod_level == 'minimal':
+        if lod_level == "minimal":
             orbitals_to_draw = self.orbitals[:2]
-        elif lod_level == 'reduced':
+        elif lod_level == "reduced":
             orbitals_to_draw = self.orbitals[:4]
 
         for orb in orbitals_to_draw:
-            orb['angle'] += orb['speed']
-            ox = cx + math.cos(orb['angle']) * orb['radius']
-            oy = cy + math.sin(orb['angle']) * orb['radius']
-            pygame.draw.circle(self.image, (*self.color, int(80 * glow_mult)), (int(ox), int(oy)), orb['size'] + 1)
-            pygame.draw.circle(self.image, (255, 255, 255), (int(ox), int(oy)), orb['size'])
+            orb["angle"] += orb["speed"]
+            ox = cx + math.cos(orb["angle"]) * orb["radius"]
+            oy = cy + math.sin(orb["angle"]) * orb["radius"]
+            pygame.draw.circle(
+                self.image, (*self.color, int(80 * glow_mult)), (int(ox), int(oy)), orb["size"] + 1
+            )
+            pygame.draw.circle(self.image, (255, 255, 255), (int(ox), int(oy)), orb["size"])
 
         # Core
         pygame.draw.circle(self.image, (30, 30, 40), (cx, cy), self.size // 2)
@@ -1051,23 +1138,25 @@ class Powerup(pygame.sprite.Sprite):
         self.image.blit(self.base_surface, icon_rect)
 
         # Sparkles for higher rarity
-        sparkle_chance = 0.08 + (0.06 if self.rarity in ('rare', 'epic') else 0)
-        if lod_level == 'full' and random.random() < sparkle_chance:
+        sparkle_chance = 0.08 + (0.06 if self.rarity in ("rare", "epic") else 0)
+        if lod_level == "full" and random.random() < sparkle_chance:
             sx = cx + random.randint(-10, 10)
             sy = cy + random.randint(-10, 10)
             pygame.draw.circle(self.image, (255, 255, 255, 180), (sx, sy), random.randint(1, 2))
 
-        self.rect = self.image.get_rect(center=(self.rect.centerx, self.rect.centery + int(self.bob_offset)))
+        self.rect = self.image.get_rect(
+            center=(self.rect.centerx, self.rect.centery + int(self.bob_offset))
+        )
 
 
 class PowerupPickupEffect(pygame.sprite.Sprite):
     """Enhanced pickup effect with rarity scaling"""
 
     RARITY_SCALE = {
-        'common':   {'intensity': 0.7, 'particles': 10, 'duration': 20, 'shake': 0},
-        'uncommon': {'intensity': 0.85, 'particles': 14, 'duration': 24, 'shake': 0},
-        'rare':     {'intensity': 1.0, 'particles': 18, 'duration': 28, 'shake': 5},
-        'epic':     {'intensity': 1.4, 'particles': 24, 'duration': 32, 'shake': 8},
+        "common": {"intensity": 0.7, "particles": 10, "duration": 20, "shake": 0},
+        "uncommon": {"intensity": 0.85, "particles": 14, "duration": 24, "shake": 0},
+        "rare": {"intensity": 1.0, "particles": 18, "duration": 28, "shake": 5},
+        "epic": {"intensity": 1.4, "particles": 24, "duration": 32, "shake": 8},
     }
 
     def __init__(self, x, y, color, powerup_type=None):
@@ -1077,25 +1166,28 @@ class PowerupPickupEffect(pygame.sprite.Sprite):
         self.color = color
         self.frame = 0
 
-        rarity = Powerup.POWERUP_RARITY.get(powerup_type, 'common')
+        rarity = Powerup.POWERUP_RARITY.get(powerup_type, "common")
         self.scale = self.RARITY_SCALE[rarity]
-        self.intensity = self.scale['intensity']
-        self.max_frames = self.scale['duration']
-        self.shake_intensity = self.scale['shake']
+        self.intensity = self.scale["intensity"]
+        self.max_frames = self.scale["duration"]
+        self.shake_intensity = self.scale["shake"]
 
         # Particles
         self.particles = []
-        num_particles = self.scale['particles']
+        num_particles = self.scale["particles"]
         for i in range(num_particles):
             angle = i * (2 * math.pi / num_particles) + random.uniform(-0.2, 0.2)
             speed = random.uniform(3, 6) * self.intensity
-            self.particles.append({
-                'x': 0, 'y': 0,
-                'vx': math.cos(angle) * speed,
-                'vy': math.sin(angle) * speed,
-                'size': random.randint(2, 5),
-                'life': random.randint(12, 22),
-            })
+            self.particles.append(
+                {
+                    "x": 0,
+                    "y": 0,
+                    "vx": math.cos(angle) * speed,
+                    "vy": math.sin(angle) * speed,
+                    "size": random.randint(2, 5),
+                    "life": random.randint(12, 22),
+                }
+            )
 
         self._update_image()
 
@@ -1118,16 +1210,22 @@ class PowerupPickupEffect(pygame.sprite.Sprite):
             ring_radius = int((5 + 25 * ring_progress) * self.intensity)
             ring_alpha = int(180 * (1 - ring_progress))
             ring_width = max(1, int(4 * (1 - ring_progress)))
-            pygame.draw.circle(self.image, (*self.color, ring_alpha), (cx, cy), ring_radius, ring_width)
+            pygame.draw.circle(
+                self.image, (*self.color, ring_alpha), (cx, cy), ring_radius, ring_width
+            )
 
         # Particles
         for p in self.particles:
-            if p['life'] > 0:
-                px = cx + p['x']
-                py = cy + p['y']
-                alpha = int(200 * (p['life'] / 22))
-                pygame.draw.circle(self.image, (*self.color, alpha // 2), (int(px), int(py)), p['size'] + 1)
-                pygame.draw.circle(self.image, (255, 255, 255, alpha), (int(px), int(py)), p['size'])
+            if p["life"] > 0:
+                px = cx + p["x"]
+                py = cy + p["y"]
+                alpha = int(200 * (p["life"] / 22))
+                pygame.draw.circle(
+                    self.image, (*self.color, alpha // 2), (int(px), int(py)), p["size"] + 1
+                )
+                pygame.draw.circle(
+                    self.image, (255, 255, 255, alpha), (int(px), int(py)), p["size"]
+                )
 
         self.rect = self.image.get_rect(center=(self.x, self.y))
 
@@ -1138,11 +1236,11 @@ class PowerupPickupEffect(pygame.sprite.Sprite):
             return
 
         for p in self.particles:
-            p['x'] += p['vx']
-            p['y'] += p['vy']
-            p['vx'] *= 0.94
-            p['vy'] *= 0.94
-            p['life'] -= 1
+            p["x"] += p["vx"]
+            p["y"] += p["vy"]
+            p["vx"] *= 0.94
+            p["vy"] *= 0.94
+            p["life"] -= 1
 
         self._update_image()
 
@@ -1171,8 +1269,7 @@ class Explosion(pygame.sprite.Sprite):
 
         self.image = pygame.Surface((current_size * 2, current_size * 2), pygame.SRCALPHA)
         color_with_alpha = (*self.color[:3], alpha)
-        pygame.draw.circle(self.image, color_with_alpha,
-                          (current_size, current_size), current_size)
+        pygame.draw.circle(self.image, color_with_alpha, (current_size, current_size), current_size)
         self.rect = self.image.get_rect(center=(self.x, self.y))
 
     def update(self):

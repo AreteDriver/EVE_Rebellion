@@ -222,7 +222,7 @@ def get_client() -> ESIClient:
     return _default_client
 '''
 
-ATTRIBUTION_TEMPLATE = '''
+ATTRIBUTION_TEMPLATE = """
 ## Attribution
 
 EVE Online and the EVE logo are registered trademarks of [CCP hf](https://www.ccpgames.com/).
@@ -233,7 +233,7 @@ This project is not affiliated with or endorsed by CCP hf.
 Data provided via:
 - [EVE Online ESI API](https://esi.evetech.net/)
 - [EVE Image Server](https://images.evetech.net/)
-'''
+"""
 
 SHIP_SPRITES_TEMPLATE = '''"""
 Ship Sprites Manager for {project_name}
@@ -378,25 +378,26 @@ REQUIREMENTS_ADDITIONS = {
 # UPDATE LOGIC
 # ============================================================================
 
+
 def detect_project_type(project_path: Path) -> str:
     """Detect project type."""
     for f in project_path.rglob("*.py"):
         try:
-            content = f.read_text(errors='ignore')
-            if 'pygame' in content:
-                return 'game'
-            if 'fastapi' in content or 'FastAPI' in content:
-                return 'api'
+            content = f.read_text(errors="ignore")
+            if "pygame" in content:
+                return "game"
+            if "fastapi" in content or "FastAPI" in content:
+                return "api"
         except Exception:
             pass
 
-    if (project_path / 'package.json').exists():
-        return 'web'
+    if (project_path / "package.json").exists():
+        return "web"
 
-    if len(list(project_path.rglob('*.svg'))) > 5:
-        return 'assets'
+    if len(list(project_path.rglob("*.svg"))) > 5:
+        return "assets"
 
-    return 'unknown'
+    return "unknown"
 
 
 def plan_updates(project_path: Path, components: List[str] = None) -> List[Dict]:
@@ -406,52 +407,58 @@ def plan_updates(project_path: Path, components: List[str] = None) -> List[Dict]
 
     # Check what already exists
     has_esi_client = any(
-        'ESIClient' in f.read_text(errors='ignore')
-        for f in project_path.rglob('*.py')
+        "ESIClient" in f.read_text(errors="ignore")
+        for f in project_path.rglob("*.py")
         if f.is_file()
     )
 
-    readme_path = project_path / 'README.md'
+    readme_path = project_path / "README.md"
     has_attribution = False
     if readme_path.exists():
-        has_attribution = 'CCP' in readme_path.read_text(errors='ignore')
+        has_attribution = "CCP" in readme_path.read_text(errors="ignore")
 
     # Plan ESI client
-    if not components or 'esi' in components:
+    if not components or "esi" in components:
         if not has_esi_client:
-            if project_type == 'game':
-                dest = project_path / 'core' / 'esi_client.py'
-            elif project_type == 'api':
-                dest = project_path / 'app' / 'esi_client.py'
+            if project_type == "game":
+                dest = project_path / "core" / "esi_client.py"
+            elif project_type == "api":
+                dest = project_path / "app" / "esi_client.py"
             else:
-                dest = project_path / 'esi_client.py'
+                dest = project_path / "esi_client.py"
 
-            plan.append({
-                "action": UpdateAction.ADD_FILE,
-                "path": str(dest),
-                "template": "esi_client",
-                "description": "Add ESI client with compliance features"
-            })
+            plan.append(
+                {
+                    "action": UpdateAction.ADD_FILE,
+                    "path": str(dest),
+                    "template": "esi_client",
+                    "description": "Add ESI client with compliance features",
+                }
+            )
 
     # Plan attribution
     if not has_attribution:
-        plan.append({
-            "action": UpdateAction.MODIFY_FILE,
-            "path": str(readme_path),
-            "template": "attribution",
-            "description": "Add CCP attribution to README"
-        })
+        plan.append(
+            {
+                "action": UpdateAction.MODIFY_FILE,
+                "path": str(readme_path),
+                "template": "attribution",
+                "description": "Add CCP attribution to README",
+            }
+        )
 
     # Plan ship sprites for games
-    if project_type == 'game' and (not components or 'sprites' in components):
-        sprites_path = project_path / 'core' / 'ship_sprites.py'
+    if project_type == "game" and (not components or "sprites" in components):
+        sprites_path = project_path / "core" / "ship_sprites.py"
         if not sprites_path.exists():
-            plan.append({
-                "action": UpdateAction.ADD_FILE,
-                "path": str(sprites_path),
-                "template": "ship_sprites",
-                "description": "Add ship sprite manager with Image Server integration"
-            })
+            plan.append(
+                {
+                    "action": UpdateAction.ADD_FILE,
+                    "path": str(sprites_path),
+                    "template": "ship_sprites",
+                    "description": "Add ship sprite manager with Image Server integration",
+                }
+            )
 
     # Plan dependencies
     deps_to_add = set()
@@ -461,11 +468,13 @@ def plan_updates(project_path: Path, components: List[str] = None) -> List[Dict]
             deps_to_add.update(REQUIREMENTS_ADDITIONS[template])
 
     if deps_to_add:
-        plan.append({
-            "action": UpdateAction.ADD_DEPENDENCY,
-            "dependencies": list(deps_to_add),
-            "description": f"Add dependencies: {', '.join(deps_to_add)}"
-        })
+        plan.append(
+            {
+                "action": UpdateAction.ADD_DEPENDENCY,
+                "dependencies": list(deps_to_add),
+                "description": f"Add dependencies: {', '.join(deps_to_add)}",
+            }
+        )
 
     return plan
 
@@ -515,12 +524,12 @@ def apply_updates(project_path: Path, plan: List[Dict], dry_run: bool = False) -
             req_path = project_path / "requirements.txt"
             existing = set()
             if req_path.exists():
-                existing = set(req_path.read_text().strip().split('\n'))
+                existing = set(req_path.read_text().strip().split("\n"))
 
             new_deps = set(item["dependencies"]) - existing
             if new_deps:
-                with open(req_path, 'a') as f:
-                    f.write('\n' + '\n'.join(new_deps) + '\n')
+                with open(req_path, "a") as f:
+                    f.write("\n" + "\n".join(new_deps) + "\n")
                 print(f"  ✅ Added to requirements.txt: {', '.join(new_deps)}")
 
 
@@ -530,9 +539,14 @@ def main():
     parser.add_argument("--plan", action="store_true", help="Show update plan only")
     parser.add_argument("--apply", action="store_true", help="Apply updates")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done")
-    parser.add_argument("--component", "-c", action="append", dest="components",
-                       choices=["esi", "sso", "sprites", "attribution"],
-                       help="Specific components to update")
+    parser.add_argument(
+        "--component",
+        "-c",
+        action="append",
+        dest="components",
+        choices=["esi", "sso", "sprites", "attribution"],
+        help="Specific components to update",
+    )
 
     args = parser.parse_args()
 

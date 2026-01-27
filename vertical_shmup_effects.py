@@ -23,6 +23,7 @@ import pygame
 @dataclass
 class Particle:
     """Individual particle for effects"""
+
     x: float
     y: float
     vx: float
@@ -46,15 +47,15 @@ class WeaponEffects:
 
         # Effect colors (EVE-themed)
         self.COLOR_AUTOCANNON = (255, 200, 100)  # Orange tracer
-        self.COLOR_MISSILE = (255, 100, 50)       # Red flame
-        self.COLOR_LASER = (100, 200, 255)        # Blue beam
-        self.COLOR_ROCKET = (255, 150, 0)         # Orange exhaust
-        self.COLOR_EXPLOSION = (255, 100, 0)      # Red-orange
-        self.COLOR_IMPACT = (255, 255, 200)       # Yellow spark
-        self.COLOR_BERSERK = (255, 50, 50)        # Red aura
-        self.COLOR_HEAT_LOW = (255, 255, 100)     # Yellow
-        self.COLOR_HEAT_MED = (255, 150, 50)      # Orange
-        self.COLOR_HEAT_HIGH = (255, 50, 50)      # Red
+        self.COLOR_MISSILE = (255, 100, 50)  # Red flame
+        self.COLOR_LASER = (100, 200, 255)  # Blue beam
+        self.COLOR_ROCKET = (255, 150, 0)  # Orange exhaust
+        self.COLOR_EXPLOSION = (255, 100, 0)  # Red-orange
+        self.COLOR_IMPACT = (255, 255, 200)  # Yellow spark
+        self.COLOR_BERSERK = (255, 50, 50)  # Red aura
+        self.COLOR_HEAT_LOW = (255, 255, 100)  # Yellow
+        self.COLOR_HEAT_MED = (255, 150, 50)  # Orange
+        self.COLOR_HEAT_HIGH = (255, 50, 50)  # Red
 
     def update(self, dt: float):
         """Update all active effects"""
@@ -72,8 +73,8 @@ class WeaponEffects:
 
         # Update muzzle flashes
         for flash in self.muzzle_flashes[:]:
-            flash['life'] -= dt
-            if flash['life'] <= 0:
+            flash["life"] -= dt
+            if flash["life"] <= 0:
                 self.muzzle_flashes.remove(flash)
 
     def render(self, surface: pygame.Surface):
@@ -93,7 +94,7 @@ class WeaponEffects:
                     surface,
                     particle.color,  # pygame.draw doesn't support alpha
                     (int(particle.x), int(particle.y)),
-                    int(particle.size)
+                    int(particle.size),
                 )
             else:
                 # Pixel for small particles
@@ -102,14 +103,11 @@ class WeaponEffects:
 
         # Render muzzle flashes
         for flash in self.muzzle_flashes:
-            alpha = int(255 * (flash['life'] / flash['max_life']))
-            size = flash['size'] * (flash['life'] / flash['max_life'])
+            alpha = int(255 * (flash["life"] / flash["max_life"]))
+            size = flash["size"] * (flash["life"] / flash["max_life"])
 
             pygame.draw.circle(
-                surface,
-                flash['color'],
-                (int(flash['x']), int(flash['y'])),
-                int(size)
+                surface, flash["color"], (int(flash["x"]), int(flash["y"])), int(size)
             )
 
     # === WEAPON EFFECTS ===
@@ -122,14 +120,16 @@ class WeaponEffects:
             x, y: Position
             angle: Direction (radians, 0 = up)
         """
-        self.muzzle_flashes.append({
-            'x': x,
-            'y': y,
-            'size': 8,
-            'color': self.COLOR_AUTOCANNON,
-            'life': 0.05,
-            'max_life': 0.05
-        })
+        self.muzzle_flashes.append(
+            {
+                "x": x,
+                "y": y,
+                "size": 8,
+                "color": self.COLOR_AUTOCANNON,
+                "life": 0.05,
+                "max_life": 0.05,
+            }
+        )
 
     def autocannon_tracer(self, x: float, y: float, angle: float = 0):
         """
@@ -140,17 +140,19 @@ class WeaponEffects:
             angle: Direction (radians)
         """
         # Small trail particle
-        self.particles.append(Particle(
-            x=x,
-            y=y,
-            vx=0,
-            vy=0,
-            life=0.1,
-            max_life=0.1,
-            color=self.COLOR_AUTOCANNON,
-            size=2,
-            fade=True
-        ))
+        self.particles.append(
+            Particle(
+                x=x,
+                y=y,
+                vx=0,
+                vy=0,
+                life=0.1,
+                max_life=0.1,
+                color=self.COLOR_AUTOCANNON,
+                size=2,
+                fade=True,
+            )
+        )
 
     def missile_trail(self, x: float, y: float, angle: float):
         """
@@ -166,17 +168,19 @@ class WeaponEffects:
             vx = math.cos(angle + math.pi + spread) * 30
             vy = math.sin(angle + math.pi + spread) * 30
 
-            self.particles.append(Particle(
-                x=x + random.uniform(-2, 2),
-                y=y + random.uniform(-2, 2),
-                vx=vx,
-                vy=vy,
-                life=0.5,
-                max_life=0.5,
-                color=(200, 200, 200),  # Gray smoke
-                size=4,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=x + random.uniform(-2, 2),
+                    y=y + random.uniform(-2, 2),
+                    vx=vx,
+                    vy=vy,
+                    life=0.5,
+                    max_life=0.5,
+                    color=(200, 200, 200),  # Gray smoke
+                    size=4,
+                    fade=True,
+                )
+            )
 
     def laser_beam(self, x1: float, y1: float, x2: float, y2: float):
         """
@@ -189,7 +193,7 @@ class WeaponEffects:
         # Beam is drawn separately (not particle-based)
         # But we add glow particles along the beam
 
-        length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         steps = int(length / 10)
 
         for i in range(steps):
@@ -197,17 +201,19 @@ class WeaponEffects:
             x = x1 + (x2 - x1) * t
             y = y1 + (y2 - y1) * t
 
-            self.particles.append(Particle(
-                x=x + random.uniform(-2, 2),
-                y=y + random.uniform(-2, 2),
-                vx=0,
-                vy=0,
-                life=0.15,
-                max_life=0.15,
-                color=self.COLOR_LASER,
-                size=3,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=x + random.uniform(-2, 2),
+                    y=y + random.uniform(-2, 2),
+                    vx=0,
+                    vy=0,
+                    life=0.15,
+                    max_life=0.15,
+                    color=self.COLOR_LASER,
+                    size=3,
+                    fade=True,
+                )
+            )
 
     def rocket_exhaust(self, x: float, y: float, angle: float):
         """
@@ -223,17 +229,19 @@ class WeaponEffects:
             vx = math.cos(angle + math.pi + spread) * speed
             vy = math.sin(angle + math.pi + spread) * speed
 
-            self.particles.append(Particle(
-                x=x,
-                y=y,
-                vx=vx,
-                vy=vy,
-                life=0.3,
-                max_life=0.3,
-                color=self.COLOR_ROCKET,
-                size=6,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=x,
+                    y=y,
+                    vx=vx,
+                    vy=vy,
+                    life=0.3,
+                    max_life=0.3,
+                    color=self.COLOR_ROCKET,
+                    size=6,
+                    fade=True,
+                )
+            )
 
     # === IMPACT EFFECTS ===
 
@@ -249,17 +257,19 @@ class WeaponEffects:
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(50, 150)
 
-            self.particles.append(Particle(
-                x=x,
-                y=y,
-                vx=math.cos(angle) * speed,
-                vy=math.sin(angle) * speed,
-                life=0.2,
-                max_life=0.2,
-                color=self.COLOR_IMPACT,
-                size=2,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=x,
+                    y=y,
+                    vx=math.cos(angle) * speed,
+                    vy=math.sin(angle) * speed,
+                    life=0.2,
+                    max_life=0.2,
+                    color=self.COLOR_IMPACT,
+                    size=2,
+                    fade=True,
+                )
+            )
 
     def explosion_small(self, x: float, y: float):
         """
@@ -269,31 +279,28 @@ class WeaponEffects:
             x, y: Explosion center
         """
         # Flash
-        self.muzzle_flashes.append({
-            'x': x,
-            'y': y,
-            'size': 30,
-            'color': (255, 255, 255),
-            'life': 0.1,
-            'max_life': 0.1
-        })
+        self.muzzle_flashes.append(
+            {"x": x, "y": y, "size": 30, "color": (255, 255, 255), "life": 0.1, "max_life": 0.1}
+        )
 
         # Debris particles
         for _ in range(20):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(50, 200)
 
-            self.particles.append(Particle(
-                x=x,
-                y=y,
-                vx=math.cos(angle) * speed,
-                vy=math.sin(angle) * speed,
-                life=0.5,
-                max_life=0.5,
-                color=self.COLOR_EXPLOSION,
-                size=random.randint(2, 5),
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=x,
+                    y=y,
+                    vx=math.cos(angle) * speed,
+                    vy=math.sin(angle) * speed,
+                    life=0.5,
+                    max_life=0.5,
+                    color=self.COLOR_EXPLOSION,
+                    size=random.randint(2, 5),
+                    fade=True,
+                )
+            )
 
     def explosion_large(self, x: float, y: float):
         """
@@ -304,35 +311,35 @@ class WeaponEffects:
         """
         # Multiple flash rings
         for i in range(3):
-            self.muzzle_flashes.append({
-                'x': x,
-                'y': y,
-                'size': 50 + i * 20,
-                'color': (255, 200, 100) if i % 2 else (255, 100, 50),
-                'life': 0.3 + i * 0.1,
-                'max_life': 0.3 + i * 0.1
-            })
+            self.muzzle_flashes.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "size": 50 + i * 20,
+                    "color": (255, 200, 100) if i % 2 else (255, 100, 50),
+                    "life": 0.3 + i * 0.1,
+                    "max_life": 0.3 + i * 0.1,
+                }
+            )
 
         # Heavy debris
         for _ in range(50):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(100, 300)
 
-            self.particles.append(Particle(
-                x=x,
-                y=y,
-                vx=math.cos(angle) * speed,
-                vy=math.sin(angle) * speed,
-                life=1.0,
-                max_life=1.0,
-                color=random.choice([
-                    self.COLOR_EXPLOSION,
-                    (255, 150, 50),
-                    (200, 100, 50)
-                ]),
-                size=random.randint(4, 10),
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=x,
+                    y=y,
+                    vx=math.cos(angle) * speed,
+                    vy=math.sin(angle) * speed,
+                    life=1.0,
+                    max_life=1.0,
+                    color=random.choice([self.COLOR_EXPLOSION, (255, 150, 50), (200, 100, 50)]),
+                    size=random.randint(4, 10),
+                    fade=True,
+                )
+            )
 
     def pointblank_burst(self, x: float, y: float):
         """
@@ -343,31 +350,35 @@ class WeaponEffects:
             x, y: Kill position
         """
         # Bright flash
-        self.muzzle_flashes.append({
-            'x': x,
-            'y': y,
-            'size': 40,
-            'color': (255, 255, 0),  # Bright yellow
-            'life': 0.15,
-            'max_life': 0.15
-        })
+        self.muzzle_flashes.append(
+            {
+                "x": x,
+                "y": y,
+                "size": 40,
+                "color": (255, 255, 0),  # Bright yellow
+                "life": 0.15,
+                "max_life": 0.15,
+            }
+        )
 
         # Ring of particles
         for i in range(12):
             angle = (i / 12) * 2 * math.pi
             speed = 200
 
-            self.particles.append(Particle(
-                x=x,
-                y=y,
-                vx=math.cos(angle) * speed,
-                vy=math.sin(angle) * speed,
-                life=0.3,
-                max_life=0.3,
-                color=(255, 255, 100),
-                size=4,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=x,
+                    y=y,
+                    vx=math.cos(angle) * speed,
+                    vy=math.sin(angle) * speed,
+                    life=0.3,
+                    max_life=0.3,
+                    color=(255, 255, 100),
+                    size=4,
+                    fade=True,
+                )
+            )
 
     # === HEAT/BERSERK EFFECTS ===
 
@@ -398,17 +409,19 @@ class WeaponEffects:
             px = x + math.cos(angle) * radius
             py = y + math.sin(angle) * radius
 
-            self.particles.append(Particle(
-                x=px,
-                y=py,
-                vx=math.cos(angle) * 30,
-                vy=math.sin(angle) * 30,
-                life=0.5,
-                max_life=0.5,
-                color=color,
-                size=3,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=px,
+                    y=py,
+                    vx=math.cos(angle) * 30,
+                    vy=math.sin(angle) * 30,
+                    life=0.5,
+                    max_life=0.5,
+                    color=color,
+                    size=3,
+                    fade=True,
+                )
+            )
 
     def berserk_pulse(self, x: float, y: float):
         """
@@ -419,31 +432,35 @@ class WeaponEffects:
         """
         # Expanding ring
         for i in range(3):
-            self.muzzle_flashes.append({
-                'x': x,
-                'y': y,
-                'size': 50 + i * 30,
-                'color': self.COLOR_BERSERK,
-                'life': 0.5 + i * 0.2,
-                'max_life': 0.5 + i * 0.2
-            })
+            self.muzzle_flashes.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "size": 50 + i * 30,
+                    "color": self.COLOR_BERSERK,
+                    "life": 0.5 + i * 0.2,
+                    "max_life": 0.5 + i * 0.2,
+                }
+            )
 
         # Particle burst
         for _ in range(30):
             angle = random.uniform(0, 2 * math.pi)
             speed = random.uniform(100, 250)
 
-            self.particles.append(Particle(
-                x=x,
-                y=y,
-                vx=math.cos(angle) * speed,
-                vy=math.sin(angle) * speed,
-                life=0.8,
-                max_life=0.8,
-                color=self.COLOR_BERSERK,
-                size=5,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=x,
+                    y=y,
+                    vx=math.cos(angle) * speed,
+                    vy=math.sin(angle) * speed,
+                    life=0.8,
+                    max_life=0.8,
+                    color=self.COLOR_BERSERK,
+                    size=5,
+                    fade=True,
+                )
+            )
 
     def berserk_aura(self, x: float, y: float):
         """
@@ -460,17 +477,19 @@ class WeaponEffects:
             px = x + math.cos(angle) * radius
             py = y + math.sin(angle) * radius
 
-            self.particles.append(Particle(
-                x=px,
-                y=py,
-                vx=math.cos(angle) * 50,
-                vy=math.sin(angle) * 50,
-                life=0.4,
-                max_life=0.4,
-                color=self.COLOR_BERSERK,
-                size=4,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=px,
+                    y=py,
+                    vx=math.cos(angle) * 50,
+                    vy=math.sin(angle) * 50,
+                    life=0.4,
+                    max_life=0.4,
+                    color=self.COLOR_BERSERK,
+                    size=4,
+                    fade=True,
+                )
+            )
 
     # === BOSS EFFECTS ===
 
@@ -484,7 +503,7 @@ class WeaponEffects:
         # Spiral particles
         for i in range(50):
             angle = (i / 50) * 4 * math.pi  # Two full rotations
-            radius = 100 - (i / 50) * 100   # Shrink to center
+            radius = 100 - (i / 50) * 100  # Shrink to center
 
             px = x + math.cos(angle) * radius
             py = y + math.sin(angle) * radius
@@ -493,17 +512,19 @@ class WeaponEffects:
             vx = -math.cos(angle) * 200
             vy = -math.sin(angle) * 200
 
-            self.particles.append(Particle(
-                x=px,
-                y=py,
-                vx=vx,
-                vy=vy,
-                life=0.5,
-                max_life=0.5,
-                color=(150, 100, 255),  # Purple
-                size=4,
-                fade=True
-            ))
+            self.particles.append(
+                Particle(
+                    x=px,
+                    y=py,
+                    vx=vx,
+                    vy=vy,
+                    life=0.5,
+                    max_life=0.5,
+                    color=(150, 100, 255),  # Purple
+                    size=4,
+                    fade=True,
+                )
+            )
 
     def boss_charge_warning(self, x: float, y: float):
         """
@@ -513,17 +534,13 @@ class WeaponEffects:
             x, y: Boss position
         """
         # Pulsing glow
-        self.muzzle_flashes.append({
-            'x': x,
-            'y': y,
-            'size': 60,
-            'color': (255, 50, 50),
-            'life': 0.3,
-            'max_life': 0.3
-        })
+        self.muzzle_flashes.append(
+            {"x": x, "y": y, "size": 60, "color": (255, 50, 50), "life": 0.3, "max_life": 0.3}
+        )
 
 
 # === INTEGRATION EXAMPLE ===
+
 
 class ExamplePlayer:
     """Example player sprite with weapon effects"""
@@ -567,7 +584,7 @@ class ExampleProjectile:
         if self.type == "autocannon":
             self.effects.autocannon_tracer(self.x, self.y)
         elif self.type == "missile":
-            self.effects.missile_trail(self.x, self.y, -math.pi/2)
+            self.effects.missile_trail(self.x, self.y, -math.pi / 2)
 
     def on_hit(self, enemy_x: float, enemy_y: float):
         """Called when projectile hits enemy"""

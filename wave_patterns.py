@@ -12,6 +12,7 @@ from typing import List, Optional, Tuple
 @dataclass
 class SpawnPoint:
     """A point where an enemy should spawn."""
+
     x: float
     y: float
     vx: float = 0.0
@@ -44,44 +45,50 @@ class LinearPattern(WavePattern):
         line_width = (num_enemies - 1) * spacing
 
         # Random edge selection
-        edge = random.choice(['top', 'left', 'right'])
+        edge = random.choice(["top", "left", "right"])
 
-        if edge == 'top':
+        if edge == "top":
             start_x = (self.screen_width - line_width) // 2
             for i in range(num_enemies):
                 x = start_x + i * spacing
-                points.append(SpawnPoint(
-                    x=x,
-                    y=-30 - i * 10,  # Staggered entry
-                    vx=0,
-                    vy=random.uniform(2.0, 3.0),
-                    delay=i * 5,
-                    enemy_type=random.choice(enemy_types)
-                ))
-        elif edge == 'left':
+                points.append(
+                    SpawnPoint(
+                        x=x,
+                        y=-30 - i * 10,  # Staggered entry
+                        vx=0,
+                        vy=random.uniform(2.0, 3.0),
+                        delay=i * 5,
+                        enemy_type=random.choice(enemy_types),
+                    )
+                )
+        elif edge == "left":
             start_y = 100
             for i in range(num_enemies):
                 y = start_y + i * spacing * 0.8
-                points.append(SpawnPoint(
-                    x=-30,
-                    y=y,
-                    vx=random.uniform(2.5, 3.5),
-                    vy=random.uniform(0.5, 1.0),
-                    delay=i * 8,
-                    enemy_type=random.choice(enemy_types)
-                ))
+                points.append(
+                    SpawnPoint(
+                        x=-30,
+                        y=y,
+                        vx=random.uniform(2.5, 3.5),
+                        vy=random.uniform(0.5, 1.0),
+                        delay=i * 8,
+                        enemy_type=random.choice(enemy_types),
+                    )
+                )
         else:  # right
             start_y = 100
             for i in range(num_enemies):
                 y = start_y + i * spacing * 0.8
-                points.append(SpawnPoint(
-                    x=self.screen_width + 30,
-                    y=y,
-                    vx=random.uniform(-3.5, -2.5),
-                    vy=random.uniform(0.5, 1.0),
-                    delay=i * 8,
-                    enemy_type=random.choice(enemy_types)
-                ))
+                points.append(
+                    SpawnPoint(
+                        x=self.screen_width + 30,
+                        y=y,
+                        vx=random.uniform(-3.5, -2.5),
+                        vy=random.uniform(0.5, 1.0),
+                        delay=i * 8,
+                        enemy_type=random.choice(enemy_types),
+                    )
+                )
 
         return points
 
@@ -107,14 +114,11 @@ class SinePattern(WavePattern):
             vx = math.cos(phase) * 1.5
             vy = random.uniform(2.0, 2.5)
 
-            points.append(SpawnPoint(
-                x=x,
-                y=y,
-                vx=vx,
-                vy=vy,
-                delay=i * 10,
-                enemy_type=random.choice(enemy_types)
-            ))
+            points.append(
+                SpawnPoint(
+                    x=x, y=y, vx=vx, vy=vy, delay=i * 10, enemy_type=random.choice(enemy_types)
+                )
+            )
 
         return points
 
@@ -154,14 +158,11 @@ class SpiralPattern(WavePattern):
             vx = (dx / dist) * speed
             vy = (dy / dist) * speed
 
-            points.append(SpawnPoint(
-                x=x,
-                y=y,
-                vx=vx,
-                vy=vy,
-                delay=i * 15,
-                enemy_type=random.choice(enemy_types)
-            ))
+            points.append(
+                SpawnPoint(
+                    x=x, y=y, vx=vx, vy=vy, delay=i * 15, enemy_type=random.choice(enemy_types)
+                )
+            )
 
         return points
 
@@ -176,7 +177,7 @@ class AmbushPattern(WavePattern):
         points = []
 
         # Distribute enemies around all edges
-        edges = ['top', 'left', 'right', 'bottom', 'top_left', 'top_right']
+        edges = ["top", "left", "right", "bottom", "top_left", "top_right"]
         enemies_per_edge = max(1, num_enemies // len(edges))
 
         for edge_idx, edge in enumerate(edges):
@@ -197,22 +198,34 @@ class AmbushPattern(WavePattern):
 
     def _get_edge_spawn(self, edge: str, idx: int, count: int) -> SpawnPoint:
         """Get spawn point for a specific edge."""
-        if edge == 'top':
+        if edge == "top":
             x = random.randint(50, self.screen_width - 50)
             return SpawnPoint(x=x, y=-30, vx=0, vy=random.uniform(3.0, 4.0))
-        elif edge == 'bottom':
+        elif edge == "bottom":
             x = random.randint(50, self.screen_width - 50)
             return SpawnPoint(x=x, y=self.screen_height + 30, vx=0, vy=random.uniform(-3.0, -2.0))
-        elif edge == 'left':
+        elif edge == "left":
             y = random.randint(50, self.screen_height - 150)
             return SpawnPoint(x=-30, y=y, vx=random.uniform(3.0, 4.0), vy=random.uniform(0.5, 1.5))
-        elif edge == 'right':
+        elif edge == "right":
             y = random.randint(50, self.screen_height - 150)
-            return SpawnPoint(x=self.screen_width + 30, y=y, vx=random.uniform(-4.0, -3.0), vy=random.uniform(0.5, 1.5))
-        elif edge == 'top_left':
-            return SpawnPoint(x=-30, y=-30, vx=random.uniform(2.5, 3.5), vy=random.uniform(2.5, 3.5))
+            return SpawnPoint(
+                x=self.screen_width + 30,
+                y=y,
+                vx=random.uniform(-4.0, -3.0),
+                vy=random.uniform(0.5, 1.5),
+            )
+        elif edge == "top_left":
+            return SpawnPoint(
+                x=-30, y=-30, vx=random.uniform(2.5, 3.5), vy=random.uniform(2.5, 3.5)
+            )
         else:  # top_right
-            return SpawnPoint(x=self.screen_width + 30, y=-30, vx=random.uniform(-3.5, -2.5), vy=random.uniform(2.5, 3.5))
+            return SpawnPoint(
+                x=self.screen_width + 30,
+                y=-30,
+                vx=random.uniform(-3.5, -2.5),
+                vy=random.uniform(2.5, 3.5),
+            )
 
 
 class PincerPattern(WavePattern):
@@ -228,26 +241,30 @@ class PincerPattern(WavePattern):
         # Left group
         for i in range(half):
             y = 100 + i * 60
-            points.append(SpawnPoint(
-                x=-30,
-                y=y,
-                vx=random.uniform(2.0, 3.0),
-                vy=random.uniform(0.5, 1.0),
-                delay=i * 8,
-                enemy_type=random.choice(enemy_types)
-            ))
+            points.append(
+                SpawnPoint(
+                    x=-30,
+                    y=y,
+                    vx=random.uniform(2.0, 3.0),
+                    vy=random.uniform(0.5, 1.0),
+                    delay=i * 8,
+                    enemy_type=random.choice(enemy_types),
+                )
+            )
 
         # Right group
         for i in range(num_enemies - half):
             y = 100 + i * 60
-            points.append(SpawnPoint(
-                x=self.screen_width + 30,
-                y=y,
-                vx=random.uniform(-3.0, -2.0),
-                vy=random.uniform(0.5, 1.0),
-                delay=i * 8,
-                enemy_type=random.choice(enemy_types)
-            ))
+            points.append(
+                SpawnPoint(
+                    x=self.screen_width + 30,
+                    y=y,
+                    vx=random.uniform(-3.0, -2.0),
+                    vy=random.uniform(0.5, 1.0),
+                    delay=i * 8,
+                    enemy_type=random.choice(enemy_types),
+                )
+            )
 
         return points
 
@@ -277,26 +294,28 @@ class ScreenClearPattern(WavePattern):
                 x = start_x + col * col_spacing
                 y = -30 - row * row_spacing
 
-                points.append(SpawnPoint(
-                    x=x,
-                    y=y,
-                    vx=0,
-                    vy=random.uniform(1.5, 2.0),  # Slow, wall-like advance
-                    delay=row * 20,  # Row by row
-                    enemy_type=random.choice(enemy_types)
-                ))
+                points.append(
+                    SpawnPoint(
+                        x=x,
+                        y=y,
+                        vx=0,
+                        vy=random.uniform(1.5, 2.0),  # Slow, wall-like advance
+                        delay=row * 20,  # Row by row
+                        enemy_type=random.choice(enemy_types),
+                    )
+                )
 
         return points
 
 
 # Pattern registry
 WAVE_PATTERNS = {
-    'linear': LinearPattern,
-    'sine': SinePattern,
-    'spiral': SpiralPattern,
-    'ambush': AmbushPattern,
-    'pincer': PincerPattern,
-    'screen_clear': ScreenClearPattern,
+    "linear": LinearPattern,
+    "sine": SinePattern,
+    "spiral": SpiralPattern,
+    "ambush": AmbushPattern,
+    "pincer": PincerPattern,
+    "screen_clear": ScreenClearPattern,
 }
 
 
@@ -307,8 +326,7 @@ class WavePatternManager:
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.patterns = {
-            name: cls(screen_width, screen_height)
-            for name, cls in WAVE_PATTERNS.items()
+            name: cls(screen_width, screen_height) for name, cls in WAVE_PATTERNS.items()
         }
         self.last_pattern = None
 
@@ -322,8 +340,9 @@ class WavePatternManager:
         name = random.choice(available)
         return name, self.patterns[name]
 
-    def generate_wave(self, pattern_name: str, num_enemies: int,
-                     enemy_types: List[str]) -> List[SpawnPoint]:
+    def generate_wave(
+        self, pattern_name: str, num_enemies: int, enemy_types: List[str]
+    ) -> List[SpawnPoint]:
         """Generate spawn points for a specific pattern."""
         pattern = self.patterns.get(pattern_name)
         if pattern:
@@ -331,8 +350,9 @@ class WavePatternManager:
             return pattern.generate(num_enemies, enemy_types)
         return []
 
-    def generate_random_wave(self, num_enemies: int,
-                            enemy_types: List[str]) -> Tuple[str, List[SpawnPoint]]:
+    def generate_random_wave(
+        self, num_enemies: int, enemy_types: List[str]
+    ) -> Tuple[str, List[SpawnPoint]]:
         """Generate a random wave pattern."""
         name, pattern = self.random_pattern(exclude=self.last_pattern)
         self.last_pattern = name
@@ -342,16 +362,16 @@ class WavePatternManager:
         """Get appropriate pattern based on wave/stage progression."""
         # Early waves use simpler patterns
         if wave_num < 3:
-            return 'linear'
+            return "linear"
         elif wave_num < 5:
-            return random.choice(['linear', 'sine'])
+            return random.choice(["linear", "sine"])
         elif wave_num < 8:
-            return random.choice(['sine', 'pincer', 'spiral'])
+            return random.choice(["sine", "pincer", "spiral"])
         else:
             # Later waves can use any pattern
-            patterns = ['sine', 'spiral', 'ambush', 'pincer']
+            patterns = ["sine", "spiral", "ambush", "pincer"]
             if wave_num % 5 == 0:  # Every 5th wave
-                patterns.append('screen_clear')
+                patterns.append("screen_clear")
             return random.choice(patterns)
 
 

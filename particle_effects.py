@@ -131,12 +131,12 @@ class ParticleEmitter:
         particle = TrailParticle(x, y, color, random.randint(8, 15))
         self.particle_group.add(particle)
 
-    def emit_engine_exhaust(self, x, y, color, direction='down'):
+    def emit_engine_exhaust(self, x, y, color, direction="down"):
         """Create engine exhaust particles"""
         # Direction offsets
-        if direction == 'down':
+        if direction == "down":
             angle_base = math.pi / 2  # Pointing down
-        elif direction == 'up':
+        elif direction == "up":
             angle_base = -math.pi / 2
         else:
             angle_base = 0
@@ -177,8 +177,9 @@ class ParticleEmitter:
             vy = math.sin(angle) * spd
 
             # Add some gravity for debris feel
-            particle = Particle(x, y, color, (vx, vy), random.randint(2, 4),
-                                random.randint(15, 25), gravity=0.1)
+            particle = Particle(
+                x, y, color, (vx, vy), random.randint(2, 4), random.randint(15, 25), gravity=0.1
+            )
             self.particle_group.add(particle)
 
     def emit_hull_hit(self, x, y):
@@ -191,22 +192,23 @@ class ParticleEmitter:
             vy = math.sin(angle) * spd
 
             color = (150, 150, 150)
-            particle = Particle(x, y, color, (vx, vy), random.randint(2, 5),
-                                random.randint(20, 35), gravity=0.15)
+            particle = Particle(
+                x, y, color, (vx, vy), random.randint(2, 5), random.randint(20, 35), gravity=0.15
+            )
             self.particle_group.add(particle)
 
         # Sparks
         self.emit_sparks(x, y, (255, 200, 100), 6)
 
-    def emit_death_explosion(self, x, y, color, size='medium'):
+    def emit_death_explosion(self, x, y, color, size="medium"):
         """Create a dramatic death explosion"""
-        if size == 'small':
+        if size == "small":
             count = 20
             speed = 5
-        elif size == 'large':
+        elif size == "large":
             count = 50
             speed = 8
-        elif size == 'boss':
+        elif size == "boss":
             count = 100
             speed = 10
         else:  # medium
@@ -224,12 +226,12 @@ class ParticleEmitter:
             py = y + math.sin(angle) * dist
             self.emit_sparks(px, py, color, 3, angle)
 
-    def emit_berserk_aura(self, x, y, intensity='normal'):
+    def emit_berserk_aura(self, x, y, intensity="normal"):
         """Create berserk visual feedback"""
-        if intensity == 'extreme':
+        if intensity == "extreme":
             color = (255, 50, 50)
             count = 4
-        elif intensity == 'close':
+        elif intensity == "close":
             color = (255, 150, 50)
             count = 2
         else:
@@ -319,9 +321,9 @@ class DamageNumber(pygame.sprite.Sprite):
         self.vx = random.uniform(-0.5, 0.5)  # Slight horizontal drift
 
         # Create font (cached at class level for performance)
-        if not hasattr(DamageNumber, '_font'):
+        if not hasattr(DamageNumber, "_font"):
             DamageNumber._font = pygame.font.Font(None, 24)
-        if not hasattr(DamageNumber, '_font_crit'):
+        if not hasattr(DamageNumber, "_font_crit"):
             DamageNumber._font_crit = pygame.font.Font(None, 32)
 
         self._update_image()
@@ -393,7 +395,7 @@ class WarpTransition:
         self.width = screen_width
         self.height = screen_height
         self.active = False
-        self.phase = 'idle'  # idle, warp_in, hold, warp_out
+        self.phase = "idle"  # idle, warp_in, hold, warp_out
         self.timer = 0
         self.max_timer = 0
         self.stars = []
@@ -403,7 +405,7 @@ class WarpTransition:
     def start(self, duration=90):
         """Start warp transition"""
         self.active = True
-        self.phase = 'warp_in'
+        self.phase = "warp_in"
         self.timer = 0
         self.max_timer = duration // 3  # Each phase gets 1/3 of duration
         self._generate_warp_stars()
@@ -417,13 +419,15 @@ class WarpTransition:
             speed = random.uniform(5, 15)
             length = random.uniform(20, 100)
             brightness = random.randint(150, 255)
-            self.stars.append({
-                'angle': angle,
-                'distance': distance,
-                'speed': speed,
-                'length': length,
-                'brightness': brightness
-            })
+            self.stars.append(
+                {
+                    "angle": angle,
+                    "distance": distance,
+                    "speed": speed,
+                    "length": length,
+                    "brightness": brightness,
+                }
+            )
 
     def update(self):
         """Update warp effect"""
@@ -432,32 +436,32 @@ class WarpTransition:
 
         self.timer += 1
 
-        if self.phase == 'warp_in':
+        if self.phase == "warp_in":
             # Stars accelerate toward center
             for star in self.stars:
-                star['distance'] -= star['speed'] * (self.timer / self.max_timer)
-                star['length'] += 2
+                star["distance"] -= star["speed"] * (self.timer / self.max_timer)
+                star["length"] += 2
 
             if self.timer >= self.max_timer:
-                self.phase = 'hold'
+                self.phase = "hold"
                 self.timer = 0
 
-        elif self.phase == 'hold':
+        elif self.phase == "hold":
             # Bright flash at center
             if self.timer >= self.max_timer // 2:
-                self.phase = 'warp_out'
+                self.phase = "warp_out"
                 self.timer = 0
                 self._generate_warp_stars()
 
-        elif self.phase == 'warp_out':
+        elif self.phase == "warp_out":
             # Stars streak outward
             for star in self.stars:
-                star['distance'] += star['speed'] * 2
-                star['length'] = max(10, star['length'] - 1)
+                star["distance"] += star["speed"] * 2
+                star["length"] = max(10, star["length"] - 1)
 
             if self.timer >= self.max_timer:
                 self.active = False
-                self.phase = 'idle'
+                self.phase = "idle"
                 return True  # Transition complete
 
         return False
@@ -470,44 +474,48 @@ class WarpTransition:
         # Create overlay surface
         overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
 
-        if self.phase == 'warp_in':
+        if self.phase == "warp_in":
             # Draw streaking stars toward center
             progress = self.timer / self.max_timer
             for star in self.stars:
-                if star['distance'] > 0:
+                if star["distance"] > 0:
                     # Calculate start and end points
-                    x1 = self.center_x + math.cos(star['angle']) * star['distance']
-                    y1 = self.center_y + math.sin(star['angle']) * star['distance']
-                    x2 = self.center_x + math.cos(star['angle']) * (star['distance'] + star['length'])
-                    y2 = self.center_y + math.sin(star['angle']) * (star['distance'] + star['length'])
+                    x1 = self.center_x + math.cos(star["angle"]) * star["distance"]
+                    y1 = self.center_y + math.sin(star["angle"]) * star["distance"]
+                    x2 = self.center_x + math.cos(star["angle"]) * (
+                        star["distance"] + star["length"]
+                    )
+                    y2 = self.center_y + math.sin(star["angle"]) * (
+                        star["distance"] + star["length"]
+                    )
 
-                    alpha = int(star['brightness'] * progress)
-                    color = (star['brightness'], star['brightness'], 255, alpha)
+                    alpha = int(star["brightness"] * progress)
+                    color = (star["brightness"], star["brightness"], 255, alpha)
                     pygame.draw.line(overlay, color, (int(x1), int(y1)), (int(x2), int(y2)), 2)
 
             # Vignette darkening
             dark_alpha = int(100 * progress)
             pygame.draw.rect(overlay, (0, 0, 0, dark_alpha), (0, 0, self.width, self.height))
 
-        elif self.phase == 'hold':
+        elif self.phase == "hold":
             # Bright flash
             progress = 1 - abs(self.timer / (self.max_timer // 2) - 1)
             flash_alpha = int(255 * progress)
             overlay.fill((255, 255, 255, flash_alpha))
 
-        elif self.phase == 'warp_out':
+        elif self.phase == "warp_out":
             # Stars streak outward
             progress = self.timer / self.max_timer
             fade = 1 - progress
 
             for star in self.stars:
-                x1 = self.center_x + math.cos(star['angle']) * star['distance']
-                y1 = self.center_y + math.sin(star['angle']) * star['distance']
-                x2 = self.center_x + math.cos(star['angle']) * (star['distance'] - star['length'])
-                y2 = self.center_y + math.sin(star['angle']) * (star['distance'] - star['length'])
+                x1 = self.center_x + math.cos(star["angle"]) * star["distance"]
+                y1 = self.center_y + math.sin(star["angle"]) * star["distance"]
+                x2 = self.center_x + math.cos(star["angle"]) * (star["distance"] - star["length"])
+                y2 = self.center_y + math.sin(star["angle"]) * (star["distance"] - star["length"])
 
-                alpha = int(star['brightness'] * fade)
-                color = (star['brightness'], star['brightness'], 255, alpha)
+                alpha = int(star["brightness"] * fade)
+                color = (star["brightness"], star["brightness"], 255, alpha)
                 pygame.draw.line(overlay, color, (int(x1), int(y1)), (int(x2), int(y2)), 2)
 
         surface.blit(overlay, (0, 0))
@@ -525,28 +533,30 @@ class HitMarker:
 
     def add(self, x, y, is_crit=False):
         """Add a hit marker at position"""
-        self.markers.append({
-            'x': x,
-            'y': y,
-            'timer': 8 if not is_crit else 12,
-            'size': 6 if not is_crit else 10,
-            'is_crit': is_crit
-        })
+        self.markers.append(
+            {
+                "x": x,
+                "y": y,
+                "timer": 8 if not is_crit else 12,
+                "size": 6 if not is_crit else 10,
+                "is_crit": is_crit,
+            }
+        )
 
     def update(self):
         """Update all markers"""
-        self.markers = [m for m in self.markers if m['timer'] > 0]
+        self.markers = [m for m in self.markers if m["timer"] > 0]
         for marker in self.markers:
-            marker['timer'] -= 1
+            marker["timer"] -= 1
 
     def draw(self, surface):
         """Draw all active markers"""
         for marker in self.markers:
-            alpha = int(255 * (marker['timer'] / (12 if marker['is_crit'] else 8)))
-            size = marker['size']
-            x, y = int(marker['x']), int(marker['y'])
+            alpha = int(255 * (marker["timer"] / (12 if marker["is_crit"] else 8)))
+            size = marker["size"]
+            x, y = int(marker["x"]), int(marker["y"])
 
-            if marker['is_crit']:
+            if marker["is_crit"]:
                 color = (255, 255, 100, alpha)
             else:
                 color = (255, 255, 255, alpha)
@@ -590,7 +600,7 @@ class ComboEffects:
                     shake = min(8, combo_count // 5)
                     self.shake_offset = (
                         random.randint(-shake, shake),
-                        random.randint(-shake, shake)
+                        random.randint(-shake, shake),
                     )
 
         self.last_combo = combo_count
@@ -607,10 +617,7 @@ class ComboEffects:
         self.target_scale += (1.0 - self.target_scale) * 0.05
 
         # Decay shake
-        self.shake_offset = (
-            int(self.shake_offset[0] * 0.8),
-            int(self.shake_offset[1] * 0.8)
-        )
+        self.shake_offset = (int(self.shake_offset[0] * 0.8), int(self.shake_offset[1] * 0.8))
 
     def draw_pulse(self, surface):
         """Draw screen pulse effect"""
@@ -620,7 +627,9 @@ class ComboEffects:
             alpha = int(self.pulse_intensity * 100)
             for i in range(3):
                 border = 30 + i * 20
-                rect = pygame.Rect(border, border, self.width - border * 2, self.height - border * 2)
+                rect = pygame.Rect(
+                    border, border, self.width - border * 2, self.height - border * 2
+                )
                 pygame.draw.rect(overlay, (255, 100, 50, alpha // (i + 1)), rect, 10 - i * 3)
             surface.blit(overlay, (0, 0))
 

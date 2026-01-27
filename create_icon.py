@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate game icon for Minmatar Rebellion using actual Rifter sprite"""
+
 import math
 import os
 
@@ -19,8 +20,8 @@ def create_icon(size=256):
     # Try to load the actual Rifter sprite
     base_dir = os.path.dirname(__file__)
     sprite_paths = [
-        os.path.join(base_dir, 'assets', 'ship_sprites', 'rifter.png'),
-        os.path.join(base_dir, 'assets', 'eve_renders', 'rifter.png'),
+        os.path.join(base_dir, "assets", "ship_sprites", "rifter.png"),
+        os.path.join(base_dir, "assets", "eve_renders", "rifter.png"),
     ]
 
     rifter_sprite = None
@@ -107,7 +108,9 @@ def create_icon(size=256):
         # === OUTER RING (subtle) ===
         ring_color = (180, 100, 50, 100)
         pygame.draw.circle(surface, ring_color, (cx, cy), int(size * 0.46), max(1, int(2 * scale)))
-        pygame.draw.circle(surface, (100, 60, 40, 60), (cx, cy), int(size * 0.44), max(1, int(1 * scale)))
+        pygame.draw.circle(
+            surface, (100, 60, 40, 60), (cx, cy), int(size * 0.44), max(1, int(1 * scale))
+        )
 
     else:
         # Fallback to procedural icon if sprite not found
@@ -133,7 +136,7 @@ def _create_procedural_icon(size=256):
     for y in range(size):
         alpha = int(180 + 40 * (y / size))
         for x in range(size):
-            dist = math.sqrt((x - cx)**2 + (y - cy)**2)
+            dist = math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
             if dist < size * 0.48:
                 bg_alpha = int(alpha * (1 - dist / (size * 0.6)))
                 surface.set_at((x, y), (15, 15, 25, max(0, bg_alpha)))
@@ -162,9 +165,9 @@ def _create_procedural_icon(size=256):
             glow_surf = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
             pygame.draw.circle(glow_surf, (*engine_glow[:3], alpha), (r, r), r)
             surface.blit(glow_surf, (cx + x_off * scale - r, cy + 85 * scale - r))
-        pygame.draw.circle(surface, engine_core,
-                          (int(cx + x_off * scale), int(cy + 85 * scale)),
-                          int(6 * scale))
+        pygame.draw.circle(
+            surface, engine_core, (int(cx + x_off * scale), int(cy + 85 * scale)), int(6 * scale)
+        )
 
     return surface
 

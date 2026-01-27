@@ -20,17 +20,17 @@ from constants import SCREEN_HEIGHT, SCREEN_WIDTH
 class Asteroid(pygame.sprite.Sprite):
     """Drifting asteroid that damages on contact"""
 
-    def __init__(self, x, y, size='medium'):
+    def __init__(self, x, y, size="medium"):
         super().__init__()
         self.size = size
 
         # Size determines damage and visual
         sizes = {
-            'small': (20, 30, 10),   # (min_radius, max_radius, damage)
-            'medium': (35, 50, 20),
-            'large': (55, 75, 35),
+            "small": (20, 30, 10),  # (min_radius, max_radius, damage)
+            "medium": (35, 50, 20),
+            "large": (55, 75, 35),
         }
-        min_r, max_r, self.damage = sizes.get(size, sizes['medium'])
+        min_r, max_r, self.damage = sizes.get(size, sizes["medium"])
         self.radius = random.randint(min_r, max_r)
 
         # Create asteroid visual
@@ -55,11 +55,13 @@ class Asteroid(pygame.sprite.Sprite):
         cx, cy = self.image.get_width() // 2, self.image.get_height() // 2
 
         # Base color - gray/brown rock
-        base_color = random.choice([
-            (80, 70, 60),   # Brown
-            (70, 70, 75),   # Gray
-            (60, 55, 50),   # Dark brown
-        ])
+        base_color = random.choice(
+            [
+                (80, 70, 60),  # Brown
+                (70, 70, 75),  # Gray
+                (60, 55, 50),  # Dark brown
+            ]
+        )
 
         # Draw irregular polygon for asteroid shape
         num_points = random.randint(7, 12)
@@ -79,9 +81,12 @@ class Asteroid(pygame.sprite.Sprite):
         highlight_color = tuple(min(255, c + 40) for c in base_color)
         for i in range(3):
             offset = i * 3
-            pygame.draw.circle(self.image, (*highlight_color, 80 - i * 20),
-                             (cx - self.radius // 3 + offset, cy - self.radius // 3 + offset),
-                             self.radius // 4 - i * 2)
+            pygame.draw.circle(
+                self.image,
+                (*highlight_color, 80 - i * 20),
+                (cx - self.radius // 3 + offset, cy - self.radius // 3 + offset),
+                self.radius // 4 - i * 2,
+            )
 
         # Add craters
         num_craters = random.randint(2, 5)
@@ -129,10 +134,10 @@ class SolarFlare(pygame.sprite.Sprite):
         self.damage = 15  # Damage dealt during flare
 
         # Timing
-        self.warning_duration = 90   # 1.5 seconds warning
-        self.charge_duration = 30    # 0.5 seconds charge
-        self.flare_duration = 20     # Brief intense flash
-        self.fade_duration = 30      # Fade out
+        self.warning_duration = 90  # 1.5 seconds warning
+        self.charge_duration = 30  # 0.5 seconds charge
+        self.flare_duration = 20  # Brief intense flash
+        self.fade_duration = 30  # Fade out
 
         self.intensity = 0
         self.warning_flash = 0
@@ -150,7 +155,11 @@ class SolarFlare(pygame.sprite.Sprite):
                 bar_height = 20
                 warning_color = (255, 200, 50, 150)
                 pygame.draw.rect(self.image, warning_color, (0, 0, SCREEN_WIDTH, bar_height))
-                pygame.draw.rect(self.image, warning_color, (0, SCREEN_HEIGHT - bar_height, SCREEN_WIDTH, bar_height))
+                pygame.draw.rect(
+                    self.image,
+                    warning_color,
+                    (0, SCREEN_HEIGHT - bar_height, SCREEN_WIDTH, bar_height),
+                )
 
                 # Warning text
                 font = pygame.font.Font(None, 48)
@@ -312,11 +321,13 @@ class NebulaCloud(pygame.sprite.Sprite):
         cx, cy = self.image.get_width() // 2, self.image.get_height() // 2
 
         # Base color - bluish or reddish nebula
-        base_hue = random.choice([
-            (60, 80, 120),   # Blue nebula
-            (120, 60, 80),   # Red nebula
-            (80, 100, 80),   # Green nebula
-        ])
+        base_hue = random.choice(
+            [
+                (60, 80, 120),  # Blue nebula
+                (120, 60, 80),  # Red nebula
+                (80, 100, 80),  # Green nebula
+            ]
+        )
 
         # Multiple overlapping ellipses for cloud effect
         for _ in range(8):
@@ -332,8 +343,9 @@ class NebulaCloud(pygame.sprite.Sprite):
             ellipse_surf = pygame.Surface((size_x, size_y), pygame.SRCALPHA)
             pygame.draw.ellipse(ellipse_surf, (*color, alpha), (0, 0, size_x, size_y))
 
-            self.image.blit(ellipse_surf,
-                          (cx + offset_x - size_x // 2, cy + offset_y - size_y // 2))
+            self.image.blit(
+                ellipse_surf, (cx + offset_x - size_x // 2, cy + offset_y - size_y // 2)
+            )
 
         # Add some bright spots (stars within nebula)
         for _ in range(5):
@@ -438,7 +450,9 @@ class ProximityMine(pygame.sprite.Sprite):
             progress = self.timer / self.explosion_duration
             exp_radius = int(self.explosion_radius * progress)
 
-            self.image = pygame.Surface((self.explosion_radius * 2 + 20, self.explosion_radius * 2 + 20), pygame.SRCALPHA)
+            self.image = pygame.Surface(
+                (self.explosion_radius * 2 + 20, self.explosion_radius * 2 + 20), pygame.SRCALPHA
+            )
             cx, cy = self.image.get_width() // 2, self.image.get_height() // 2
 
             # Explosion rings
@@ -510,19 +524,19 @@ class HazardManager:
         self.mine_timer = 0
 
         # Spawn rates (frames between spawns) - adjusted by stage
-        self.asteroid_rate = 180   # Every 3 seconds
-        self.flare_rate = 1800     # Every 30 seconds
-        self.bubble_rate = 600     # Every 10 seconds
-        self.nebula_rate = 400     # Every ~7 seconds
-        self.mine_rate = 300       # Every 5 seconds
+        self.asteroid_rate = 180  # Every 3 seconds
+        self.flare_rate = 1800  # Every 30 seconds
+        self.bubble_rate = 600  # Every 10 seconds
+        self.nebula_rate = 400  # Every ~7 seconds
+        self.mine_rate = 300  # Every 5 seconds
 
         # Which hazards are active (set by stage)
         self.hazards_enabled = {
-            'asteroids': False,
-            'flares': False,
-            'bubbles': False,
-            'nebulae': False,
-            'mines': False
+            "asteroids": False,
+            "flares": False,
+            "bubbles": False,
+            "nebulae": False,
+            "mines": False,
         }
 
     def set_stage_hazards(self, stage_index):
@@ -533,19 +547,19 @@ class HazardManager:
 
         # Stage-specific hazards
         if stage_index == 0:  # Asteroid Belt Escape
-            self.hazards_enabled['asteroids'] = True
+            self.hazards_enabled["asteroids"] = True
         elif stage_index == 1:  # Patrol Interdiction
-            self.hazards_enabled['asteroids'] = True
-            self.hazards_enabled['mines'] = True
+            self.hazards_enabled["asteroids"] = True
+            self.hazards_enabled["mines"] = True
         elif stage_index == 2:  # Slave Colony Liberation
-            self.hazards_enabled['nebulae'] = True
+            self.hazards_enabled["nebulae"] = True
         elif stage_index == 3:  # Gate Assault
-            self.hazards_enabled['bubbles'] = True
-            self.hazards_enabled['mines'] = True
+            self.hazards_enabled["bubbles"] = True
+            self.hazards_enabled["mines"] = True
         elif stage_index == 4:  # Final Push
-            self.hazards_enabled['asteroids'] = True
-            self.hazards_enabled['flares'] = True
-            self.hazards_enabled['bubbles'] = True
+            self.hazards_enabled["asteroids"] = True
+            self.hazards_enabled["flares"] = True
+            self.hazards_enabled["bubbles"] = True
 
     def update(self, player_rect):
         """Update all hazards and check collisions"""
@@ -565,23 +579,23 @@ class HazardManager:
 
     def _spawn_hazards(self):
         """Spawn hazards based on timers and enabled flags"""
-        if self.hazards_enabled['asteroids']:
+        if self.hazards_enabled["asteroids"]:
             self.asteroid_timer += 1
             if self.asteroid_timer >= self.asteroid_rate:
                 self.asteroid_timer = 0
-                size = random.choice(['small', 'small', 'medium', 'medium', 'large'])
+                size = random.choice(["small", "small", "medium", "medium", "large"])
                 x = random.randint(50, SCREEN_WIDTH - 50)
                 asteroid = Asteroid(x, -50, size)
                 self.asteroids.add(asteroid)
 
-        if self.hazards_enabled['flares']:
+        if self.hazards_enabled["flares"]:
             self.flare_timer += 1
             if self.flare_timer >= self.flare_rate:
                 self.flare_timer = 0
                 flare = SolarFlare()
                 self.flares.add(flare)
 
-        if self.hazards_enabled['bubbles']:
+        if self.hazards_enabled["bubbles"]:
             self.bubble_timer += 1
             if self.bubble_timer >= self.bubble_rate:
                 self.bubble_timer = 0
@@ -590,7 +604,7 @@ class HazardManager:
                 bubble = WarpBubble(x, y)
                 self.bubbles.add(bubble)
 
-        if self.hazards_enabled['nebulae']:
+        if self.hazards_enabled["nebulae"]:
             self.nebula_timer += 1
             if self.nebula_timer >= self.nebula_rate:
                 self.nebula_timer = 0
@@ -598,7 +612,7 @@ class HazardManager:
                 nebula = NebulaCloud(x, -100)
                 self.nebulae.add(nebula)
 
-        if self.hazards_enabled['mines']:
+        if self.hazards_enabled["mines"]:
             self.mine_timer += 1
             if self.mine_timer >= self.mine_rate:
                 self.mine_timer = 0

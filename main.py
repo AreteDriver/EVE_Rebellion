@@ -22,8 +22,9 @@ import os
 import sys
 
 # Show platform info if debug mode is requested
-if os.environ.get('EVE_REBELLION_DEBUG') or '--debug' in sys.argv:
+if os.environ.get("EVE_REBELLION_DEBUG") or "--debug" in sys.argv:
     from platform_init import init_platform, print_platform_info
+
     init_platform()
     print_platform_info()
 

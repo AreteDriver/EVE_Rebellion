@@ -1,4 +1,5 @@
 """Procedural sound effects for Minmatar Rebellion"""
+
 import io
 
 import numpy as np
@@ -24,72 +25,72 @@ class SoundGenerator:
     def _generate_all_sounds(self):
         """Generate all game sound effects"""
         # Player weapons
-        self.sounds['autocannon'] = self._make_autocannon()
-        self.sounds['rocket'] = self._make_rocket()
+        self.sounds["autocannon"] = self._make_autocannon()
+        self.sounds["rocket"] = self._make_rocket()
 
         # Ammo swap
-        self.sounds['ammo_switch'] = self._make_ammo_switch()
+        self.sounds["ammo_switch"] = self._make_ammo_switch()
 
         # Enemy laser
-        self.sounds['laser'] = self._make_laser()
+        self.sounds["laser"] = self._make_laser()
 
         # Explosions
-        self.sounds['explosion_small'] = self._make_explosion(0.2, 200)
-        self.sounds['explosion_medium'] = self._make_explosion(0.4, 150)
-        self.sounds['explosion_large'] = self._make_explosion(0.7, 100)
+        self.sounds["explosion_small"] = self._make_explosion(0.2, 200)
+        self.sounds["explosion_medium"] = self._make_explosion(0.4, 150)
+        self.sounds["explosion_large"] = self._make_explosion(0.7, 100)
 
         # Pickups
-        self.sounds['pickup_refugee'] = self._make_pickup_refugee()
-        self.sounds['pickup_powerup'] = self._make_pickup_powerup()
+        self.sounds["pickup_refugee"] = self._make_pickup_refugee()
+        self.sounds["pickup_powerup"] = self._make_pickup_powerup()
 
         # UI
-        self.sounds['menu_select'] = self._make_menu_select()
-        self.sounds['purchase'] = self._make_purchase()
-        self.sounds['error'] = self._make_error()
+        self.sounds["menu_select"] = self._make_menu_select()
+        self.sounds["purchase"] = self._make_purchase()
+        self.sounds["error"] = self._make_error()
 
         # Player damage
-        self.sounds['shield_hit'] = self._make_shield_hit()
-        self.sounds['armor_hit'] = self._make_armor_hit()
-        self.sounds['hull_hit'] = self._make_hull_hit()
+        self.sounds["shield_hit"] = self._make_shield_hit()
+        self.sounds["armor_hit"] = self._make_armor_hit()
+        self.sounds["hull_hit"] = self._make_hull_hit()
 
         # Alerts
-        self.sounds['warning'] = self._make_warning()
-        self.sounds['wave_start'] = self._make_wave_start()
-        self.sounds['stage_complete'] = self._make_stage_complete()
+        self.sounds["warning"] = self._make_warning()
+        self.sounds["wave_start"] = self._make_wave_start()
+        self.sounds["stage_complete"] = self._make_stage_complete()
 
         # Wolf upgrade
-        self.sounds['upgrade'] = self._make_upgrade()
+        self.sounds["upgrade"] = self._make_upgrade()
 
         # Berserk system sounds
-        self.sounds['berserk_extreme'] = self._make_berserk_extreme()
-        self.sounds['berserk_close'] = self._make_berserk_close()
-        self.sounds['combo'] = self._make_combo()
+        self.sounds["berserk_extreme"] = self._make_berserk_extreme()
+        self.sounds["berserk_close"] = self._make_berserk_close()
+        self.sounds["combo"] = self._make_combo()
 
         # Boss sounds
-        self.sounds['boss_entrance'] = self._make_boss_entrance()
-        self.sounds['boss_death'] = self._make_boss_death()
-        self.sounds['boss_attack'] = self._make_boss_attack()
-        self.sounds['boss_summon'] = self._make_boss_summon()
-        self.sounds['bomb'] = self._make_bomb()
+        self.sounds["boss_entrance"] = self._make_boss_entrance()
+        self.sounds["boss_death"] = self._make_boss_death()
+        self.sounds["boss_attack"] = self._make_boss_attack()
+        self.sounds["boss_summon"] = self._make_boss_summon()
+        self.sounds["bomb"] = self._make_bomb()
 
         # Alert sounds
-        self.sounds['low_health'] = self._make_low_health()
-        self.sounds['shield_down'] = self._make_shield_down()
+        self.sounds["low_health"] = self._make_low_health()
+        self.sounds["shield_down"] = self._make_shield_down()
 
         # Victory/defeat
-        self.sounds['victory'] = self._make_victory_fanfare()
-        self.sounds['defeat'] = self._make_defeat()
+        self.sounds["victory"] = self._make_victory_fanfare()
+        self.sounds["defeat"] = self._make_defeat()
 
         # Unique powerup pickup sounds
-        self.sounds['powerup_nanite'] = self._make_powerup_nanite()
-        self.sounds['powerup_capacitor'] = self._make_powerup_capacitor()
-        self.sounds['powerup_overdrive'] = self._make_powerup_overdrive()
-        self.sounds['powerup_shield'] = self._make_powerup_shield()
-        self.sounds['powerup_damage'] = self._make_powerup_damage()
-        self.sounds['powerup_rapid'] = self._make_powerup_rapid()
-        self.sounds['powerup_bomb'] = self._make_powerup_bomb()
-        self.sounds['powerup_magnet'] = self._make_powerup_magnet()
-        self.sounds['powerup_invuln'] = self._make_powerup_invuln()
+        self.sounds["powerup_nanite"] = self._make_powerup_nanite()
+        self.sounds["powerup_capacitor"] = self._make_powerup_capacitor()
+        self.sounds["powerup_overdrive"] = self._make_powerup_overdrive()
+        self.sounds["powerup_shield"] = self._make_powerup_shield()
+        self.sounds["powerup_damage"] = self._make_powerup_damage()
+        self.sounds["powerup_rapid"] = self._make_powerup_rapid()
+        self.sounds["powerup_bomb"] = self._make_powerup_bomb()
+        self.sounds["powerup_magnet"] = self._make_powerup_magnet()
+        self.sounds["powerup_invuln"] = self._make_powerup_invuln()
 
     def _numpy_to_sound(self, samples):
         """Convert numpy array to pygame Sound"""
@@ -112,12 +113,14 @@ class SoundGenerator:
         release_samples = int(release * length)
         sustain_samples = length - attack_samples - decay_samples - release_samples
 
-        envelope = np.concatenate([
-            np.linspace(0, 1, attack_samples),
-            np.linspace(1, sustain, decay_samples),
-            np.ones(sustain_samples) * sustain,
-            np.linspace(sustain, 0, release_samples)
-        ])
+        envelope = np.concatenate(
+            [
+                np.linspace(0, 1, attack_samples),
+                np.linspace(1, sustain, decay_samples),
+                np.ones(sustain_samples) * sustain,
+                np.linspace(sustain, 0, release_samples),
+            ]
+        )
 
         # Pad or trim to match sample length
         if len(envelope) < length:
@@ -145,7 +148,7 @@ class SoundGenerator:
 
         # Heavy mechanical noise burst
         noise = np.random.uniform(-0.5, 0.5, len(t))
-        noise_filtered = np.convolve(noise, np.ones(20)/20, mode='same')
+        noise_filtered = np.convolve(noise, np.ones(20) / 20, mode="same")
         wave += noise_filtered * np.exp(-t * 35) * 0.4
         wave += crack
 
@@ -170,7 +173,7 @@ class SoundGenerator:
 
         # Thrust noise (white noise filtered)
         noise = np.random.uniform(-0.6, 0.6, len(t))
-        noise_filtered = np.convolve(noise, np.ones(30)/30, mode='same')
+        noise_filtered = np.convolve(noise, np.ones(30) / 30, mode="same")
         thrust = noise_filtered * np.exp(-t * 5) * 0.45
 
         wave = ignition + whoosh + thrust
@@ -204,7 +207,7 @@ class SoundGenerator:
         freq = 800
         wave = np.sin(2 * np.pi * freq * t) * 0.35
         wave += np.sin(2 * np.pi * freq * 1.5 * t) * 0.2  # Perfect fifth
-        wave += np.sin(2 * np.pi * freq * 2 * t) * 0.15   # Octave
+        wave += np.sin(2 * np.pi * freq * 2 * t) * 0.15  # Octave
 
         # Slight shimmer/pulse
         shimmer = 1 + 0.15 * np.sin(2 * np.pi * 50 * t)
@@ -231,7 +234,7 @@ class SoundGenerator:
 
         # Heavy noise component
         noise = np.random.uniform(-1, 1, len(t))
-        noise_filtered = np.convolve(noise, np.ones(50)/50, mode='same')
+        noise_filtered = np.convolve(noise, np.ones(50) / 50, mode="same")
         wave += noise_filtered * np.exp(-t * 8) * 0.6
 
         # Envelope with punch
@@ -527,7 +530,7 @@ class SoundGenerator:
 
         # Heavy noise burst
         noise = np.random.uniform(-1, 1, len(t))
-        noise_filtered = np.convolve(noise, np.ones(100)/100, mode='same')
+        noise_filtered = np.convolve(noise, np.ones(100) / 100, mode="same")
         wave += noise_filtered * np.exp(-t * 4) * 0.6
 
         # Add some metallic debris sounds
@@ -594,7 +597,7 @@ class SoundGenerator:
 
         # Heavy noise burst
         noise = np.random.uniform(-1, 1, len(t))
-        noise_filtered = np.convolve(noise, np.ones(150)/150, mode='same')
+        noise_filtered = np.convolve(noise, np.ones(150) / 150, mode="same")
         wave += noise_filtered * np.exp(-t * 3) * 0.5
 
         # High frequency sizzle
@@ -661,7 +664,7 @@ class SoundGenerator:
                 note = np.sin(2 * np.pi * freq * segment_t) * 0.25
                 note += np.sin(2 * np.pi * freq * 1.5 * segment_t) * 0.12
                 note *= np.exp(-segment_t * 2)
-                wave[start_idx:start_idx + len(note)] += note[:len(wave) - start_idx]
+                wave[start_idx : start_idx + len(note)] += note[: len(wave) - start_idx]
 
         wave = np.clip(wave, -1, 1) * 0.5
         return self._numpy_to_sound(wave)
@@ -682,7 +685,7 @@ class SoundGenerator:
                 note = np.sin(2 * np.pi * freq * segment_t) * 0.3
                 note *= np.exp(-segment_t * 4)
                 end_idx = min(start_idx + len(note), len(wave))
-                wave[start_idx:end_idx] += note[:end_idx - start_idx]
+                wave[start_idx:end_idx] += note[: end_idx - start_idx]
 
         wave = np.clip(wave, -1, 1) * 0.4
         return self._numpy_to_sound(wave)
@@ -732,7 +735,7 @@ class SoundGenerator:
 
         # Wind noise
         noise = np.random.uniform(-0.3, 0.3, len(t))
-        noise_filtered = np.convolve(noise, np.ones(80)/80, mode='same')
+        noise_filtered = np.convolve(noise, np.ones(80) / 80, mode="same")
         wave += noise_filtered * 0.4
 
         envelope = (1 - np.exp(-t * 40)) * (1 - t / duration)
@@ -772,7 +775,7 @@ class SoundGenerator:
 
         # Punch
         punch = np.exp(-t * 25) * 0.5
-        wave *= (0.5 + punch)
+        wave *= 0.5 + punch
 
         envelope = (1 - np.exp(-t * 50)) * np.exp(-t * 5)
         wave *= envelope * 0.5
@@ -849,8 +852,8 @@ class SoundGenerator:
 
         # Majestic chord (golden/powerful feel)
         wave = np.sin(2 * np.pi * 440 * t) * 0.25  # A
-        wave += np.sin(2 * np.pi * 550 * t) * 0.2   # C#
-        wave += np.sin(2 * np.pi * 660 * t) * 0.2   # E
+        wave += np.sin(2 * np.pi * 550 * t) * 0.2  # C#
+        wave += np.sin(2 * np.pi * 660 * t) * 0.2  # E
         wave += np.sin(2 * np.pi * 880 * t) * 0.15  # A octave
 
         # Shimmering effect
@@ -903,7 +906,7 @@ class MusicGenerator:
         # Moving average filter
         window_size = max(1, int(1.0 / cutoff_ratio))
         kernel = np.ones(window_size) / window_size
-        return np.convolve(wave, kernel, mode='same')
+        return np.convolve(wave, kernel, mode="same")
 
     def _add_reverb(self, wave, decay=0.4, delay_samples=None):
         """Add reverb/echo effect"""
@@ -914,7 +917,7 @@ class MusicGenerator:
             delayed = np.zeros_like(wave)
             shift = delay_samples * i
             if shift < len(wave):
-                delayed[shift:] = wave[:-shift] * (decay ** i)
+                delayed[shift:] = wave[:-shift] * (decay**i)
                 result += delayed
         return result / 2
 
@@ -1023,10 +1026,18 @@ class MusicGenerator:
             bpm = 75
             root = 41.2  # E1
             bass_pattern = [
-                (0, 2), (0, 1), (5, 1),  # E, E, A
-                (7, 2), (5, 1), (3, 1),  # B, A, G
-                (0, 2), (0, 1), (-2, 1),  # E, E, D
-                (0, 2), (3, 1), (5, 1),  # E, G, A
+                (0, 2),
+                (0, 1),
+                (5, 1),  # E, E, A
+                (7, 2),
+                (5, 1),
+                (3, 1),  # B, A, G
+                (0, 2),
+                (0, 1),
+                (-2, 1),  # E, E, D
+                (0, 2),
+                (3, 1),
+                (5, 1),  # E, G, A
             ]
             chord = [164.81, 196.00, 246.94, 329.63]  # E minor 7
             arp_notes = [329.63, 392.00, 493.88, 659.26]
@@ -1035,10 +1046,23 @@ class MusicGenerator:
             bpm = 82
             root = 36.71  # D1
             bass_pattern = [
-                (0, 1), (0, 0.5), (12, 0.5), (10, 1), (7, 1),
-                (5, 1), (5, 0.5), (7, 0.5), (5, 1), (3, 1),
-                (0, 2), (0, 1), (5, 1),
-                (7, 1), (10, 1), (12, 1), (10, 1),
+                (0, 1),
+                (0, 0.5),
+                (12, 0.5),
+                (10, 1),
+                (7, 1),
+                (5, 1),
+                (5, 0.5),
+                (7, 0.5),
+                (5, 1),
+                (3, 1),
+                (0, 2),
+                (0, 1),
+                (5, 1),
+                (7, 1),
+                (10, 1),
+                (12, 1),
+                (10, 1),
             ]
             chord = [146.83, 174.61, 220.00, 293.66]  # D minor 7
             arp_notes = [293.66, 349.23, 440.00, 523.25]
@@ -1047,10 +1071,19 @@ class MusicGenerator:
             bpm = 70
             root = 43.65  # F1
             bass_pattern = [
-                (0, 2), (0, 1), (0, 0.5), (3, 0.5),
-                (5, 2), (3, 1), (0, 1),
-                (-2, 2), (0, 1), (3, 1),
-                (5, 1), (3, 1), (0, 2),
+                (0, 2),
+                (0, 1),
+                (0, 0.5),
+                (3, 0.5),
+                (5, 2),
+                (3, 1),
+                (0, 1),
+                (-2, 2),
+                (0, 1),
+                (3, 1),
+                (5, 1),
+                (3, 1),
+                (0, 2),
             ]
             chord = [174.61, 207.65, 261.63, 349.23]  # F major 7
             arp_notes = [523.25, 659.26, 783.99, 1046.50]
@@ -1059,10 +1092,24 @@ class MusicGenerator:
             bpm = 90
             root = 32.70  # C1
             bass_pattern = [
-                (0, 0.5), (0, 0.5), (12, 0.5), (0, 0.5),
-                (10, 0.5), (0, 0.5), (7, 0.5), (0, 0.5),
-                (5, 1), (7, 1), (10, 1), (12, 1),
-                (0, 0.5), (0, 0.5), (0, 0.5), (15, 0.5), (12, 1), (10, 1),
+                (0, 0.5),
+                (0, 0.5),
+                (12, 0.5),
+                (0, 0.5),
+                (10, 0.5),
+                (0, 0.5),
+                (7, 0.5),
+                (0, 0.5),
+                (5, 1),
+                (7, 1),
+                (10, 1),
+                (12, 1),
+                (0, 0.5),
+                (0, 0.5),
+                (0, 0.5),
+                (15, 0.5),
+                (12, 1),
+                (10, 1),
             ]
             chord = [130.81, 155.56, 196.00, 261.63]  # C minor 7
             arp_notes = [261.63, 311.13, 392.00, 466.16, 523.25]
@@ -1071,10 +1118,26 @@ class MusicGenerator:
             bpm = 95
             root = 27.50  # A0 - super deep
             bass_pattern = [
-                (0, 1), (12, 0.5), (0, 0.5), (7, 1), (5, 1),
-                (0, 0.5), (0, 0.5), (12, 0.5), (10, 0.5), (7, 1), (5, 1),
-                (3, 1), (5, 1), (7, 2),
-                (0, 0.5), (12, 0.5), (0, 0.5), (12, 0.5), (10, 1), (7, 1),
+                (0, 1),
+                (12, 0.5),
+                (0, 0.5),
+                (7, 1),
+                (5, 1),
+                (0, 0.5),
+                (0, 0.5),
+                (12, 0.5),
+                (10, 0.5),
+                (7, 1),
+                (5, 1),
+                (3, 1),
+                (5, 1),
+                (7, 2),
+                (0, 0.5),
+                (12, 0.5),
+                (0, 0.5),
+                (12, 0.5),
+                (10, 1),
+                (7, 1),
             ]
             chord = [110.00, 130.81, 164.81, 220.00]  # A minor 7
             arp_notes = [440.00, 523.25, 659.26, 783.99, 880.00]
@@ -1104,7 +1167,7 @@ class MusicGenerator:
             local_t = t[mask] - beat_time
             if len(local_t) > 3:  # Need enough samples for filter
                 noise = np.random.uniform(-1, 1, len(local_t))
-                noise = self._lowpass_filter(noise, 0.3)[:len(local_t)]
+                noise = self._lowpass_filter(noise, 0.3)[: len(local_t)]
                 hat_env = np.exp(-local_t * 40)
                 hihat[mask] += noise * hat_env * 0.08
 
@@ -1145,15 +1208,16 @@ class MusicGenerator:
 
             # Save as WAV in memory
             import wave as wave_module
+
             buffer = io.BytesIO()
-            with wave_module.open(buffer, 'wb') as wf:
+            with wave_module.open(buffer, "wb") as wf:
                 wf.setnchannels(2)
                 wf.setsampwidth(2)
                 wf.setframerate(self.sample_rate)
                 wf.writeframes(stereo.tobytes())
 
             buffer.seek(0)
-            pygame.mixer.music.load(buffer, 'wav')
+            pygame.mixer.music.load(buffer, "wav")
             pygame.mixer.music.set_volume(0.4)
             pygame.mixer.music.play(-1)  # Loop forever
             self.playing = True

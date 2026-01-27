@@ -1,4 +1,5 @@
 """SVG ship loader for Minmatar Rebellion"""
+
 import os
 from io import BytesIO
 
@@ -10,7 +11,7 @@ class ShipImageCache:
 
     def __init__(self):
         self.cache = {}
-        self.svg_path = os.path.join(os.path.dirname(__file__), 'svg', 'top')
+        self.svg_path = os.path.join(os.path.dirname(__file__), "svg", "top")
         self.available = os.path.exists(self.svg_path)
 
         if not self.available:
@@ -41,10 +42,10 @@ class ShipImageCache:
         if not self.available:
             return None
 
-        svg_file = os.path.join(self.svg_path, f'{ship_name}.svg')
+        svg_file = os.path.join(self.svg_path, f"{ship_name}.svg")
         if not os.path.exists(svg_file):
             # Try with capital first letter (some files use this)
-            svg_file = os.path.join(self.svg_path, f'{ship_name.capitalize()}.svg')
+            svg_file = os.path.join(self.svg_path, f"{ship_name.capitalize()}.svg")
             if not os.path.exists(svg_file):
                 return None
 
@@ -72,15 +73,11 @@ class ShipImageCache:
             import cairosvg
 
             # Convert SVG to PNG in memory
-            png_data = cairosvg.svg2png(
-                url=svg_file,
-                output_width=width,
-                output_height=height
-            )
+            png_data = cairosvg.svg2png(url=svg_file, output_width=width, output_height=height)
 
             # Load PNG data into pygame surface
             png_io = BytesIO(png_data)
-            surface = pygame.image.load(png_io, 'PNG')
+            surface = pygame.image.load(png_io, "PNG")
 
             # Apply color tint if specified
             if color:
@@ -174,8 +171,11 @@ def check_svg_support():
     """Check if SVG loading libraries are available"""
     try:
         import importlib.util
-        return (importlib.util.find_spec("cairosvg") is not None and
-                importlib.util.find_spec("PIL") is not None)
+
+        return (
+            importlib.util.find_spec("cairosvg") is not None
+            and importlib.util.find_spec("PIL") is not None
+        )
     except Exception:
         return False
 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
         print()
 
         # Test loading some ships
-        test_ships = ['rifter', 'wolf', 'apocalypse', 'abaddon']
+        test_ships = ["rifter", "wolf", "apocalypse", "abaddon"]
 
         for ship in test_ships:
             surface = cache.load_ship(ship, 64, 64)

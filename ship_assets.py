@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 try:
     import pygame
+
     PYGAME_AVAILABLE = True
 except ImportError:
     PYGAME_AVAILABLE = False
@@ -83,16 +84,13 @@ class ShipAssetManager:
             print(f"[Download] Fetching {ship_name} from {url}")
 
             # Create request with user agent
-            request = urllib.request.Request(
-                url,
-                headers={'User-Agent': 'EVE-Rebellion-Game/1.0'}
-            )
+            request = urllib.request.Request(url, headers={"User-Agent": "EVE-Rebellion-Game/1.0"})
 
             with urllib.request.urlopen(request, timeout=30) as response:
                 data = response.read()
 
             # Save to cache
-            with open(cache_path, 'wb') as f:
+            with open(cache_path, "wb") as f:
                 f.write(data)
 
             print(f"[Download] Saved {ship_name} to {cache_path}")
@@ -117,7 +115,9 @@ class ShipAssetManager:
                 results[type_id] = path
         return results
 
-    def load_and_rotate(self, type_id: int, rotation: float = ROTATION_ANGLE) -> Optional['pygame.Surface']:
+    def load_and_rotate(
+        self, type_id: int, rotation: float = ROTATION_ANGLE
+    ) -> Optional["pygame.Surface"]:
         """
         Load a ship image and rotate it for top-down view.
 
@@ -157,8 +157,9 @@ class ShipAssetManager:
             print(f"[Error] Failed to load/rotate ship {type_id}: {e}")
             return None
 
-    def create_sprite_sheet(self, type_id: int, frames: int = 8,
-                           effect_type: str = "pulse") -> Optional['pygame.Surface']:
+    def create_sprite_sheet(
+        self, type_id: int, frames: int = 8, effect_type: str = "pulse"
+    ) -> Optional["pygame.Surface"]:
         """
         Create a sprite sheet with animation frames for a ship.
 
@@ -212,7 +213,7 @@ class ShipAssetManager:
         self.sprite_sheets[type_id] = sheet
         return sheet
 
-    def generate_thrust_effects(self, type_id: int, frames: int = 6) -> List['pygame.Surface']:
+    def generate_thrust_effects(self, type_id: int, frames: int = 6) -> List["pygame.Surface"]:
         """
         Generate thrust/engine glow effects for a ship.
 
@@ -274,35 +275,37 @@ class ShipAssetManager:
                 alpha = int((200 - j * 50) * intensity)
 
                 # Draw elongated thrust cone
-                self._draw_thrust_plume(thrust, cx, base_y, plume_width,
-                                       plume_height, color, alpha)
+                self._draw_thrust_plume(thrust, cx, base_y, plume_width, plume_height, color, alpha)
 
             # Add glow around thrust
             glow_radius = int(20 * intensity)
             glow_color = thrust_colors[0]
             glow_alpha = int(80 * intensity)
-            self._draw_glow_circle(thrust, cx, base_y + 5, glow_radius,
-                                  glow_color, glow_alpha)
+            self._draw_glow_circle(thrust, cx, base_y + 5, glow_radius, glow_color, glow_alpha)
 
             thrust_frames.append(thrust)
 
         # Save thrust frames
         for i, frame in enumerate(thrust_frames):
-            effect_path = self.cache_dir / "effects" / f"{ALL_SHIPS.get(type_id, type_id).lower()}_thrust_{i}.png"
+            effect_path = (
+                self.cache_dir
+                / "effects"
+                / f"{ALL_SHIPS.get(type_id, type_id).lower()}_thrust_{i}.png"
+            )
             pygame.image.save(frame, str(effect_path))
 
         self.thrust_effects[type_id] = thrust_frames
         return thrust_frames
 
-    def _adjust_brightness(self, surface: 'pygame.Surface', factor: float) -> 'pygame.Surface':
+    def _adjust_brightness(self, surface: "pygame.Surface", factor: float) -> "pygame.Surface":
         """Adjust the brightness of a surface."""
         result = surface.copy()
         arr = pygame.surfarray.pixels3d(result)
-        arr[:] = (arr * factor).clip(0, 255).astype('uint8')
+        arr[:] = (arr * factor).clip(0, 255).astype("uint8")
         del arr
         return result
 
-    def _add_glow(self, surface: 'pygame.Surface', intensity: int) -> 'pygame.Surface':
+    def _add_glow(self, surface: "pygame.Surface", intensity: int) -> "pygame.Surface":
         """Add an outer glow effect to a surface."""
         width, height = surface.get_size()
         result = pygame.Surface((width + 20, height + 20), pygame.SRCALPHA)
@@ -322,7 +325,7 @@ class ShipAssetManager:
 
         return result
 
-    def _add_shield_effect(self, surface: 'pygame.Surface', alpha: int) -> 'pygame.Surface':
+    def _add_shield_effect(self, surface: "pygame.Surface", alpha: int) -> "pygame.Surface":
         """Add a shield shimmer effect."""
         result = surface.copy()
         width, height = result.get_size()
@@ -340,9 +343,16 @@ class ShipAssetManager:
         result.blit(shield, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
         return result
 
-    def _draw_thrust_plume(self, surface: 'pygame.Surface', x: int, y: int,
-                          width: int, height: int, color: Tuple[int, int, int],
-                          alpha: int):
+    def _draw_thrust_plume(
+        self,
+        surface: "pygame.Surface",
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        color: Tuple[int, int, int],
+        alpha: int,
+    ):
         """Draw a thrust plume effect."""
         plume = pygame.Surface((width * 2, height), pygame.SRCALPHA)
 
@@ -357,13 +367,20 @@ class ShipAssetManager:
                     plume,
                     (*color, current_alpha),
                     (width - current_width, i),
-                    (width + current_width, i)
+                    (width + current_width, i),
                 )
 
         surface.blit(plume, (x - width, y))
 
-    def _draw_glow_circle(self, surface: 'pygame.Surface', x: int, y: int,
-                         radius: int, color: Tuple[int, int, int], alpha: int):
+    def _draw_glow_circle(
+        self,
+        surface: "pygame.Surface",
+        x: int,
+        y: int,
+        radius: int,
+        color: Tuple[int, int, int],
+        alpha: int,
+    ):
         """Draw a glowing circle effect."""
         glow = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
 
@@ -374,7 +391,7 @@ class ShipAssetManager:
 
         surface.blit(glow, (x - radius, y - radius), special_flags=pygame.BLEND_RGBA_ADD)
 
-    def get_ship(self, type_id: int, with_thrust: bool = False) -> Optional['pygame.Surface']:
+    def get_ship(self, type_id: int, with_thrust: bool = False) -> Optional["pygame.Surface"]:
         """
         Get a ship surface, loading/downloading if necessary.
 
@@ -396,7 +413,7 @@ class ShipAssetManager:
 
         return self.loaded_ships.get(type_id)
 
-    def get_thrust_frame(self, type_id: int, frame: int) -> Optional['pygame.Surface']:
+    def get_thrust_frame(self, type_id: int, frame: int) -> Optional["pygame.Surface"]:
         """Get a specific thrust animation frame."""
         if type_id not in self.thrust_effects:
             self.generate_thrust_effects(type_id)
@@ -454,7 +471,7 @@ class ShipAssetManager:
 def get_asset_manager() -> ShipAssetManager:
     """Get or create the global ship asset manager."""
     global _asset_manager
-    if '_asset_manager' not in globals():
+    if "_asset_manager" not in globals():
         _asset_manager = ShipAssetManager()
     return _asset_manager
 
@@ -470,7 +487,7 @@ def process_all() -> Dict[int, bool]:
     return get_asset_manager().process_all_ships()
 
 
-def get_ship(type_id: int, with_thrust: bool = False) -> Optional['pygame.Surface']:
+def get_ship(type_id: int, with_thrust: bool = False) -> Optional["pygame.Surface"]:
     """Get a ship surface by type ID."""
     return get_asset_manager().get_ship(type_id, with_thrust)
 
@@ -481,7 +498,7 @@ def init_headless():
         return False
 
     # Use dummy video driver for headless operation
-    os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     pygame.init()
 
     # Create a small dummy display for image operations

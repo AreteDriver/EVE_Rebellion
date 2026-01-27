@@ -20,6 +20,7 @@ class EnemyPattern(Enum):
     PINCER = "pincer"
     SCREEN_CLEAR = "screen_clear"
 
+
 class EnemyBehavior(Enum):
     KAMIKAZE = "kamikaze"
     WEAVER = "weaver"
@@ -28,15 +29,18 @@ class EnemyBehavior(Enum):
     TANK = "tank"
     BASIC = "basic"
 
+
 @dataclass
 class ScoreEvent:
     """Individual scoring event for visual feedback"""
+
     points: int
     x: float
     y: float
     text: str
     lifetime: float = 0.0
     max_lifetime: float = 1.5
+
 
 class ComboSystem:
     """Manages combo multiplier and timing"""
@@ -88,6 +92,7 @@ class ComboSystem:
         else:
             return ""
 
+
 class ScoringSystem:
     """Handles all scoring calculations and visual feedback"""
 
@@ -107,15 +112,17 @@ class ScoringSystem:
             "boss_tier1": 500,
             "boss_tier2": 1000,
             "boss_tier3": 2500,
-            "boss_tier4": 5000
+            "boss_tier4": 5000,
         }
 
-    def calculate_kill_score(self,
-                            enemy_type: str,
-                            distance: float,
-                            player_pos: Tuple[float, float],
-                            enemy_pos: Tuple[float, float],
-                            special_conditions: List[str] = None) -> int:
+    def calculate_kill_score(
+        self,
+        enemy_type: str,
+        distance: float,
+        player_pos: Tuple[float, float],
+        enemy_pos: Tuple[float, float],
+        special_conditions: List[str] = None,
+    ) -> int:
         """
         Calculate score for killing enemy
 
@@ -181,12 +188,10 @@ class ScoringSystem:
             text_surface = font.render(event.text, True, color)
             text_surface.set_alpha(alpha)
 
-            pos = (
-                int(event.x - camera_offset[0]),
-                int(event.y + y_offset - camera_offset[1])
-            )
+            pos = (int(event.x - camera_offset[0]), int(event.y + y_offset - camera_offset[1]))
 
             screen.blit(text_surface, pos)
+
 
 class WaveSpawner:
     """Generates enemy waves with arcade-style patterns"""
@@ -214,27 +219,31 @@ class WaveSpawner:
             # Enemies fly straight down in formation
             count = int(5 + difficulty * 3)
             for i in range(count):
-                enemies.append({
-                    "type": EnemyBehavior.BASIC,
-                    "spawn_time": i * 0.5,
-                    "position": (100 + i * 100, -50),
-                    "movement_params": {"velocity": (0, 100 * difficulty)}
-                })
+                enemies.append(
+                    {
+                        "type": EnemyBehavior.BASIC,
+                        "spawn_time": i * 0.5,
+                        "position": (100 + i * 100, -50),
+                        "movement_params": {"velocity": (0, 100 * difficulty)},
+                    }
+                )
 
         elif pattern == EnemyPattern.SINE_WAVE:
             # Enemies weave side to side
             count = int(8 + difficulty * 4)
             for i in range(count):
-                enemies.append({
-                    "type": EnemyBehavior.WEAVER,
-                    "spawn_time": i * 0.4,
-                    "position": (self.width // 2, -50),
-                    "movement_params": {
-                        "base_velocity": (0, 80 * difficulty),
-                        "wave_amplitude": 100,
-                        "wave_frequency": 2.0
+                enemies.append(
+                    {
+                        "type": EnemyBehavior.WEAVER,
+                        "spawn_time": i * 0.4,
+                        "position": (self.width // 2, -50),
+                        "movement_params": {
+                            "base_velocity": (0, 80 * difficulty),
+                            "wave_amplitude": 100,
+                            "wave_frequency": 2.0,
+                        },
                     }
-                })
+                )
 
         elif pattern == EnemyPattern.SPIRAL:
             # Enemies rotate inward
@@ -243,18 +252,20 @@ class WaveSpawner:
             for i in range(count):
                 angle = (i / count) * 2 * math.pi
                 radius = 300
-                enemies.append({
-                    "type": EnemyBehavior.BASIC,
-                    "spawn_time": i * 0.2,
-                    "position": (
-                        center[0] + math.cos(angle) * radius,
-                        center[1] + math.sin(angle) * radius
-                    ),
-                    "movement_params": {
-                        "spiral_center": center,
-                        "spiral_speed": 50 * difficulty
+                enemies.append(
+                    {
+                        "type": EnemyBehavior.BASIC,
+                        "spawn_time": i * 0.2,
+                        "position": (
+                            center[0] + math.cos(angle) * radius,
+                            center[1] + math.sin(angle) * radius,
+                        ),
+                        "movement_params": {
+                            "spiral_center": center,
+                            "spiral_speed": 50 * difficulty,
+                        },
                     }
-                })
+                )
 
         elif pattern == EnemyPattern.AMBUSH:
             # Enemies enter from sides and behind
@@ -274,12 +285,14 @@ class WaveSpawner:
                     pos = (random.randint(100, self.width - 100), self.height + 50)
                     vel = (0, -150 * difficulty)
 
-                enemies.append({
-                    "type": EnemyBehavior.KAMIKAZE,
-                    "spawn_time": i * 0.6,
-                    "position": pos,
-                    "movement_params": {"velocity": vel}
-                })
+                enemies.append(
+                    {
+                        "type": EnemyBehavior.KAMIKAZE,
+                        "spawn_time": i * 0.6,
+                        "position": pos,
+                        "movement_params": {"velocity": vel},
+                    }
+                )
 
         elif pattern == EnemyPattern.PINCER:
             # Two groups converge from edges
@@ -294,41 +307,45 @@ class WaveSpawner:
                     pos = (self.width + 50, y_pos)
                     target = (self.width // 2, self.height // 2)
 
-                enemies.append({
-                    "type": EnemyBehavior.BASIC,
-                    "spawn_time": (i // 2) * 0.5,
-                    "position": pos,
-                    "movement_params": {
-                        "target": target,
-                        "speed": 100 * difficulty
+                enemies.append(
+                    {
+                        "type": EnemyBehavior.BASIC,
+                        "spawn_time": (i // 2) * 0.5,
+                        "position": pos,
+                        "movement_params": {"target": target, "speed": 100 * difficulty},
                     }
-                })
+                )
 
         elif pattern == EnemyPattern.SCREEN_CLEAR:
             # Fills screen gradually
             count = int(20 + difficulty * 10)
             for i in range(count):
-                enemies.append({
-                    "type": random.choice([EnemyBehavior.BASIC, EnemyBehavior.WEAVER]),
-                    "spawn_time": i * 0.3,
-                    "position": (
-                        random.randint(50, self.width - 50),
-                        random.randint(-200, -50)
-                    ),
-                    "movement_params": {
-                        "velocity": (
-                            random.uniform(-30, 30),
-                            random.uniform(60, 120) * difficulty
-                        )
+                enemies.append(
+                    {
+                        "type": random.choice([EnemyBehavior.BASIC, EnemyBehavior.WEAVER]),
+                        "spawn_time": i * 0.3,
+                        "position": (
+                            random.randint(50, self.width - 50),
+                            random.randint(-200, -50),
+                        ),
+                        "movement_params": {
+                            "velocity": (
+                                random.uniform(-30, 30),
+                                random.uniform(60, 120) * difficulty,
+                            )
+                        },
                     }
-                })
+                )
 
         return enemies
+
 
 class EnemyAI:
     """Individual enemy AI controller"""
 
-    def __init__(self, behavior: EnemyBehavior, position: Tuple[float, float], movement_params: Dict):
+    def __init__(
+        self, behavior: EnemyBehavior, position: Tuple[float, float], movement_params: Dict
+    ):
         self.behavior = behavior
         self.position = list(position)
         self.params = movement_params
@@ -340,7 +357,9 @@ class EnemyAI:
         self.target_acquired = False
         self.firing_cooldown = 0.0
 
-    def update(self, delta_time: float, player_pos: Tuple[float, float], screen_bounds: Tuple[int, int]) -> Optional[Dict]:
+    def update(
+        self, delta_time: float, player_pos: Tuple[float, float], screen_bounds: Tuple[int, int]
+    ) -> Optional[Dict]:
         """
         Update enemy AI and return shot data if firing
 
@@ -360,9 +379,9 @@ class EnemyAI:
                 speed = self.params.get("speed", 100)
                 dx = target[0] - self.position[0]
                 dy = target[1] - self.position[1]
-                dist = math.sqrt(dx*dx + dy*dy)
+                dist = math.sqrt(dx * dx + dy * dy)
                 if dist > 0:
-                    self.velocity = [dx/dist * speed, dy/dist * speed]
+                    self.velocity = [dx / dist * speed, dy / dist * speed]
 
         elif self.behavior == EnemyBehavior.WEAVER:
             # Sine wave movement
@@ -379,10 +398,10 @@ class EnemyAI:
                 self.target_acquired = True
                 dx = player_pos[0] - self.position[0]
                 dy = player_pos[1] - self.position[1]
-                dist = math.sqrt(dx*dx + dy*dy)
+                dist = math.sqrt(dx * dx + dy * dy)
                 if dist > 0:
                     speed = 200
-                    self.velocity = [dx/dist * speed, dy/dist * speed]
+                    self.velocity = [dx / dist * speed, dy / dist * speed]
 
         elif self.behavior == EnemyBehavior.SNIPER:
             # Stay at top, track and shoot player
@@ -393,13 +412,13 @@ class EnemyAI:
                 # Fire tracking shot at player
                 dx = player_pos[0] - self.position[0]
                 dy = player_pos[1] - self.position[1]
-                dist = math.sqrt(dx*dx + dy*dy)
+                dist = math.sqrt(dx * dx + dy * dy)
                 if dist > 0:
                     shot_speed = 300
                     shot_data = {
                         "position": tuple(self.position),
-                        "velocity": (dx/dist * shot_speed, dy/dist * shot_speed),
-                        "damage": 15
+                        "velocity": (dx / dist * shot_speed, dy / dist * shot_speed),
+                        "damage": 15,
                     }
                     self.firing_cooldown = 2.0  # Fire every 2 seconds
 
@@ -414,7 +433,7 @@ class EnemyAI:
                     "position": tuple(self.position),
                     "velocity": (0, 200),
                     "damage": 20,
-                    "pattern": "spread"  # Would spawn multiple shots
+                    "pattern": "spread",  # Would spawn multiple shots
                 }
                 self.firing_cooldown = 3.0
 
@@ -423,8 +442,12 @@ class EnemyAI:
         self.position[1] += self.velocity[1] * delta_time
 
         # Check if off screen
-        if (self.position[0] < -100 or self.position[0] > screen_bounds[0] + 100 or
-            self.position[1] < -100 or self.position[1] > screen_bounds[1] + 100):
+        if (
+            self.position[0] < -100
+            or self.position[0] > screen_bounds[0] + 100
+            or self.position[1] < -100
+            or self.position[1] > screen_bounds[1] + 100
+        ):
             self.alive = False
 
         return shot_data
@@ -456,12 +479,14 @@ if __name__ == "__main__":
     # Test scoring
     player_pos = (640, 600)
     enemy_pos = (640, 100)
-    distance = math.sqrt((player_pos[0] - enemy_pos[0])**2 + (player_pos[1] - enemy_pos[1])**2)
+    distance = math.sqrt((player_pos[0] - enemy_pos[0]) ** 2 + (player_pos[1] - enemy_pos[1]) ** 2)
 
     for i in range(5):
         combo.register_kill(took_damage=False)
         score = scoring.calculate_kill_score("basic", distance, player_pos, enemy_pos)
-        print(f"Kill {i+1}: {score} points, Combo: {combo.multiplier}x, Text: {combo.get_combo_text()}")
+        print(
+            f"Kill {i + 1}: {score} points, Combo: {combo.multiplier}x, Text: {combo.get_combo_text()}"
+        )
 
     print(f"Total score: {scoring.total_score}")
 

@@ -18,6 +18,7 @@ import pygame
 @dataclass
 class ControllerConfig:
     """Controller configuration with dead zones and sensitivity"""
+
     left_stick_deadzone: float = 0.15
     right_stick_deadzone: float = 0.20
     trigger_deadzone: float = 0.10
@@ -33,20 +34,20 @@ class ControllerConfig:
 
     # Steam Deck back button actions (configurable)
     # Maps button indices to action names
-    back_button_l4: str = 'ammo_prev'     # L4 = previous ammo
-    back_button_l5: str = 'boost'         # L5 = speed boost
-    back_button_r4: str = 'ammo_next'     # R4 = next ammo
-    back_button_r5: str = 'quick_rocket'  # R5 = quick rocket
+    back_button_l4: str = "ammo_prev"  # L4 = previous ammo
+    back_button_l5: str = "boost"  # L5 = speed boost
+    back_button_r4: str = "ammo_next"  # R4 = next ammo
+    back_button_r5: str = "quick_rocket"  # R5 = quick rocket
 
 
 # Preset configurations for different controllers
 STEAM_DECK_CONFIG = ControllerConfig(
-    left_stick_deadzone=0.12,     # Steam Deck sticks are precise
-    right_stick_deadzone=0.15,    # Slightly tighter for aiming
-    trigger_deadzone=0.08,        # Steam Deck triggers are responsive
+    left_stick_deadzone=0.12,  # Steam Deck sticks are precise
+    right_stick_deadzone=0.15,  # Slightly tighter for aiming
+    trigger_deadzone=0.08,  # Steam Deck triggers are responsive
     movement_sensitivity=1.0,
-    aim_sensitivity=0.9,          # Slightly higher for twin-stick
-    haptic_heat_base=0.4,         # Steam Deck haptics are subtle
+    aim_sensitivity=0.9,  # Slightly higher for twin-stick
+    haptic_heat_base=0.4,  # Steam Deck haptics are subtle
     haptic_heat_max=0.9,
 )
 
@@ -61,10 +62,10 @@ XBOX_CONFIG = ControllerConfig(
 DUALSENSE_CONFIG = ControllerConfig(
     left_stick_deadzone=0.12,
     right_stick_deadzone=0.18,
-    trigger_deadzone=0.05,        # DualSense triggers are very precise
+    trigger_deadzone=0.05,  # DualSense triggers are very precise
     movement_sensitivity=1.0,
     aim_sensitivity=0.85,
-    haptic_heat_base=0.25,        # DualSense haptics are strong
+    haptic_heat_base=0.25,  # DualSense haptics are strong
     haptic_heat_max=0.7,
 )
 
@@ -98,7 +99,7 @@ class ControllerInput:
         self.config = config or ControllerConfig()
         self.joystick: Optional[pygame.joystick.Joystick] = None
         self.connected = False
-        self.controller_type = 'unknown'  # 'steam_deck', 'xbox', 'playstation', 'unknown'
+        self.controller_type = "unknown"  # 'steam_deck', 'xbox', 'playstation', 'unknown'
 
         # Initialize pygame joystick system
         pygame.joystick.init()
@@ -123,10 +124,10 @@ class ControllerInput:
 
         # Back button actions (for Steam Deck)
         self.back_button_actions = {
-            'ammo_next': False,
-            'ammo_prev': False,
-            'boost': False,
-            'quick_rocket': False,
+            "ammo_next": False,
+            "ammo_prev": False,
+            "boost": False,
+            "quick_rocket": False,
         }
 
         # Haptic state
@@ -154,7 +155,7 @@ class ControllerInput:
             print(f"Controller type: {self.controller_type}")
 
             # Enable haptics if supported
-            if hasattr(self.joystick, 'rumble'):
+            if hasattr(self.joystick, "rumble"):
                 print("Haptic feedback enabled")
         else:
             print("No controller detected - keyboard/mouse active")
@@ -164,22 +165,28 @@ class ControllerInput:
         name = name.lower()
 
         # Steam Deck detection
-        if 'steam' in name or 'deck' in name or 'valve' in name:
-            self.controller_type = 'steam_deck'
+        if "steam" in name or "deck" in name or "valve" in name:
+            self.controller_type = "steam_deck"
             self.config = STEAM_DECK_CONFIG
             print("Steam Deck detected - applying optimized controls")
         # PlayStation detection
-        elif 'playstation' in name or 'dualshock' in name or 'dualsense' in name or 'ps4' in name or 'ps5' in name:
-            self.controller_type = 'playstation'
+        elif (
+            "playstation" in name
+            or "dualshock" in name
+            or "dualsense" in name
+            or "ps4" in name
+            or "ps5" in name
+        ):
+            self.controller_type = "playstation"
             self.config = DUALSENSE_CONFIG
             print("PlayStation controller detected - applying optimized controls")
         # Xbox detection
-        elif 'xbox' in name or 'microsoft' in name or 'xinput' in name:
-            self.controller_type = 'xbox'
+        elif "xbox" in name or "microsoft" in name or "xinput" in name:
+            self.controller_type = "xbox"
             self.config = XBOX_CONFIG
             print("Xbox controller detected - applying optimized controls")
         else:
-            self.controller_type = 'unknown'
+            self.controller_type = "unknown"
             # Keep default config
 
     def start_frame(self):
@@ -203,23 +210,11 @@ class ControllerInput:
             return  # Skip input processing while locked
 
         # Read analog sticks with deadzone
-        left_x = self._apply_deadzone(
-            self.joystick.get_axis(0),
-            self.config.left_stick_deadzone
-        )
-        left_y = self._apply_deadzone(
-            self.joystick.get_axis(1),
-            self.config.left_stick_deadzone
-        )
+        left_x = self._apply_deadzone(self.joystick.get_axis(0), self.config.left_stick_deadzone)
+        left_y = self._apply_deadzone(self.joystick.get_axis(1), self.config.left_stick_deadzone)
 
-        right_x = self._apply_deadzone(
-            self.joystick.get_axis(2),
-            self.config.right_stick_deadzone
-        )
-        right_y = self._apply_deadzone(
-            self.joystick.get_axis(3),
-            self.config.right_stick_deadzone
-        )
+        right_x = self._apply_deadzone(self.joystick.get_axis(2), self.config.right_stick_deadzone)
+        right_y = self._apply_deadzone(self.joystick.get_axis(3), self.config.right_stick_deadzone)
 
         # Apply movement with momentum curve (not linear)
         # Use exponential curve for finer control at low speeds
@@ -227,7 +222,7 @@ class ControllerInput:
         self.movement_y = self._momentum_curve(left_y) * self.config.movement_sensitivity
 
         # Right stick for directional firing (twin-stick style)
-        right_stick_magnitude = (right_x ** 2 + right_y ** 2) ** 0.5
+        right_stick_magnitude = (right_x**2 + right_y**2) ** 0.5
         self.right_stick_fire = right_stick_magnitude > 0.3
 
         # Store normalized fire direction
@@ -248,11 +243,11 @@ class ControllerInput:
             # Xbox layout: axis 2 = triggers combined, or separate axes
             rt = self._apply_deadzone(
                 self.joystick.get_axis(5),  # Right trigger
-                self.config.trigger_deadzone
+                self.config.trigger_deadzone,
             )
             lt = self._apply_deadzone(
                 self.joystick.get_axis(4),  # Left trigger (sometimes axis 2)
-                self.config.trigger_deadzone
+                self.config.trigger_deadzone,
             )
         except Exception:
             rt = 0.0
@@ -390,7 +385,7 @@ class ControllerInput:
 
     def _update_haptics(self):
         """Update continuous haptic feedback based on heat"""
-        if not self.connected or not hasattr(self.joystick, 'rumble'):
+        if not self.connected or not hasattr(self.joystick, "rumble"):
             return
 
         # Stop all rumble when haptics disabled (menus)
@@ -404,8 +399,8 @@ class ControllerInput:
 
         # Rumble intensity scales with heat
         target_rumble = (
-            self.config.haptic_heat_base +
-            (self.config.haptic_heat_max - self.config.haptic_heat_base) * self.heat_level
+            self.config.haptic_heat_base
+            + (self.config.haptic_heat_max - self.config.haptic_heat_base) * self.heat_level
         )
 
         # Smooth rumble changes
@@ -416,14 +411,14 @@ class ControllerInput:
             self.joystick.rumble(
                 self.current_rumble * 0.7,  # Low frequency motor
                 self.current_rumble * 0.3,  # High frequency motor
-                100  # Duration in ms
+                100,  # Duration in ms
             )
         except Exception:
             pass
 
     def _haptic_spike(self, intensity: float):
         """Trigger sharp haptic spike (lock-on, decision, death)"""
-        if not self.haptics_enabled or not self.connected or not hasattr(self.joystick, 'rumble'):
+        if not self.haptics_enabled or not self.connected or not hasattr(self.joystick, "rumble"):
             return
 
         try:
@@ -461,6 +456,7 @@ class ControllerInput:
 # Button mapping constants for clarity
 class XboxButton:
     """Xbox controller button mapping"""
+
     A = 0
     B = 1
     X = 2
@@ -475,6 +471,7 @@ class XboxButton:
 
 class PlayStationButton:
     """PlayStation controller button mapping"""
+
     CROSS = 0
     CIRCLE = 1
     SQUARE = 2
@@ -492,17 +489,18 @@ class SteamDeckButton:
     Steam Deck controller button mapping.
     Steam Deck appears as an Xbox controller + back buttons.
     """
+
     A = 0
     B = 1
     X = 2
     Y = 3
     LB = 4
     RB = 5
-    BACK = 6      # View button (left menu)
-    START = 7     # Menu button (right menu)
+    BACK = 6  # View button (left menu)
+    START = 7  # Menu button (right menu)
     L_STICK = 8
     R_STICK = 9
-    GUIDE = 10    # Steam button
+    GUIDE = 10  # Steam button
     # Back grip buttons (may vary by SDL version)
     L4 = 15
     R4 = 16

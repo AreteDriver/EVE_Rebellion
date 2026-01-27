@@ -55,15 +55,15 @@ class CapitalShipEnemy(Enemy):
 
     def __init__(self, x: int, difficulty: dict[str, float] | None = None) -> None:
         # Start off‑screen vertically so the capital ship slides into view
-        super().__init__('amarr_capital', x, y=-200, difficulty=difficulty or {})
+        super().__init__("amarr_capital", x, y=-200, difficulty=difficulty or {})
 
         # Define turret positions along the hull.  These offsets are relative
         # to the enemy sprite's centre (centre x, centre y).  Adjust to
         # match the size defined in constants.ENEMY_STATS['amarr_capital']['size'].
         self.turret_offsets: list[tuple[int, int]] = [
             (-80, 60),  # left turret
-            (0, 80),    # centre turret
-            (80, 60)    # right turret
+            (0, 80),  # centre turret
+            (80, 60),  # right turret
         ]
 
         # Control firing cadence for salvos

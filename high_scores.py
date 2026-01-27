@@ -22,17 +22,17 @@ class HighScoreManager:
         """Load high scores from file"""
         try:
             if os.path.exists(self.SAVE_FILE):
-                with open(self.SAVE_FILE, 'r') as f:
+                with open(self.SAVE_FILE, "r") as f:
                     data = json.load(f)
-                    self.scores = data.get('scores', [])
+                    self.scores = data.get("scores", [])
         except (json.JSONDecodeError, IOError):
             self.scores = []
 
     def save(self):
         """Save high scores to file"""
         try:
-            with open(self.SAVE_FILE, 'w') as f:
-                json.dump({'scores': self.scores}, f, indent=2)
+            with open(self.SAVE_FILE, "w") as f:
+                json.dump({"scores": self.scores}, f, indent=2)
         except IOError:
             pass
 
@@ -42,29 +42,29 @@ class HighScoreManager:
         Returns (rank, is_new_high) tuple - rank is 1-indexed, or 0 if not in top 10
         """
         entry = {
-            'score': score,
-            'refugees': refugees,
-            'stage': stage,
-            'wave': wave,
-            'ship': ship,
-            'difficulty': difficulty,
-            'date': datetime.now().strftime("%Y-%m-%d %H:%M"),
-            'berserk': berserk_stats or {}
+            "score": score,
+            "refugees": refugees,
+            "stage": stage,
+            "wave": wave,
+            "ship": ship,
+            "difficulty": difficulty,
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "berserk": berserk_stats or {},
         }
 
         # Find insertion position
         insert_pos = len(self.scores)
         for i, existing in enumerate(self.scores):
-            if score > existing['score']:
+            if score > existing["score"]:
                 insert_pos = i
                 break
 
         # Check if it's a new high score
-        is_new_high = insert_pos == 0 and (not self.scores or score > self.scores[0]['score'])
+        is_new_high = insert_pos == 0 and (not self.scores or score > self.scores[0]["score"])
 
         # Insert and trim to max
         self.scores.insert(insert_pos, entry)
-        self.scores = self.scores[:self.MAX_SCORES]
+        self.scores = self.scores[: self.MAX_SCORES]
 
         self.save()
 
@@ -75,7 +75,7 @@ class HighScoreManager:
     def get_high_score(self):
         """Get the current high score, or 0 if none"""
         if self.scores:
-            return self.scores[0]['score']
+            return self.scores[0]["score"]
         return 0
 
     def get_top_scores(self, count=5):
@@ -86,7 +86,7 @@ class HighScoreManager:
         """Check if a score would make the leaderboard"""
         if len(self.scores) < self.MAX_SCORES:
             return True
-        return score > self.scores[-1]['score']
+        return score > self.scores[-1]["score"]
 
     def clear(self):
         """Clear all high scores"""
@@ -102,192 +102,180 @@ class AchievementManager:
     # Achievement definitions
     ACHIEVEMENTS = {
         # Combat achievements
-        'first_blood': {
-            'name': 'First Blood',
-            'desc': 'Destroy your first enemy',
-            'icon': 'skull',
-            'hidden': False
+        "first_blood": {
+            "name": "First Blood",
+            "desc": "Destroy your first enemy",
+            "icon": "skull",
+            "hidden": False,
         },
-        'centurion': {
-            'name': 'Centurion',
-            'desc': 'Destroy 100 enemies in a single run',
-            'icon': 'star',
-            'hidden': False
+        "centurion": {
+            "name": "Centurion",
+            "desc": "Destroy 100 enemies in a single run",
+            "icon": "star",
+            "hidden": False,
         },
-        'exterminator': {
-            'name': 'Exterminator',
-            'desc': 'Destroy 500 enemies in a single run',
-            'icon': 'star2',
-            'hidden': False
+        "exterminator": {
+            "name": "Exterminator",
+            "desc": "Destroy 500 enemies in a single run",
+            "icon": "star2",
+            "hidden": False,
         },
-
         # Berserk achievements
-        'up_close': {
-            'name': 'Up Close and Personal',
-            'desc': 'Get 10 extreme range kills in a run',
-            'icon': 'fire',
-            'hidden': False
+        "up_close": {
+            "name": "Up Close and Personal",
+            "desc": "Get 10 extreme range kills in a run",
+            "icon": "fire",
+            "hidden": False,
         },
-        'berserker': {
-            'name': 'Berserker',
-            'desc': 'Maintain a x3+ average multiplier',
-            'icon': 'rage',
-            'hidden': False
+        "berserker": {
+            "name": "Berserker",
+            "desc": "Maintain a x3+ average multiplier",
+            "icon": "rage",
+            "hidden": False,
         },
-        'death_wish': {
-            'name': 'Death Wish',
-            'desc': 'Get 50 extreme range kills in a run',
-            'icon': 'skull2',
-            'hidden': False
+        "death_wish": {
+            "name": "Death Wish",
+            "desc": "Get 50 extreme range kills in a run",
+            "icon": "skull2",
+            "hidden": False,
         },
-
         # Refugee achievements
-        'liberator': {
-            'name': 'Liberator',
-            'desc': 'Rescue 50 refugees in a single run',
-            'icon': 'people',
-            'hidden': False
+        "liberator": {
+            "name": "Liberator",
+            "desc": "Rescue 50 refugees in a single run",
+            "icon": "people",
+            "hidden": False,
         },
-        'freedom_fighter': {
-            'name': 'Freedom Fighter',
-            'desc': 'Rescue 200 refugees in a single run',
-            'icon': 'flag',
-            'hidden': False
+        "freedom_fighter": {
+            "name": "Freedom Fighter",
+            "desc": "Rescue 200 refugees in a single run",
+            "icon": "flag",
+            "hidden": False,
         },
-
         # Progression achievements
-        'survivor': {
-            'name': 'Survivor',
-            'desc': 'Complete Stage 1',
-            'icon': 'shield',
-            'hidden': False
+        "survivor": {
+            "name": "Survivor",
+            "desc": "Complete Stage 1",
+            "icon": "shield",
+            "hidden": False,
         },
-        'veteran': {
-            'name': 'Veteran',
-            'desc': 'Complete Stage 3',
-            'icon': 'medal',
-            'hidden': False
+        "veteran": {
+            "name": "Veteran",
+            "desc": "Complete Stage 3",
+            "icon": "medal",
+            "hidden": False,
         },
-        'rebel_hero': {
-            'name': 'Rebel Hero',
-            'desc': 'Complete the game on Newbro or harder',
-            'icon': 'trophy',
-            'hidden': False
+        "rebel_hero": {
+            "name": "Rebel Hero",
+            "desc": "Complete the game on Newbro or harder",
+            "icon": "trophy",
+            "hidden": False,
         },
-        'triglavian_slayer': {
-            'name': 'Triglavian Slayer',
-            'desc': 'Complete the game on Triglavian difficulty',
-            'icon': 'crown',
-            'hidden': True
+        "triglavian_slayer": {
+            "name": "Triglavian Slayer",
+            "desc": "Complete the game on Triglavian difficulty",
+            "icon": "crown",
+            "hidden": True,
         },
-
         # Ship achievements
-        'wolf_pack': {
-            'name': 'Wolf Pack',
-            'desc': 'Complete a run with the Wolf',
-            'icon': 'wolf',
-            'hidden': False
+        "wolf_pack": {
+            "name": "Wolf Pack",
+            "desc": "Complete a run with the Wolf",
+            "icon": "wolf",
+            "hidden": False,
         },
-        'speed_demon': {
-            'name': 'Speed Demon',
-            'desc': 'Complete a run with the Jaguar',
-            'icon': 'lightning',
-            'hidden': False
+        "speed_demon": {
+            "name": "Speed Demon",
+            "desc": "Complete a run with the Jaguar",
+            "icon": "lightning",
+            "hidden": False,
         },
-
         # Score achievements
-        'high_roller': {
-            'name': 'High Roller',
-            'desc': 'Score over 50,000 points',
-            'icon': 'coin',
-            'hidden': False
+        "high_roller": {
+            "name": "High Roller",
+            "desc": "Score over 50,000 points",
+            "icon": "coin",
+            "hidden": False,
         },
-        'score_master': {
-            'name': 'Score Master',
-            'desc': 'Score over 100,000 points',
-            'icon': 'gem',
-            'hidden': False
+        "score_master": {
+            "name": "Score Master",
+            "desc": "Score over 100,000 points",
+            "icon": "gem",
+            "hidden": False,
         },
-
         # Secret achievements
-        'no_upgrades': {
-            'name': 'Purist',
-            'desc': 'Complete Stage 3 without buying upgrades',
-            'icon': 'zen',
-            'hidden': True
+        "no_upgrades": {
+            "name": "Purist",
+            "desc": "Complete Stage 3 without buying upgrades",
+            "icon": "zen",
+            "hidden": True,
         },
-        'pacifist_run': {
-            'name': 'Close Quarters Only',
-            'desc': 'Complete a stage with only extreme/close kills',
-            'icon': 'fist',
-            'hidden': True
+        "pacifist_run": {
+            "name": "Close Quarters Only",
+            "desc": "Complete a stage with only extreme/close kills",
+            "icon": "fist",
+            "hidden": True,
         },
-
         # Endless mode achievements
-        'endless_initiate': {
-            'name': 'Endless Initiate',
-            'desc': 'Reach wave 5 in Endless Mode',
-            'icon': 'wave',
-            'hidden': False
+        "endless_initiate": {
+            "name": "Endless Initiate",
+            "desc": "Reach wave 5 in Endless Mode",
+            "icon": "wave",
+            "hidden": False,
         },
-        'endless_warrior': {
-            'name': 'Endless Warrior',
-            'desc': 'Reach wave 10 in Endless Mode',
-            'icon': 'sword',
-            'hidden': False
+        "endless_warrior": {
+            "name": "Endless Warrior",
+            "desc": "Reach wave 10 in Endless Mode",
+            "icon": "sword",
+            "hidden": False,
         },
-        'endless_champion': {
-            'name': 'Endless Champion',
-            'desc': 'Reach wave 20 in Endless Mode',
-            'icon': 'champion',
-            'hidden': False
+        "endless_champion": {
+            "name": "Endless Champion",
+            "desc": "Reach wave 20 in Endless Mode",
+            "icon": "champion",
+            "hidden": False,
         },
-        'endless_legend': {
-            'name': 'Endless Legend',
-            'desc': 'Reach wave 30 in Endless Mode',
-            'icon': 'legend',
-            'hidden': False
+        "endless_legend": {
+            "name": "Endless Legend",
+            "desc": "Reach wave 30 in Endless Mode",
+            "icon": "legend",
+            "hidden": False,
         },
-        'endless_god': {
-            'name': 'Endless God',
-            'desc': 'Reach wave 50 in Endless Mode',
-            'icon': 'god',
-            'hidden': True
+        "endless_god": {
+            "name": "Endless God",
+            "desc": "Reach wave 50 in Endless Mode",
+            "icon": "god",
+            "hidden": True,
         },
-        'endless_survivor': {
-            'name': 'Survivor',
-            'desc': 'Survive 5 minutes in Endless Mode',
-            'icon': 'clock',
-            'hidden': False
+        "endless_survivor": {
+            "name": "Survivor",
+            "desc": "Survive 5 minutes in Endless Mode",
+            "icon": "clock",
+            "hidden": False,
         },
-        'endless_endurance': {
-            'name': 'Iron Will',
-            'desc': 'Survive 10 minutes in Endless Mode',
-            'icon': 'iron',
-            'hidden': False
+        "endless_endurance": {
+            "name": "Iron Will",
+            "desc": "Survive 10 minutes in Endless Mode",
+            "icon": "iron",
+            "hidden": False,
         },
-        'endless_score_50k': {
-            'name': 'Endless Scorer',
-            'desc': 'Score 50,000 points in Endless Mode',
-            'icon': 'endless_coin',
-            'hidden': False
+        "endless_score_50k": {
+            "name": "Endless Scorer",
+            "desc": "Score 50,000 points in Endless Mode",
+            "icon": "endless_coin",
+            "hidden": False,
         },
-        'endless_score_100k': {
-            'name': 'Endless Master',
-            'desc': 'Score 100,000 points in Endless Mode',
-            'icon': 'endless_gem',
-            'hidden': False
-        }
+        "endless_score_100k": {
+            "name": "Endless Master",
+            "desc": "Score 100,000 points in Endless Mode",
+            "icon": "endless_gem",
+            "hidden": False,
+        },
     }
 
     def __init__(self):
         self.unlocked = set()
-        self.stats = {
-            'total_kills': 0,
-            'total_refugees': 0,
-            'games_played': 0,
-            'victories': 0
-        }
+        self.stats = {"total_kills": 0, "total_refugees": 0, "games_played": 0, "victories": 0}
         self.pending_unlocks = []  # Achievements unlocked this session
         self.load()
 
@@ -295,21 +283,18 @@ class AchievementManager:
         """Load achievements from file"""
         try:
             if os.path.exists(self.SAVE_FILE):
-                with open(self.SAVE_FILE, 'r') as f:
+                with open(self.SAVE_FILE, "r") as f:
                     data = json.load(f)
-                    self.unlocked = set(data.get('unlocked', []))
-                    self.stats = data.get('stats', self.stats)
+                    self.unlocked = set(data.get("unlocked", []))
+                    self.stats = data.get("stats", self.stats)
         except (json.JSONDecodeError, IOError):
             pass
 
     def save(self):
         """Save achievements to file"""
         try:
-            with open(self.SAVE_FILE, 'w') as f:
-                json.dump({
-                    'unlocked': list(self.unlocked),
-                    'stats': self.stats
-                }, f, indent=2)
+            with open(self.SAVE_FILE, "w") as f:
+                json.dump({"unlocked": list(self.unlocked), "stats": self.stats}, f, indent=2)
         except IOError:
             pass
 
@@ -336,124 +321,124 @@ class AchievementManager:
         """Check and unlock achievements based on game stats"""
         newly_unlocked = []
 
-        kills = game_stats.get('total_kills', 0)
-        refugees = game_stats.get('refugees', 0)
-        score = game_stats.get('score', 0)
-        stage = game_stats.get('stage', 0)
-        victory = game_stats.get('victory', False)
-        ship = game_stats.get('ship', 'Rifter')
-        difficulty = game_stats.get('difficulty', 'normal')
-        berserk = game_stats.get('berserk', {})
+        kills = game_stats.get("total_kills", 0)
+        refugees = game_stats.get("refugees", 0)
+        score = game_stats.get("score", 0)
+        stage = game_stats.get("stage", 0)
+        victory = game_stats.get("victory", False)
+        ship = game_stats.get("ship", "Rifter")
+        difficulty = game_stats.get("difficulty", "normal")
+        berserk = game_stats.get("berserk", {})
 
-        extreme_kills = berserk.get('kills_by_range', {}).get('EXTREME', 0)
-        avg_mult = berserk.get('avg_multiplier', 1.0)
+        extreme_kills = berserk.get("kills_by_range", {}).get("EXTREME", 0)
+        avg_mult = berserk.get("avg_multiplier", 1.0)
 
         # Combat achievements
         if kills >= 1:
-            if self.unlock('first_blood'):
-                newly_unlocked.append('first_blood')
+            if self.unlock("first_blood"):
+                newly_unlocked.append("first_blood")
         if kills >= 100:
-            if self.unlock('centurion'):
-                newly_unlocked.append('centurion')
+            if self.unlock("centurion"):
+                newly_unlocked.append("centurion")
         if kills >= 500:
-            if self.unlock('exterminator'):
-                newly_unlocked.append('exterminator')
+            if self.unlock("exterminator"):
+                newly_unlocked.append("exterminator")
 
         # Berserk achievements
         if extreme_kills >= 10:
-            if self.unlock('up_close'):
-                newly_unlocked.append('up_close')
+            if self.unlock("up_close"):
+                newly_unlocked.append("up_close")
         if extreme_kills >= 50:
-            if self.unlock('death_wish'):
-                newly_unlocked.append('death_wish')
+            if self.unlock("death_wish"):
+                newly_unlocked.append("death_wish")
         if avg_mult >= 3.0 and kills >= 20:
-            if self.unlock('berserker'):
-                newly_unlocked.append('berserker')
+            if self.unlock("berserker"):
+                newly_unlocked.append("berserker")
 
         # Refugee achievements
         if refugees >= 50:
-            if self.unlock('liberator'):
-                newly_unlocked.append('liberator')
+            if self.unlock("liberator"):
+                newly_unlocked.append("liberator")
         if refugees >= 200:
-            if self.unlock('freedom_fighter'):
-                newly_unlocked.append('freedom_fighter')
+            if self.unlock("freedom_fighter"):
+                newly_unlocked.append("freedom_fighter")
 
         # Progression achievements
         if stage >= 1:
-            if self.unlock('survivor'):
-                newly_unlocked.append('survivor')
+            if self.unlock("survivor"):
+                newly_unlocked.append("survivor")
         if stage >= 3:
-            if self.unlock('veteran'):
-                newly_unlocked.append('veteran')
+            if self.unlock("veteran"):
+                newly_unlocked.append("veteran")
 
         # Victory achievements
         if victory:
-            if difficulty in ['normal', 'hard', 'nightmare']:
-                if self.unlock('rebel_hero'):
-                    newly_unlocked.append('rebel_hero')
-            if difficulty == 'nightmare':
-                if self.unlock('triglavian_slayer'):
-                    newly_unlocked.append('triglavian_slayer')
-            if ship == 'Wolf':
-                if self.unlock('wolf_pack'):
-                    newly_unlocked.append('wolf_pack')
-            if ship == 'Jaguar':
-                if self.unlock('speed_demon'):
-                    newly_unlocked.append('speed_demon')
+            if difficulty in ["normal", "hard", "nightmare"]:
+                if self.unlock("rebel_hero"):
+                    newly_unlocked.append("rebel_hero")
+            if difficulty == "nightmare":
+                if self.unlock("triglavian_slayer"):
+                    newly_unlocked.append("triglavian_slayer")
+            if ship == "Wolf":
+                if self.unlock("wolf_pack"):
+                    newly_unlocked.append("wolf_pack")
+            if ship == "Jaguar":
+                if self.unlock("speed_demon"):
+                    newly_unlocked.append("speed_demon")
 
         # Score achievements
         if score >= 50000:
-            if self.unlock('high_roller'):
-                newly_unlocked.append('high_roller')
+            if self.unlock("high_roller"):
+                newly_unlocked.append("high_roller")
         if score >= 100000:
-            if self.unlock('score_master'):
-                newly_unlocked.append('score_master')
+            if self.unlock("score_master"):
+                newly_unlocked.append("score_master")
 
         # Endless mode achievements
-        endless_wave = game_stats.get('endless_wave', 0)
-        endless_time = game_stats.get('endless_time', 0)
-        is_endless = game_stats.get('game_mode') == 'endless'
+        endless_wave = game_stats.get("endless_wave", 0)
+        endless_time = game_stats.get("endless_time", 0)
+        is_endless = game_stats.get("game_mode") == "endless"
 
         if is_endless:
             # Wave achievements
             if endless_wave >= 5:
-                if self.unlock('endless_initiate'):
-                    newly_unlocked.append('endless_initiate')
+                if self.unlock("endless_initiate"):
+                    newly_unlocked.append("endless_initiate")
             if endless_wave >= 10:
-                if self.unlock('endless_warrior'):
-                    newly_unlocked.append('endless_warrior')
+                if self.unlock("endless_warrior"):
+                    newly_unlocked.append("endless_warrior")
             if endless_wave >= 20:
-                if self.unlock('endless_champion'):
-                    newly_unlocked.append('endless_champion')
+                if self.unlock("endless_champion"):
+                    newly_unlocked.append("endless_champion")
             if endless_wave >= 30:
-                if self.unlock('endless_legend'):
-                    newly_unlocked.append('endless_legend')
+                if self.unlock("endless_legend"):
+                    newly_unlocked.append("endless_legend")
             if endless_wave >= 50:
-                if self.unlock('endless_god'):
-                    newly_unlocked.append('endless_god')
+                if self.unlock("endless_god"):
+                    newly_unlocked.append("endless_god")
 
             # Time-based achievements (time in seconds)
             if endless_time >= 300:  # 5 minutes
-                if self.unlock('endless_survivor'):
-                    newly_unlocked.append('endless_survivor')
+                if self.unlock("endless_survivor"):
+                    newly_unlocked.append("endless_survivor")
             if endless_time >= 600:  # 10 minutes
-                if self.unlock('endless_endurance'):
-                    newly_unlocked.append('endless_endurance')
+                if self.unlock("endless_endurance"):
+                    newly_unlocked.append("endless_endurance")
 
             # Endless score achievements
             if score >= 50000:
-                if self.unlock('endless_score_50k'):
-                    newly_unlocked.append('endless_score_50k')
+                if self.unlock("endless_score_50k"):
+                    newly_unlocked.append("endless_score_50k")
             if score >= 100000:
-                if self.unlock('endless_score_100k'):
-                    newly_unlocked.append('endless_score_100k')
+                if self.unlock("endless_score_100k"):
+                    newly_unlocked.append("endless_score_100k")
 
         # Update persistent stats
-        self.stats['total_kills'] += kills
-        self.stats['total_refugees'] += refugees
-        self.stats['games_played'] += 1
+        self.stats["total_kills"] += kills
+        self.stats["total_refugees"] += refugees
+        self.stats["games_played"] += 1
         if victory:
-            self.stats['victories'] += 1
+            self.stats["victories"] += 1
         self.save()
 
         return newly_unlocked
@@ -466,17 +451,13 @@ class AchievementManager:
         """Get list of all achievements with unlock status"""
         result = []
         for aid, info in self.ACHIEVEMENTS.items():
-            if info.get('hidden') and not include_hidden and aid not in self.unlocked:
+            if info.get("hidden") and not include_hidden and aid not in self.unlocked:
                 continue
-            result.append({
-                'id': aid,
-                'unlocked': aid in self.unlocked,
-                **info
-            })
+            result.append({"id": aid, "unlocked": aid in self.unlocked, **info})
         return result
 
     def get_progress(self):
         """Get achievement progress as (unlocked, total)"""
-        total = len([a for a in self.ACHIEVEMENTS.values() if not a.get('hidden')])
-        unlocked = len([a for a in self.unlocked if not self.ACHIEVEMENTS.get(a, {}).get('hidden')])
+        total = len([a for a in self.ACHIEVEMENTS.values() if not a.get("hidden")])
+        unlocked = len([a for a in self.unlocked if not self.ACHIEVEMENTS.get(a, {}).get("hidden")])
         return unlocked, total

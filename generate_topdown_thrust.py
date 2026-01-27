@@ -9,28 +9,99 @@ import os
 import pygame
 
 # Ship categories for thrust colors
-MINMATAR_SHIPS = ['rifter', 'wolf', 'jaguar', 'slasher', 'breacher', 'thrasher',
-                  'rupture', 'stabber', 'hurricane', 'cyclone', 'tempest', 'typhoon',
-                  'maelstrom', 'tornado', 'naglfar', 'hel', 'ragnarok']
+MINMATAR_SHIPS = [
+    "rifter",
+    "wolf",
+    "jaguar",
+    "slasher",
+    "breacher",
+    "thrasher",
+    "rupture",
+    "stabber",
+    "hurricane",
+    "cyclone",
+    "tempest",
+    "typhoon",
+    "maelstrom",
+    "tornado",
+    "naglfar",
+    "hel",
+    "ragnarok",
+]
 
-AMARR_SHIPS = ['executioner', 'punisher', 'tormentor', 'crucifier', 'magnate',
-               'coercer', 'omen', 'maller', 'arbitrator', 'augoror',
-               'harbinger', 'prophecy', 'oracle', 'apocalypse', 'abaddon',
-               'armageddon', 'paladin', 'redeemer', 'revelation', 'avatar',
-               'bestower', 'sigil']
+AMARR_SHIPS = [
+    "executioner",
+    "punisher",
+    "tormentor",
+    "crucifier",
+    "magnate",
+    "coercer",
+    "omen",
+    "maller",
+    "arbitrator",
+    "augoror",
+    "harbinger",
+    "prophecy",
+    "oracle",
+    "apocalypse",
+    "abaddon",
+    "armageddon",
+    "paladin",
+    "redeemer",
+    "revelation",
+    "avatar",
+    "bestower",
+    "sigil",
+]
 
-CALDARI_SHIPS = ['condor', 'merlin', 'kestrel', 'heron', 'bantam',
-                 'cormorant', 'caracal', 'moa', 'osprey', 'blackbird',
-                 'drake', 'ferox', 'naga', 'raven', 'rokh', 'scorpion',
-                 'phoenix', 'leviathan', 'badger', 'tayra']
+CALDARI_SHIPS = [
+    "condor",
+    "merlin",
+    "kestrel",
+    "heron",
+    "bantam",
+    "cormorant",
+    "caracal",
+    "moa",
+    "osprey",
+    "blackbird",
+    "drake",
+    "ferox",
+    "naga",
+    "raven",
+    "rokh",
+    "scorpion",
+    "phoenix",
+    "leviathan",
+    "badger",
+    "tayra",
+]
 
-GALLENTE_SHIPS = ['atron', 'tristan', 'incursus', 'maulus', 'navitas',
-                  'catalyst', 'vexor', 'thorax', 'celestis', 'exequror',
-                  'brutix', 'myrmidon', 'talos', 'dominix', 'megathron',
-                  'hyperion', 'kronos', 'moros', 'erebus', 'iteron']
+GALLENTE_SHIPS = [
+    "atron",
+    "tristan",
+    "incursus",
+    "maulus",
+    "navitas",
+    "catalyst",
+    "vexor",
+    "thorax",
+    "celestis",
+    "exequror",
+    "brutix",
+    "myrmidon",
+    "talos",
+    "dominix",
+    "megathron",
+    "hyperion",
+    "kronos",
+    "moros",
+    "erebus",
+    "iteron",
+]
 
-SPRITE_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'ship_sprites')
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'ships', 'effects')
+SPRITE_DIR = os.path.join(os.path.dirname(__file__), "assets", "ship_sprites")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "assets", "ships", "effects")
 
 
 def get_thrust_colors(ship_name):
@@ -68,7 +139,7 @@ def draw_thrust_plume(surface, x, y, width, height, color, alpha):
                 plume,
                 (*color, current_alpha),
                 (width - current_width, i),
-                (width + current_width, i)
+                (width + current_width, i),
             )
 
     surface.blit(plume, (x - width, y))
@@ -149,23 +220,36 @@ def save_thrust_frames(ship_name, frames):
 
 def main():
     # Initialize pygame
-    os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     pygame.init()
     pygame.display.set_mode((1, 1))
 
     # Ships to generate effects for
     ships = [
         # Player ships (Minmatar)
-        'rifter', 'wolf', 'jaguar',
+        "rifter",
+        "wolf",
+        "jaguar",
         # Enemy ships (Amarr)
-        'executioner', 'punisher', 'omen', 'maller',
+        "executioner",
+        "punisher",
+        "omen",
+        "maller",
         # Industrial
-        'bestower', 'sigil',
+        "bestower",
+        "sigil",
         # Bosses
-        'apocalypse', 'abaddon',
+        "apocalypse",
+        "abaddon",
         # Extra ships
-        'condor', 'tristan', 'hurricane', 'tempest',
-        'dominix', 'megathron', 'raven', 'rokh'
+        "condor",
+        "tristan",
+        "hurricane",
+        "tempest",
+        "dominix",
+        "megathron",
+        "raven",
+        "rokh",
     ]
 
     print("Generating top-down thrust effects...\n")

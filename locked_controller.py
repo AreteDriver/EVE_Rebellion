@@ -20,6 +20,7 @@ class GameAction(IntEnum):
     All possible game actions.
     These are ABSTRACT - mapped to physical buttons in ControllerLayout.
     """
+
     # Movement (analog)
     MOVE_SHIP = 0
     AIM_TURRET = 1
@@ -55,26 +56,26 @@ class ControllerLayout:
 
     # === XBOX LAYOUT (Primary) ===
     # Sticks (axes)
-    MOVE_X_AXIS: int = 0          # Left stick horizontal
-    MOVE_Y_AXIS: int = 1          # Left stick vertical
-    AIM_X_AXIS: int = 2           # Right stick horizontal
-    AIM_Y_AXIS: int = 3           # Right stick vertical
+    MOVE_X_AXIS: int = 0  # Left stick horizontal
+    MOVE_Y_AXIS: int = 1  # Left stick vertical
+    AIM_X_AXIS: int = 2  # Right stick horizontal
+    AIM_Y_AXIS: int = 3  # Right stick vertical
 
     # Triggers (axes on most controllers)
-    PRIMARY_FIRE_AXIS: int = 5    # RT (Right Trigger)
+    PRIMARY_FIRE_AXIS: int = 5  # RT (Right Trigger)
     ALTERNATE_FIRE_AXIS: int = 4  # LT (Left Trigger) - may be axis 2 on some
 
     # Buttons
-    BTN_CONTEXT_ACTION: int = 0   # A / Cross
-    BTN_EMERGENCY_BURN: int = 1   # B / Circle
-    BTN_DEPLOY_FLEET: int = 2     # X / Square
-    BTN_FORMATION_SWITCH: int = 3 # Y / Triangle
+    BTN_CONTEXT_ACTION: int = 0  # A / Cross
+    BTN_EMERGENCY_BURN: int = 1  # B / Circle
+    BTN_DEPLOY_FLEET: int = 2  # X / Square
+    BTN_FORMATION_SWITCH: int = 3  # Y / Triangle
     BTN_CYCLE_AMMO_PREV: int = 4  # LB / L1
     BTN_CYCLE_AMMO_NEXT: int = 5  # RB / R1
-    BTN_QUICK_STATS: int = 6      # Back/Select / Share
-    BTN_PAUSE: int = 7            # Start / Options
-    BTN_L_STICK_PRESS: int = 8    # L3 (unused, reserved)
-    BTN_R_STICK_PRESS: int = 9    # R3 (unused, reserved)
+    BTN_QUICK_STATS: int = 6  # Back/Select / Share
+    BTN_PAUSE: int = 7  # Start / Options
+    BTN_L_STICK_PRESS: int = 8  # L3 (unused, reserved)
+    BTN_R_STICK_PRESS: int = 9  # R3 (unused, reserved)
 
     # D-Pad (treated as buttons)
     DPAD_UP: int = 11
@@ -86,10 +87,14 @@ class ControllerLayout:
         """Validate layout on creation"""
         # Ensure no duplicate bindings
         buttons = [
-            self.BTN_CONTEXT_ACTION, self.BTN_EMERGENCY_BURN,
-            self.BTN_DEPLOY_FLEET, self.BTN_FORMATION_SWITCH,
-            self.BTN_CYCLE_AMMO_PREV, self.BTN_CYCLE_AMMO_NEXT,
-            self.BTN_QUICK_STATS, self.BTN_PAUSE
+            self.BTN_CONTEXT_ACTION,
+            self.BTN_EMERGENCY_BURN,
+            self.BTN_DEPLOY_FLEET,
+            self.BTN_FORMATION_SWITCH,
+            self.BTN_CYCLE_AMMO_PREV,
+            self.BTN_CYCLE_AMMO_NEXT,
+            self.BTN_QUICK_STATS,
+            self.BTN_PAUSE,
         ]
         if len(buttons) != len(set(buttons)):
             raise ValueError("Duplicate button bindings detected")
@@ -329,7 +334,7 @@ class LockedControllerInput:
 
     def _rumble(self, intensity: float, duration_ms: int):
         """Trigger haptic feedback"""
-        if not self.haptic_enabled or not hasattr(self.joystick, 'rumble'):
+        if not self.haptic_enabled or not hasattr(self.joystick, "rumble"):
             return
         try:
             self.joystick.rumble(intensity, intensity, duration_ms)
@@ -404,23 +409,24 @@ class LockedControllerInput:
         NOT allowed:
         - Rebinding buttons (layout is LOCKED)
         """
-        if 'deadzone_move' in kwargs:
-            self.deadzone_move = max(0.05, min(0.30, kwargs['deadzone_move']))
-        if 'deadzone_aim' in kwargs:
-            self.deadzone_aim = max(0.10, min(0.40, kwargs['deadzone_aim']))
-        if 'sensitivity_move' in kwargs:
-            self.sensitivity_move = max(0.5, min(2.0, kwargs['sensitivity_move']))
-        if 'sensitivity_aim' in kwargs:
-            self.sensitivity_aim = max(0.3, min(1.5, kwargs['sensitivity_aim']))
-        if 'invert_y' in kwargs:
-            self.invert_y = bool(kwargs['invert_y'])
-        if 'haptic_enabled' in kwargs:
-            self.haptic_enabled = bool(kwargs['haptic_enabled'])
-        if 'haptic_intensity' in kwargs:
-            self.haptic_intensity = max(0.0, min(1.0, kwargs['haptic_intensity']))
+        if "deadzone_move" in kwargs:
+            self.deadzone_move = max(0.05, min(0.30, kwargs["deadzone_move"]))
+        if "deadzone_aim" in kwargs:
+            self.deadzone_aim = max(0.10, min(0.40, kwargs["deadzone_aim"]))
+        if "sensitivity_move" in kwargs:
+            self.sensitivity_move = max(0.5, min(2.0, kwargs["sensitivity_move"]))
+        if "sensitivity_aim" in kwargs:
+            self.sensitivity_aim = max(0.3, min(1.5, kwargs["sensitivity_aim"]))
+        if "invert_y" in kwargs:
+            self.invert_y = bool(kwargs["invert_y"])
+        if "haptic_enabled" in kwargs:
+            self.haptic_enabled = bool(kwargs["haptic_enabled"])
+        if "haptic_intensity" in kwargs:
+            self.haptic_intensity = max(0.0, min(1.0, kwargs["haptic_intensity"]))
 
 
 # === INTEGRATION EXAMPLE ===
+
 
 def example_game_loop():
     """Example showing how to use hard-locked controller in game loop"""
@@ -429,10 +435,7 @@ def example_game_loop():
 
     # Optional: Configure sensitivity (NOT bindings)
     controller.configure(
-        deadzone_move=0.12,
-        sensitivity_move=1.2,
-        invert_y=False,
-        haptic_intensity=0.8
+        deadzone_move=0.12, sensitivity_move=1.2, invert_y=False, haptic_intensity=0.8
     )
 
     clock = pygame.time.Clock()

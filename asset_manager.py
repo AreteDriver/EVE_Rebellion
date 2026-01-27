@@ -34,21 +34,18 @@ SHIP_DATABASE = {
         "probe": {"type_id": 586, "faction": "minmatar"},
         "burst": {"type_id": 599, "faction": "minmatar"},
         "vigil": {"type_id": 3766, "faction": "minmatar"},
-
         "tristan": {"type_id": 593, "faction": "gallente"},
         "atron": {"type_id": 608, "faction": "gallente"},
         "incursus": {"type_id": 594, "faction": "gallente"},
         "imicus": {"type_id": 605, "faction": "gallente"},
         "navitas": {"type_id": 592, "faction": "gallente"},
         "maulus": {"type_id": 609, "faction": "gallente"},
-
         "merlin": {"type_id": 603, "faction": "caldari"},
         "kestrel": {"type_id": 602, "faction": "caldari"},
         "condor": {"type_id": 583, "faction": "caldari"},
         "heron": {"type_id": 605, "faction": "caldari"},
         "bantam": {"type_id": 582, "faction": "caldari"},
         "griffin": {"type_id": 584, "faction": "caldari"},
-
         "punisher": {"type_id": 597, "faction": "amarr"},
         "executioner": {"type_id": 589, "faction": "amarr"},
         "tormentor": {"type_id": 591, "faction": "amarr"},
@@ -61,17 +58,14 @@ SHIP_DATABASE = {
         "rupture": {"type_id": 629, "faction": "minmatar"},
         "bellicose": {"type_id": 630, "faction": "minmatar"},
         "scythe": {"type_id": 631, "faction": "minmatar"},
-
         "thorax": {"type_id": 627, "faction": "gallente"},
         "vexor": {"type_id": 626, "faction": "gallente"},
         "celestis": {"type_id": 633, "faction": "gallente"},
         "exequror": {"type_id": 634, "faction": "gallente"},
-
         "caracal": {"type_id": 621, "faction": "caldari"},
         "moa": {"type_id": 623, "faction": "caldari"},
         "blackbird": {"type_id": 632, "faction": "caldari"},
         "osprey": {"type_id": 620, "faction": "caldari"},
-
         "maller": {"type_id": 624, "faction": "amarr"},
         "omen": {"type_id": 625, "faction": "amarr"},
         "arbitrator": {"type_id": 628, "faction": "amarr"},
@@ -80,13 +74,10 @@ SHIP_DATABASE = {
     "battlecruisers": {
         "hurricane": {"type_id": 24702, "faction": "minmatar"},
         "cyclone": {"type_id": 24700, "faction": "minmatar"},
-
         "brutix": {"type_id": 16229, "faction": "gallente"},
         "myrmidon": {"type_id": 24690, "faction": "gallente"},
-
         "drake": {"type_id": 24690, "faction": "caldari"},
         "ferox": {"type_id": 24688, "faction": "caldari"},
-
         "harbinger": {"type_id": 24696, "faction": "amarr"},
         "prophecy": {"type_id": 24692, "faction": "amarr"},
     },
@@ -94,15 +85,12 @@ SHIP_DATABASE = {
         "tempest": {"type_id": 639, "faction": "minmatar"},
         "typhoon": {"type_id": 644, "faction": "minmatar"},
         "maelstrom": {"type_id": 24694, "faction": "minmatar"},
-
         "megathron": {"type_id": 641, "faction": "gallente"},
         "dominix": {"type_id": 645, "faction": "gallente"},
         "hyperion": {"type_id": 24690, "faction": "gallente"},
-
         "raven": {"type_id": 638, "faction": "caldari"},
         "scorpion": {"type_id": 640, "faction": "caldari"},
         "rokh": {"type_id": 24688, "faction": "caldari"},
-
         "apocalypse": {"type_id": 642, "faction": "amarr"},
         "armageddon": {"type_id": 643, "faction": "amarr"},
         "abaddon": {"type_id": 24692, "faction": "amarr"},
@@ -122,7 +110,6 @@ SHIP_DATABASE = {
         "moros": {"type_id": 19720, "faction": "gallente"},
         "phoenix": {"type_id": 19726, "faction": "caldari"},
         "revelation": {"type_id": 19722, "faction": "amarr"},
-
         "nidhoggur": {"type_id": 24483, "faction": "minmatar"},
         "thanatos": {"type_id": 23911, "faction": "gallente"},
         "chimera": {"type_id": 23915, "faction": "caldari"},
@@ -133,7 +120,6 @@ SHIP_DATABASE = {
         "nyx": {"type_id": 23913, "faction": "gallente"},
         "wyvern": {"type_id": 23917, "faction": "caldari"},
         "aeon": {"type_id": 23919, "faction": "amarr"},
-
         "ragnarok": {"type_id": 11568, "faction": "minmatar"},
         "erebus": {"type_id": 671, "faction": "gallente"},
         "leviathan": {"type_id": 3764, "faction": "caldari"},
@@ -179,7 +165,7 @@ class AssetManager:
             "created": datetime.now().isoformat(),
             "updated": datetime.now().isoformat(),
             "ships": {},
-            "downloads": []
+            "downloads": [],
         }
 
     def _save_manifest(self):
@@ -188,11 +174,7 @@ class AssetManager:
         self.manifest_path.write_text(json.dumps(self.manifest, indent=2))
 
     async def download_ship(
-        self,
-        type_id: int,
-        name: str,
-        size: int = 256,
-        variation: str = "render"
+        self, type_id: int, name: str, size: int = 256, variation: str = "render"
     ) -> DownloadResult:
         """Download a single ship image."""
         # Determine output path
@@ -220,8 +202,7 @@ class AssetManager:
                     return DownloadResult(type_id, name, size, True, output_path)
                 else:
                     return DownloadResult(
-                        type_id, name, size, False,
-                        error=f"HTTP {response.status_code}"
+                        type_id, name, size, False, error=f"HTTP {response.status_code}"
                     )
         except Exception as e:
             return DownloadResult(type_id, name, size, False, error=str(e))
@@ -230,7 +211,7 @@ class AssetManager:
         self,
         sizes: List[int] = [256],
         classes: Optional[List[str]] = None,
-        factions: Optional[List[str]] = None
+        factions: Optional[List[str]] = None,
     ) -> List[DownloadResult]:
         """Download all ships matching criteria."""
         results = []
@@ -245,11 +226,7 @@ class AssetManager:
                     continue
 
                 for size in sizes:
-                    tasks.append(self.download_ship(
-                        info["type_id"],
-                        name,
-                        size
-                    ))
+                    tasks.append(self.download_ship(info["type_id"], name, size))
 
         print(f"📥 Downloading {len(tasks)} images...")
 
@@ -270,7 +247,7 @@ class AssetManager:
                     self.manifest["ships"][ship_key] = {
                         "type_id": result.type_id,
                         "name": result.name,
-                        "sizes": []
+                        "sizes": [],
                     }
                 if result.size not in self.manifest["ships"][ship_key]["sizes"]:
                     self.manifest["ships"][ship_key]["sizes"].append(result.size)
@@ -322,7 +299,7 @@ class AssetManager:
             "total_files": render_count + icon_count,
             "total_size_mb": round(total_size / (1024 * 1024), 2),
             "ship_classes": len(SHIP_DATABASE),
-            "unique_ships": sum(len(ships) for ships in SHIP_DATABASE.values())
+            "unique_ships": sum(len(ships) for ships in SHIP_DATABASE.values()),
         }
 
 
@@ -339,27 +316,28 @@ def print_stats(manager: AssetManager):
 
 async def main():
     parser = argparse.ArgumentParser(description="EVE Asset Manager")
-    parser.add_argument("--asset-dir", "-d", type=Path,
-                       default=Path.home() / ".eve_assets",
-                       help="Central asset directory")
-    parser.add_argument("--sync-all", action="store_true",
-                       help="Download all ships in all sizes")
-    parser.add_argument("--download-ships", action="store_true",
-                       help="Download ship renders")
-    parser.add_argument("--sizes", type=str, default="256,512",
-                       help="Comma-separated sizes to download")
-    parser.add_argument("--classes", type=str,
-                       help="Ship classes to download (frigates,cruisers,etc)")
-    parser.add_argument("--factions", type=str,
-                       help="Factions to download (minmatar,gallente,etc)")
-    parser.add_argument("--link-to-project", type=Path,
-                       help="Link assets to a project")
-    parser.add_argument("--copy-to-project", type=Path,
-                       help="Copy assets to a project")
-    parser.add_argument("--stats", action="store_true",
-                       help="Show asset statistics")
-    parser.add_argument("--generate-mapping", action="store_true",
-                       help="Generate type ID mapping JSON")
+    parser.add_argument(
+        "--asset-dir",
+        "-d",
+        type=Path,
+        default=Path.home() / ".eve_assets",
+        help="Central asset directory",
+    )
+    parser.add_argument("--sync-all", action="store_true", help="Download all ships in all sizes")
+    parser.add_argument("--download-ships", action="store_true", help="Download ship renders")
+    parser.add_argument(
+        "--sizes", type=str, default="256,512", help="Comma-separated sizes to download"
+    )
+    parser.add_argument(
+        "--classes", type=str, help="Ship classes to download (frigates,cruisers,etc)"
+    )
+    parser.add_argument("--factions", type=str, help="Factions to download (minmatar,gallente,etc)")
+    parser.add_argument("--link-to-project", type=Path, help="Link assets to a project")
+    parser.add_argument("--copy-to-project", type=Path, help="Copy assets to a project")
+    parser.add_argument("--stats", action="store_true", help="Show asset statistics")
+    parser.add_argument(
+        "--generate-mapping", action="store_true", help="Generate type ID mapping JSON"
+    )
 
     args = parser.parse_args()
 
@@ -389,11 +367,7 @@ async def main():
         classes = args.classes.split(",") if args.classes else None
         factions = args.factions.split(",") if args.factions else None
 
-        results = await manager.download_all_ships(
-            sizes=sizes,
-            classes=classes,
-            factions=factions
-        )
+        results = await manager.download_all_ships(sizes=sizes, classes=classes, factions=factions)
         success = sum(1 for r in results if r.success)
         print(f"\n✅ Downloaded {success}/{len(results)} images")
 

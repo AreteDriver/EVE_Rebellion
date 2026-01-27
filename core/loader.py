@@ -23,12 +23,13 @@ def get_data_path() -> str:
     # Try platform_init first for portable/packaged mode
     try:
         from platform_init import get_resource_path
-        return get_resource_path('data')
+
+        return get_resource_path("data")
     except ImportError:
         pass
 
     # Fallback for development mode
-    return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
 
 def load_json_file(filepath: str) -> Dict[str, Any]:
@@ -45,7 +46,7 @@ def load_json_file(filepath: str) -> Dict[str, Any]:
         FileNotFoundError: If the file does not exist.
         json.JSONDecodeError: If the file contains invalid JSON.
     """
-    with open(filepath, 'r', encoding='utf-8') as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -64,7 +65,7 @@ def load_all_from_directory(directory: str) -> Dict[str, Dict[str, Any]]:
         return data
 
     for filename in os.listdir(directory):
-        if filename.endswith('.json'):
+        if filename.endswith(".json"):
             filepath = os.path.join(directory, filename)
             name = os.path.splitext(filename)[0]
             data[name] = load_json_file(filepath)
@@ -79,7 +80,7 @@ def load_enemies() -> Dict[str, Dict[str, Any]]:
     Returns:
         Dictionary mapping enemy IDs to their stats and properties.
     """
-    enemies_dir = os.path.join(get_data_path(), 'enemies')
+    enemies_dir = os.path.join(get_data_path(), "enemies")
     return load_all_from_directory(enemies_dir)
 
 
@@ -90,7 +91,7 @@ def load_stages() -> Dict[str, Dict[str, Any]]:
     Returns:
         Dictionary mapping stage IDs to their configuration.
     """
-    stages_dir = os.path.join(get_data_path(), 'stages')
+    stages_dir = os.path.join(get_data_path(), "stages")
     return load_all_from_directory(stages_dir)
 
 
@@ -101,7 +102,7 @@ def load_powerups() -> Dict[str, Dict[str, Any]]:
     Returns:
         Dictionary mapping power-up IDs to their effects and properties.
     """
-    powerups_dir = os.path.join(get_data_path(), 'powerups')
+    powerups_dir = os.path.join(get_data_path(), "powerups")
     return load_all_from_directory(powerups_dir)
 
 
@@ -113,11 +114,7 @@ def load_all_game_data() -> Dict[str, Dict[str, Dict[str, Any]]]:
         Dictionary with 'enemies', 'stages', and 'powerups' keys,
         each containing the respective loaded data.
     """
-    return {
-        'enemies': load_enemies(),
-        'stages': load_stages(),
-        'powerups': load_powerups()
-    }
+    return {"enemies": load_enemies(), "stages": load_stages(), "powerups": load_powerups()}
 
 
 if __name__ == "__main__":
@@ -130,33 +127,33 @@ if __name__ == "__main__":
 
     # Display loaded enemies
     print("\n--- Enemies ---")
-    enemies = all_data['enemies']
+    enemies = all_data["enemies"]
     if enemies:
         for enemy_id, enemy_data in enemies.items():
-            name = enemy_data.get('name', enemy_id)
-            health = enemy_data.get('health', 'N/A')
+            name = enemy_data.get("name", enemy_id)
+            health = enemy_data.get("health", "N/A")
             print(f"  {enemy_id}: {name} (Health: {health})")
     else:
         print("  No enemy data found.")
 
     # Display loaded stages
     print("\n--- Stages ---")
-    stages = all_data['stages']
+    stages = all_data["stages"]
     if stages:
         for stage_id, stage_data in stages.items():
-            name = stage_data.get('name', stage_id)
-            waves = stage_data.get('waves', 'N/A')
+            name = stage_data.get("name", stage_id)
+            waves = stage_data.get("waves", "N/A")
             print(f"  {stage_id}: {name} (Waves: {waves})")
     else:
         print("  No stage data found.")
 
     # Display loaded power-ups
     print("\n--- Power-ups ---")
-    powerups = all_data['powerups']
+    powerups = all_data["powerups"]
     if powerups:
         for powerup_id, powerup_data in powerups.items():
-            name = powerup_data.get('name', powerup_id)
-            effect = powerup_data.get('effect', 'N/A')
+            name = powerup_data.get("name", powerup_id)
+            effect = powerup_data.get("effect", "N/A")
             print(f"  {powerup_id}: {name} (Effect: {effect})")
     else:
         print("  No power-up data found.")

@@ -16,8 +16,13 @@ class PixelExplosion:
     Used for enemy deaths, impacts, etc.
     """
 
-    def __init__(self, pos: Tuple[int, int], color: Tuple[int, int, int],
-                 particle_count: int = 20, spread: float = 5.0):
+    def __init__(
+        self,
+        pos: Tuple[int, int],
+        color: Tuple[int, int, int],
+        particle_count: int = 20,
+        spread: float = 5.0,
+    ):
         self.particles = []
 
         for _ in range(particle_count):
@@ -25,46 +30,46 @@ class PixelExplosion:
             speed = random.uniform(2, spread)
 
             particle = {
-                'x': float(pos[0]),
-                'y': float(pos[1]),
-                'vx': math.cos(angle) * speed,
-                'vy': math.sin(angle) * speed,
-                'lifetime': random.randint(20, 60),
-                'max_lifetime': 60,
-                'size': random.randint(2, 4),
-                'color': color,
-                'gravity': random.uniform(0.1, 0.3)
+                "x": float(pos[0]),
+                "y": float(pos[1]),
+                "vx": math.cos(angle) * speed,
+                "vy": math.sin(angle) * speed,
+                "lifetime": random.randint(20, 60),
+                "max_lifetime": 60,
+                "size": random.randint(2, 4),
+                "color": color,
+                "gravity": random.uniform(0.1, 0.3),
             }
             self.particles.append(particle)
 
     def update(self):
         """Update particle positions and lifetime"""
         for particle in self.particles[:]:
-            particle['x'] += particle['vx']
-            particle['y'] += particle['vy']
-            particle['vy'] += particle['gravity']  # Gravity
-            particle['lifetime'] -= 1
+            particle["x"] += particle["vx"]
+            particle["y"] += particle["vy"]
+            particle["vy"] += particle["gravity"]  # Gravity
+            particle["lifetime"] -= 1
 
             # Air resistance
-            particle['vx'] *= 0.95
-            particle['vy'] *= 0.95
+            particle["vx"] *= 0.95
+            particle["vy"] *= 0.95
 
-            if particle['lifetime'] <= 0:
+            if particle["lifetime"] <= 0:
                 self.particles.remove(particle)
 
     def draw(self, surface: pygame.Surface):
         """Draw particles"""
         for particle in self.particles:
             # Fade out based on lifetime
-            alpha = int((particle['lifetime'] / particle['max_lifetime']) * 255)
-            color = particle['color']
+            alpha = int((particle["lifetime"] / particle["max_lifetime"]) * 255)
+            color = particle["color"]
 
             # Create small surface for particle with alpha
-            size = particle['size']
+            size = particle["size"]
             particle_surf = pygame.Surface((size, size), pygame.SRCALPHA)
             particle_surf.fill((*color, alpha))
 
-            surface.blit(particle_surf, (int(particle['x']), int(particle['y'])))
+            surface.blit(particle_surf, (int(particle["x"]), int(particle["y"])))
 
     def is_finished(self) -> bool:
         """Check if explosion is complete"""
@@ -77,8 +82,12 @@ class ScreenFlash:
     Used for boss deaths, extreme close kills, etc.
     """
 
-    def __init__(self, color: Tuple[int, int, int] = (255, 255, 255),
-                 duration: int = 10, peak_alpha: int = 180):
+    def __init__(
+        self,
+        color: Tuple[int, int, int] = (255, 255, 255),
+        duration: int = 10,
+        peak_alpha: int = 180,
+    ):
         self.color = color
         self.duration = duration
         self.max_duration = duration
@@ -155,8 +164,7 @@ class ScanLine:
     Can be toggled in settings for authentic retro feel
     """
 
-    def __init__(self, screen_height: int, line_spacing: int = 2,
-                 opacity: int = 30):
+    def __init__(self, screen_height: int, line_spacing: int = 2, opacity: int = 30):
         self.screen_height = screen_height
         self.line_spacing = line_spacing
         self.opacity = opacity
@@ -170,8 +178,7 @@ class ScanLine:
 
         # Draw horizontal lines
         for y in range(0, self.screen_height, self.line_spacing):
-            pygame.draw.line(scanline_surf, (0, 0, 0, self.opacity),
-                           (0, y), (width, y))
+            pygame.draw.line(scanline_surf, (0, 0, 0, self.opacity), (0, y), (width, y))
 
         surface.blit(scanline_surf, (0, 0))
 
@@ -181,10 +188,13 @@ class BulletTrail:
     Pixel-perfect bullet trails for enhanced visual feedback
     """
 
-    def __init__(self, start_pos: Tuple[float, float],
-                 end_pos: Tuple[float, float],
-                 color: Tuple[int, int, int],
-                 lifetime: int = 5):
+    def __init__(
+        self,
+        start_pos: Tuple[float, float],
+        end_pos: Tuple[float, float],
+        color: Tuple[int, int, int],
+        lifetime: int = 5,
+    ):
         self.start = start_pos
         self.end = end_pos
         self.color = color
@@ -218,8 +228,9 @@ class BulletTrail:
             local_x2 = x2 - min_x + 2
             local_y2 = y2 - min_y + 2
 
-            pygame.draw.line(trail_surf, (*self.color, alpha),
-                           (local_x1, local_y1), (local_x2, local_y2), 2)
+            pygame.draw.line(
+                trail_surf, (*self.color, alpha), (local_x1, local_y1), (local_x2, local_y2), 2
+            )
 
             surface.blit(trail_surf, (min_x - 2, min_y - 2))
 
@@ -234,8 +245,13 @@ class ImpactRing:
     Classic shmup visual
     """
 
-    def __init__(self, pos: Tuple[int, int], color: Tuple[int, int, int],
-                 max_radius: int = 30, duration: int = 15):
+    def __init__(
+        self,
+        pos: Tuple[int, int],
+        color: Tuple[int, int, int],
+        max_radius: int = 30,
+        duration: int = 15,
+    ):
         self.pos = pos
         self.color = color
         self.radius = 5
@@ -261,8 +277,7 @@ class ImpactRing:
 
             # Draw ring
             center = (size // 2, size // 2)
-            pygame.draw.circle(ring_surf, (*self.color, alpha),
-                             center, int(self.radius), 2)
+            pygame.draw.circle(ring_surf, (*self.color, alpha), center, int(self.radius), 2)
 
             # Blit centered on position
             surface.blit(ring_surf, (self.pos[0] - size // 2, self.pos[1] - size // 2))
@@ -293,14 +308,20 @@ class EffectManager:
         self.total_shake_x = 0
         self.total_shake_y = 0
 
-    def add_explosion(self, pos: Tuple[int, int], color: Tuple[int, int, int],
-                     particle_count: int = 20, spread: float = 5.0):
+    def add_explosion(
+        self,
+        pos: Tuple[int, int],
+        color: Tuple[int, int, int],
+        particle_count: int = 20,
+        spread: float = 5.0,
+    ):
         """Add pixel explosion effect"""
         explosion = PixelExplosion(pos, color, particle_count, spread)
         self.explosions.append(explosion)
 
-    def add_flash(self, color: Tuple[int, int, int] = (255, 255, 255),
-                  duration: int = 10, alpha: int = 180):
+    def add_flash(
+        self, color: Tuple[int, int, int] = (255, 255, 255), duration: int = 10, alpha: int = 180
+    ):
         """Add screen flash"""
         flash = ScreenFlash(color, duration, alpha)
         self.flashes.append(flash)
@@ -310,14 +331,20 @@ class EffectManager:
         shake = ScreenShake(intensity, duration)
         self.shakes.append(shake)
 
-    def add_trail(self, start: Tuple[float, float], end: Tuple[float, float],
-                  color: Tuple[int, int, int], lifetime: int = 5):
+    def add_trail(
+        self,
+        start: Tuple[float, float],
+        end: Tuple[float, float],
+        color: Tuple[int, int, int],
+        lifetime: int = 5,
+    ):
         """Add bullet trail"""
         trail = BulletTrail(start, end, color, lifetime)
         self.trails.append(trail)
 
-    def add_impact_ring(self, pos: Tuple[int, int], color: Tuple[int, int, int],
-                       max_radius: int = 30):
+    def add_impact_ring(
+        self, pos: Tuple[int, int], color: Tuple[int, int, int], max_radius: int = 30
+    ):
         """Add impact ring"""
         ring = ImpactRing(pos, color, max_radius)
         self.rings.append(ring)

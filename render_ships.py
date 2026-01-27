@@ -20,110 +20,109 @@ STL_BASE = "/tmp/eve-stls/ships"
 # Ships to render for the game
 SHIPS_TO_RENDER = {
     # Minmatar (Player ships) - rusty brown/red colors
-    'rifter': {
-        'stl': f'{STL_BASE}/minmatar/frigate/rifter.stl',
-        'color': (0.6, 0.25, 0.1, 1.0),  # Rusty brown
-        'size': 64,
-        'faction': 'minmatar'
+    "rifter": {
+        "stl": f"{STL_BASE}/minmatar/frigate/rifter.stl",
+        "color": (0.6, 0.25, 0.1, 1.0),  # Rusty brown
+        "size": 64,
+        "faction": "minmatar",
     },
-    'slasher': {
-        'stl': f'{STL_BASE}/minmatar/frigate/slasher.stl',
-        'color': (0.5, 0.2, 0.1, 1.0),  # Dark rust
-        'size': 64,
-        'faction': 'minmatar'
+    "slasher": {
+        "stl": f"{STL_BASE}/minmatar/frigate/slasher.stl",
+        "color": (0.5, 0.2, 0.1, 1.0),  # Dark rust
+        "size": 64,
+        "faction": "minmatar",
     },
-    'hurricane': {
-        'stl': f'{STL_BASE}/minmatar/battlecruiser/hurricane.stl',
-        'color': (0.55, 0.22, 0.12, 1.0),  # Rust
-        'size': 96,
-        'faction': 'minmatar'
+    "hurricane": {
+        "stl": f"{STL_BASE}/minmatar/battlecruiser/hurricane.stl",
+        "color": (0.55, 0.22, 0.12, 1.0),  # Rust
+        "size": 96,
+        "faction": "minmatar",
     },
-
     # Amarr (Enemy ships) - gold/bronze colors
-    'executioner': {
-        'stl': f'{STL_BASE}/amarr/frigate/executioner.stl',
-        'color': (0.8, 0.6, 0.2, 1.0),  # Gold
-        'size': 48,
-        'faction': 'amarr'
+    "executioner": {
+        "stl": f"{STL_BASE}/amarr/frigate/executioner.stl",
+        "color": (0.8, 0.6, 0.2, 1.0),  # Gold
+        "size": 48,
+        "faction": "amarr",
     },
-    'punisher': {
-        'stl': f'{STL_BASE}/amarr/frigate/punisher.stl',
-        'color': (0.75, 0.55, 0.25, 1.0),  # Bronze
-        'size': 48,
-        'faction': 'amarr'
+    "punisher": {
+        "stl": f"{STL_BASE}/amarr/frigate/punisher.stl",
+        "color": (0.75, 0.55, 0.25, 1.0),  # Bronze
+        "size": 48,
+        "faction": "amarr",
     },
-    'tormentor': {
-        'stl': f'{STL_BASE}/amarr/frigate/tormentor.stl',
-        'color': (0.7, 0.5, 0.2, 1.0),  # Gold-bronze
-        'size': 48,
-        'faction': 'amarr'
+    "tormentor": {
+        "stl": f"{STL_BASE}/amarr/frigate/tormentor.stl",
+        "color": (0.7, 0.5, 0.2, 1.0),  # Gold-bronze
+        "size": 48,
+        "faction": "amarr",
     },
-    'crucifier': {
-        'stl': f'{STL_BASE}/amarr/frigate/crucifier.stl',
-        'color': (0.85, 0.65, 0.3, 1.0),  # Light gold
-        'size': 48,
-        'faction': 'amarr'
+    "crucifier": {
+        "stl": f"{STL_BASE}/amarr/frigate/crucifier.stl",
+        "color": (0.85, 0.65, 0.3, 1.0),  # Light gold
+        "size": 48,
+        "faction": "amarr",
     },
-    'coercer': {
-        'stl': f'{STL_BASE}/amarr/destroyer/coercer.stl',
-        'color': (0.78, 0.58, 0.22, 1.0),  # Gold
-        'size': 56,
-        'faction': 'amarr'
+    "coercer": {
+        "stl": f"{STL_BASE}/amarr/destroyer/coercer.stl",
+        "color": (0.78, 0.58, 0.22, 1.0),  # Gold
+        "size": 56,
+        "faction": "amarr",
     },
-    'omen': {
-        'stl': f'{STL_BASE}/amarr/cruiser/omen.stl',
-        'color': (0.8, 0.6, 0.25, 1.0),  # Gold
-        'size': 72,
-        'faction': 'amarr'
+    "omen": {
+        "stl": f"{STL_BASE}/amarr/cruiser/omen.stl",
+        "color": (0.8, 0.6, 0.25, 1.0),  # Gold
+        "size": 72,
+        "faction": "amarr",
     },
-    'maller': {
-        'stl': f'{STL_BASE}/amarr/cruiser/maller.stl',
-        'color': (0.72, 0.52, 0.2, 1.0),  # Bronze
-        'size': 72,
-        'faction': 'amarr'
+    "maller": {
+        "stl": f"{STL_BASE}/amarr/cruiser/maller.stl",
+        "color": (0.72, 0.52, 0.2, 1.0),  # Bronze
+        "size": 72,
+        "faction": "amarr",
     },
-    'harbinger': {
-        'stl': f'{STL_BASE}/amarr/battlecruiser/harbringer.stl',
-        'color': (0.82, 0.62, 0.28, 1.0),  # Gold
-        'size': 88,
-        'faction': 'amarr'
+    "harbinger": {
+        "stl": f"{STL_BASE}/amarr/battlecruiser/harbringer.stl",
+        "color": (0.82, 0.62, 0.28, 1.0),  # Gold
+        "size": 88,
+        "faction": "amarr",
     },
-    'prophecy': {
-        'stl': f'{STL_BASE}/amarr/battlecruiser/prophecy.stl',
-        'color': (0.76, 0.56, 0.24, 1.0),  # Bronze-gold
-        'size': 88,
-        'faction': 'amarr'
+    "prophecy": {
+        "stl": f"{STL_BASE}/amarr/battlecruiser/prophecy.stl",
+        "color": (0.76, 0.56, 0.24, 1.0),  # Bronze-gold
+        "size": 88,
+        "faction": "amarr",
     },
-    'apocalypse': {
-        'stl': f'{STL_BASE}/amarr/battleship/apocalypse.stl',
-        'color': (0.85, 0.65, 0.3, 1.0),  # Bright gold
-        'size': 112,
-        'faction': 'amarr'
+    "apocalypse": {
+        "stl": f"{STL_BASE}/amarr/battleship/apocalypse.stl",
+        "color": (0.85, 0.65, 0.3, 1.0),  # Bright gold
+        "size": 112,
+        "faction": "amarr",
     },
-    'abaddon': {
-        'stl': f'{STL_BASE}/amarr/battleship/abaddon.stl',
-        'color': (0.8, 0.55, 0.2, 1.0),  # Deep gold
-        'size': 128,
-        'faction': 'amarr'
+    "abaddon": {
+        "stl": f"{STL_BASE}/amarr/battleship/abaddon.stl",
+        "color": (0.8, 0.55, 0.2, 1.0),  # Deep gold
+        "size": 128,
+        "faction": "amarr",
     },
-    'archon': {
-        'stl': f'{STL_BASE}/amarr/capital/archon.stl',
-        'color': (0.88, 0.68, 0.32, 1.0),  # Bright gold
-        'size': 160,
-        'faction': 'amarr'
+    "archon": {
+        "stl": f"{STL_BASE}/amarr/capital/archon.stl",
+        "color": (0.88, 0.68, 0.32, 1.0),  # Bright gold
+        "size": 160,
+        "faction": "amarr",
     },
-    'avatar': {
-        'stl': f'{STL_BASE}/amarr/capital/avatar.stl',
-        'color': (0.9, 0.7, 0.35, 1.0),  # Brilliant gold
-        'size': 256,
-        'faction': 'amarr'
+    "avatar": {
+        "stl": f"{STL_BASE}/amarr/capital/avatar.stl",
+        "color": (0.9, 0.7, 0.35, 1.0),  # Brilliant gold
+        "size": 256,
+        "faction": "amarr",
     },
 }
 
 
 def clear_scene():
     """Remove all objects from scene"""
-    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
     # Clear orphan data
@@ -137,7 +136,9 @@ def setup_render_settings(resolution):
     scene = bpy.context.scene
 
     # Render engine - use Eevee for speed
-    scene.render.engine = 'BLENDER_EEVEE_NEXT' if hasattr(bpy.types, 'BLENDER_EEVEE_NEXT') else 'BLENDER_EEVEE'
+    scene.render.engine = (
+        "BLENDER_EEVEE_NEXT" if hasattr(bpy.types, "BLENDER_EEVEE_NEXT") else "BLENDER_EEVEE"
+    )
 
     # Resolution
     scene.render.resolution_x = resolution
@@ -148,9 +149,9 @@ def setup_render_settings(resolution):
     scene.render.film_transparent = True
 
     # Output format
-    scene.render.image_settings.file_format = 'PNG'
-    scene.render.image_settings.color_mode = 'RGBA'
-    scene.render.image_settings.color_depth = '8'
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGBA"
+    scene.render.image_settings.color_depth = "8"
 
 
 def create_camera():
@@ -160,7 +161,7 @@ def create_camera():
     camera.name = "TopDownCamera"
 
     # Set to orthographic
-    camera.data.type = 'ORTHO'
+    camera.data.type = "ORTHO"
     camera.data.ortho_scale = 5.0  # Will be adjusted per model
 
     # Point straight down
@@ -173,21 +174,21 @@ def create_camera():
 def create_lighting():
     """Create lighting setup for top-down view"""
     # Key light from front-top
-    bpy.ops.object.light_add(type='SUN', location=(2, -2, 8))
+    bpy.ops.object.light_add(type="SUN", location=(2, -2, 8))
     key_light = bpy.context.active_object
     key_light.name = "KeyLight"
     key_light.data.energy = 3.0
     key_light.rotation_euler = (math.radians(30), math.radians(20), 0)
 
     # Fill light from side
-    bpy.ops.object.light_add(type='SUN', location=(-3, 0, 6))
+    bpy.ops.object.light_add(type="SUN", location=(-3, 0, 6))
     fill_light = bpy.context.active_object
     fill_light.name = "FillLight"
     fill_light.data.energy = 1.5
     fill_light.rotation_euler = (math.radians(45), math.radians(-30), 0)
 
     # Rim light for definition
-    bpy.ops.object.light_add(type='SUN', location=(0, 3, 4))
+    bpy.ops.object.light_add(type="SUN", location=(0, 3, 4))
     rim_light = bpy.context.active_object
     rim_light.name = "RimLight"
     rim_light.data.energy = 2.0
@@ -213,7 +214,12 @@ def create_material(name, color, metallic=0.8, roughness=0.3):
         bsdf.inputs["Metallic"].default_value = metallic
         bsdf.inputs["Roughness"].default_value = roughness
         # Add slight emission for visibility
-        bsdf.inputs["Emission Color"].default_value = (color[0] * 0.1, color[1] * 0.1, color[2] * 0.1, 1.0)
+        bsdf.inputs["Emission Color"].default_value = (
+            color[0] * 0.1,
+            color[1] * 0.1,
+            color[2] * 0.1,
+            1.0,
+        )
         bsdf.inputs["Emission Strength"].default_value = 0.2
 
     return mat
@@ -223,7 +229,7 @@ def center_and_scale_object(obj, camera):
     """Center object and scale to fit view"""
     # Apply transforms
     bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+    bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
 
     # Move to origin
     obj.location = (0, 0, 0)
@@ -245,10 +251,10 @@ def center_and_scale_object(obj, camera):
 
 def render_ship(ship_name, config):
     """Render a single ship to sprite"""
-    stl_path = config['stl']
-    color = config['color']
-    size = config['size']
-    config['faction']
+    stl_path = config["stl"]
+    color = config["color"]
+    size = config["size"]
+    config["faction"]
 
     if not os.path.exists(stl_path):
         print(f"  [SKIP] {ship_name}: STL not found at {stl_path}")

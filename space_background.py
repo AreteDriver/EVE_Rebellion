@@ -12,48 +12,92 @@ import pygame
 # Each is a list of (x, y) points normalized to 0-1 range
 SHIP_SILHOUETTES = {
     # Minmatar style - angular, aggressive
-    'frigate_minmatar': [
-        (0.0, 0.5), (0.2, 0.3), (0.4, 0.2), (0.7, 0.15),
+    "frigate_minmatar": [
+        (0.0, 0.5),
+        (0.2, 0.3),
+        (0.4, 0.2),
+        (0.7, 0.15),
         (1.0, 0.5),  # nose
-        (0.7, 0.85), (0.4, 0.8), (0.2, 0.7)
+        (0.7, 0.85),
+        (0.4, 0.8),
+        (0.2, 0.7),
     ],
-    'cruiser_minmatar': [
-        (0.0, 0.4), (0.1, 0.25), (0.3, 0.2), (0.5, 0.15), (0.8, 0.2),
+    "cruiser_minmatar": [
+        (0.0, 0.4),
+        (0.1, 0.25),
+        (0.3, 0.2),
+        (0.5, 0.15),
+        (0.8, 0.2),
         (1.0, 0.5),  # nose
-        (0.8, 0.8), (0.5, 0.85), (0.3, 0.8), (0.1, 0.75), (0.0, 0.6)
+        (0.8, 0.8),
+        (0.5, 0.85),
+        (0.3, 0.8),
+        (0.1, 0.75),
+        (0.0, 0.6),
     ],
-    'battleship_minmatar': [
-        (0.0, 0.35), (0.05, 0.2), (0.2, 0.15), (0.4, 0.1), (0.6, 0.15), (0.85, 0.25),
+    "battleship_minmatar": [
+        (0.0, 0.35),
+        (0.05, 0.2),
+        (0.2, 0.15),
+        (0.4, 0.1),
+        (0.6, 0.15),
+        (0.85, 0.25),
         (1.0, 0.5),  # nose
-        (0.85, 0.75), (0.6, 0.85), (0.4, 0.9), (0.2, 0.85), (0.05, 0.8), (0.0, 0.65)
+        (0.85, 0.75),
+        (0.6, 0.85),
+        (0.4, 0.9),
+        (0.2, 0.85),
+        (0.05, 0.8),
+        (0.0, 0.65),
     ],
     # Amarr style - sleek, golden curves
-    'frigate_amarr': [
-        (0.0, 0.5), (0.15, 0.35), (0.4, 0.25), (0.7, 0.3),
+    "frigate_amarr": [
+        (0.0, 0.5),
+        (0.15, 0.35),
+        (0.4, 0.25),
+        (0.7, 0.3),
         (1.0, 0.5),  # nose
-        (0.7, 0.7), (0.4, 0.75), (0.15, 0.65)
+        (0.7, 0.7),
+        (0.4, 0.75),
+        (0.15, 0.65),
     ],
-    'cruiser_amarr': [
-        (0.0, 0.5), (0.1, 0.3), (0.25, 0.2), (0.5, 0.18), (0.75, 0.25),
+    "cruiser_amarr": [
+        (0.0, 0.5),
+        (0.1, 0.3),
+        (0.25, 0.2),
+        (0.5, 0.18),
+        (0.75, 0.25),
         (1.0, 0.5),  # nose
-        (0.75, 0.75), (0.5, 0.82), (0.25, 0.8), (0.1, 0.7)
+        (0.75, 0.75),
+        (0.5, 0.82),
+        (0.25, 0.8),
+        (0.1, 0.7),
     ],
-    'battleship_amarr': [
-        (0.0, 0.5), (0.08, 0.3), (0.2, 0.18), (0.4, 0.12), (0.6, 0.15), (0.8, 0.3),
+    "battleship_amarr": [
+        (0.0, 0.5),
+        (0.08, 0.3),
+        (0.2, 0.18),
+        (0.4, 0.12),
+        (0.6, 0.15),
+        (0.8, 0.3),
         (1.0, 0.5),  # nose
-        (0.8, 0.7), (0.6, 0.85), (0.4, 0.88), (0.2, 0.82), (0.08, 0.7)
+        (0.8, 0.7),
+        (0.6, 0.85),
+        (0.4, 0.88),
+        (0.2, 0.82),
+        (0.08, 0.7),
     ],
 }
 
 # Faction colors
 MINMATAR_COLORS = [
-    (180, 100, 60),   # Rust orange
-    (150, 80, 50),    # Dark rust
-    (200, 120, 70),   # Light rust
+    (180, 100, 60),  # Rust orange
+    (150, 80, 50),  # Dark rust
+    (200, 120, 70),  # Light rust
 ]
 AMARR_COLORS = [
-    (200, 170, 80),   # Gold
-    (180, 150, 60),   # Dark gold
+    (200, 170, 80),  # Gold
+    (180, 150, 60),  # Dark gold
     (220, 190, 100),  # Bright gold
 ]
 
@@ -66,16 +110,16 @@ class BackgroundShip:
         self.height = height
 
         # Pick faction - determines direction and color
-        self.faction = random.choice(['minmatar', 'amarr'])
+        self.faction = random.choice(["minmatar", "amarr"])
 
         # Pick ship class (affects size)
         self.ship_class = random.choices(
-            ['frigate', 'cruiser', 'battleship'],
-            weights=[0.5, 0.35, 0.15]  # More frigates than battleships
+            ["frigate", "cruiser", "battleship"],
+            weights=[0.5, 0.35, 0.15],  # More frigates than battleships
         )[0]
 
         # Size based on class and distance
-        base_sizes = {'frigate': 25, 'cruiser': 45, 'battleship': 70}
+        base_sizes = {"frigate": 25, "cruiser": 45, "battleship": 70}
         self.base_size = base_sizes[self.ship_class]
 
         # Distance factor (0.3 = far, 1.0 = close)
@@ -84,7 +128,7 @@ class BackgroundShip:
         self.alpha = int(60 + self.distance * 120)  # Closer = more visible
 
         # Color based on faction
-        if self.faction == 'minmatar':
+        if self.faction == "minmatar":
             self.color = random.choice(MINMATAR_COLORS)
             # Minmatar fly left to right (retreating/flanking)
             self.x = -self.size
@@ -109,7 +153,7 @@ class BackgroundShip:
 
     def _create_silhouette(self):
         """Create a ship silhouette sprite"""
-        silhouette_key = f'{self.ship_class}_{self.faction}'
+        silhouette_key = f"{self.ship_class}_{self.faction}"
         points_normalized = SHIP_SILHOUETTES.get(silhouette_key)
 
         if not points_normalized:
@@ -159,8 +203,12 @@ class BackgroundShip:
     def is_offscreen(self):
         """Check if ship has left the screen"""
         margin = self.size + 50
-        return (self.x < -margin or self.x > self.width + margin or
-                self.y < -margin or self.y > self.height + margin)
+        return (
+            self.x < -margin
+            or self.x > self.width + margin
+            or self.y < -margin
+            or self.y > self.height + margin
+        )
 
     def draw(self, surface):
         """Draw the ship with engine glow"""
@@ -183,7 +231,7 @@ class BackgroundShip:
             glow_size = int(4 + self.distance * 6)
             glow_surf = pygame.Surface((glow_size * 2, glow_size * 2), pygame.SRCALPHA)
 
-            if self.faction == 'minmatar':
+            if self.faction == "minmatar":
                 glow_color = (255, 150, 50, glow_alpha)  # Orange exhaust
             else:
                 glow_color = (255, 220, 100, glow_alpha)  # Yellow exhaust
@@ -232,15 +280,17 @@ class SpaceBackground:
             size = random.randint(100, 300)
 
             # Semi-transparent purple/orange clouds
-            cloud_color = random.choice([
-                (80, 40, 120, 30),   # Purple
-                (100, 50, 80, 25),   # Magenta
-                (60, 30, 90, 20)     # Deep purple
-            ])
+            cloud_color = random.choice(
+                [
+                    (80, 40, 120, 30),  # Purple
+                    (100, 50, 80, 25),  # Magenta
+                    (60, 30, 90, 20),  # Deep purple
+                ]
+            )
 
             cloud_surf = pygame.Surface((size, size), pygame.SRCALPHA)
-            pygame.draw.circle(cloud_surf, cloud_color, (size//2, size//2), size//2)
-            surface.blit(cloud_surf, (x - size//2, y - size//2))
+            pygame.draw.circle(cloud_surf, cloud_color, (size // 2, size // 2), size // 2)
+            surface.blit(cloud_surf, (x - size // 2, y - size // 2))
 
         return surface
 
@@ -252,11 +302,15 @@ class SpaceBackground:
             y = random.randint(0, self.height * 2)
             size = random.randint(1, 3)
             brightness = random.randint(150, 255)
-            stars.append({
-                'x': x, 'y': y, 'size': size,
-                'color': (brightness, brightness, brightness),
-                'speed': 0.2
-            })
+            stars.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "size": size,
+                    "color": (brightness, brightness, brightness),
+                    "speed": 0.2,
+                }
+            )
         return stars
 
     def create_asteroid_field(self, count):
@@ -269,11 +323,16 @@ class SpaceBackground:
             speed = random.uniform(1.0, 3.0)
             rotation = random.uniform(0, math.pi * 2)
 
-            asteroids.append({
-                'x': x, 'y': y, 'size': size,
-                'speed': speed, 'rotation': rotation,
-                'color': (100, 90, 80)
-            })
+            asteroids.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "size": size,
+                    "speed": speed,
+                    "rotation": rotation,
+                    "color": (100, 90, 80),
+                }
+            )
         return asteroids
 
     def update(self, speed=1.0):
@@ -286,19 +345,19 @@ class SpaceBackground:
 
         # Update stars
         for star in self.star_field:
-            star['y'] += star['speed'] * speed
-            if star['y'] > self.height * 2:
-                star['y'] = 0
-                star['x'] = random.randint(0, self.width)
+            star["y"] += star["speed"] * speed
+            if star["y"] > self.height * 2:
+                star["y"] = 0
+                star["x"] = random.randint(0, self.width)
 
         # Update asteroids
         for asteroid in self.asteroids:
-            asteroid['y'] += asteroid['speed'] * speed
-            asteroid['rotation'] += 0.02
+            asteroid["y"] += asteroid["speed"] * speed
+            asteroid["rotation"] += 0.02
 
-            if asteroid['y'] > self.height * 2:
-                asteroid['y'] = -asteroid['size']
-                asteroid['x'] = random.randint(0, self.width)
+            if asteroid["y"] > self.height * 2:
+                asteroid["y"] = -asteroid["size"]
+                asteroid["x"] = random.randint(0, self.width)
 
         # Update background ships
         for ship in self.background_ships[:]:
@@ -308,8 +367,10 @@ class SpaceBackground:
 
         # Spawn new background ships occasionally
         self.ship_spawn_timer += 1
-        if (self.ship_spawn_timer >= self.ship_spawn_interval and
-                len(self.background_ships) < self.max_background_ships):
+        if (
+            self.ship_spawn_timer >= self.ship_spawn_interval
+            and len(self.background_ships) < self.max_background_ships
+        ):
             if random.random() < 0.5:  # 50% chance each interval
                 self.background_ships.append(
                     BackgroundShip(self.width, self.height, self.sprite_cache)
@@ -324,10 +385,9 @@ class SpaceBackground:
 
         # Draw stars
         for star in self.star_field:
-            y = int(star['y'] - self.scroll_y)
+            y = int(star["y"] - self.scroll_y)
             if 0 <= y <= self.height:
-                pygame.draw.circle(surface, star['color'],
-                                   (int(star['x']), y), star['size'])
+                pygame.draw.circle(surface, star["color"], (int(star["x"]), y), star["size"])
 
         # Draw background ships (behind asteroids, in front of stars)
         for ship in self.background_ships:
@@ -335,10 +395,11 @@ class SpaceBackground:
 
         # Draw asteroids
         for asteroid in self.asteroids:
-            y = int(asteroid['y'] - self.scroll_y)
-            if -asteroid['size'] <= y <= self.height + asteroid['size']:
-                self.draw_asteroid(surface, asteroid['x'], y,
-                                   asteroid['size'], asteroid['rotation'])
+            y = int(asteroid["y"] - self.scroll_y)
+            if -asteroid["size"] <= y <= self.height + asteroid["size"]:
+                self.draw_asteroid(
+                    surface, asteroid["x"], y, asteroid["size"], asteroid["rotation"]
+                )
 
     def draw_asteroid(self, surface, x, y, size, rotation):
         """Draw a rocky asteroid"""

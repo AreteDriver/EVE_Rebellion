@@ -2,27 +2,16 @@
 
 Loads tutorial steps and messages from data/tutorial.json.
 """
+
 import json
 from pathlib import Path
 
 # Default tutorial steps if file not found
 DEFAULT_TUTORIAL = {
     "steps": [
-        {
-            "id": "welcome",
-            "message": "Welcome to Minmatar Rebellion!",
-            "duration": 3.0
-        },
-        {
-            "id": "movement",
-            "message": "Use WASD or Arrow Keys to move.",
-            "duration": 4.0
-        },
-        {
-            "id": "shooting",
-            "message": "Press SPACE to fire autocannons.",
-            "duration": 4.0
-        }
+        {"id": "welcome", "message": "Welcome to Minmatar Rebellion!", "duration": 3.0},
+        {"id": "movement", "message": "Use WASD or Arrow Keys to move.", "duration": 4.0},
+        {"id": "shooting", "message": "Press SPACE to fire autocannons.", "duration": 4.0},
     ]
 }
 
@@ -46,28 +35,28 @@ def load_tutorial_data():
         return DEFAULT_TUTORIAL.copy()
 
     try:
-        with open(tutorial_path, 'r', encoding='utf-8') as f:
+        with open(tutorial_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         # Validate that steps exist
-        if 'steps' not in data or not isinstance(data['steps'], list):
+        if "steps" not in data or not isinstance(data["steps"], list):
             return DEFAULT_TUTORIAL.copy()
 
         # Validate each step has required fields
         validated_steps = []
-        for step in data['steps']:
-            if isinstance(step, dict) and 'message' in step:
+        for step in data["steps"]:
+            if isinstance(step, dict) and "message" in step:
                 validated_step = {
-                    'id': step.get('id', f'step_{len(validated_steps)}'),
-                    'message': str(step['message']),
-                    'duration': float(step.get('duration', 3.0))
+                    "id": step.get("id", f"step_{len(validated_steps)}"),
+                    "message": str(step["message"]),
+                    "duration": float(step.get("duration", 3.0)),
                 }
                 validated_steps.append(validated_step)
 
         if not validated_steps:
             return DEFAULT_TUTORIAL.copy()
 
-        return {'steps': validated_steps}
+        return {"steps": validated_steps}
     except (json.JSONDecodeError, IOError, ValueError):
         return DEFAULT_TUTORIAL.copy()
 
@@ -88,7 +77,7 @@ class Tutorial:
     def __init__(self):
         """Initialize the tutorial system and load tutorial data."""
         data = load_tutorial_data()
-        self.steps = data['steps']
+        self.steps = data["steps"]
         self.current_step = 0
         self.is_active = False
         self.step_timer = 0.0
@@ -100,7 +89,7 @@ class Tutorial:
         self.is_active = True
         self.completed = False
         if self.steps:
-            self.step_timer = self.steps[0]['duration']
+            self.step_timer = self.steps[0]["duration"]
 
     def stop(self):
         """Stop the tutorial."""
@@ -125,7 +114,7 @@ class Tutorial:
             self.completed = True
             return False
 
-        self.step_timer = self.steps[self.current_step]['duration']
+        self.step_timer = self.steps[self.current_step]["duration"]
         return True
 
     def previous_step(self):
@@ -136,7 +125,7 @@ class Tutorial:
         """
         if self.current_step > 0:
             self.current_step -= 1
-            self.step_timer = self.steps[self.current_step]['duration']
+            self.step_timer = self.steps[self.current_step]["duration"]
             return True
         return False
 
@@ -168,7 +157,7 @@ class Tutorial:
         if not self.is_active or self.current_step >= len(self.steps):
             return None
 
-        return self.steps[self.current_step]['message']
+        return self.steps[self.current_step]["message"]
 
     def get_current_step_id(self):
         """Get the current step's ID.
@@ -179,7 +168,7 @@ class Tutorial:
         if not self.is_active or self.current_step >= len(self.steps):
             return None
 
-        return self.steps[self.current_step]['id']
+        return self.steps[self.current_step]["id"]
 
     def get_progress(self):
         """Get tutorial progress information.
@@ -191,11 +180,7 @@ class Tutorial:
         current = min(self.current_step + 1, total)
         percentage = (current / total * 100) if total > 0 else 100
 
-        return {
-            'current': current,
-            'total': total,
-            'percentage': percentage
-        }
+        return {"current": current, "total": total, "percentage": percentage}
 
     def get_display_data(self):
         """Get tutorial data for rendering.
@@ -204,12 +189,12 @@ class Tutorial:
             dict: Tutorial state for rendering including message and progress.
         """
         return {
-            'is_active': self.is_active,
-            'message': self.get_current_message(),
-            'step_id': self.get_current_step_id(),
-            'progress': self.get_progress(),
-            'time_remaining': self.step_timer,
-            'completed': self.completed
+            "is_active": self.is_active,
+            "message": self.get_current_message(),
+            "step_id": self.get_current_step_id(),
+            "progress": self.get_progress(),
+            "time_remaining": self.step_timer,
+            "completed": self.completed,
         }
 
     def reload(self):
@@ -218,10 +203,10 @@ class Tutorial:
         Useful for development to pick up changes without restarting.
         """
         data = load_tutorial_data()
-        self.steps = data['steps']
+        self.steps = data["steps"]
 
         # Reset if current step is now out of bounds
         if self.current_step >= len(self.steps):
             self.current_step = 0
             if self.is_active and self.steps:
-                self.step_timer = self.steps[0]['duration']
+                self.step_timer = self.steps[0]["duration"]

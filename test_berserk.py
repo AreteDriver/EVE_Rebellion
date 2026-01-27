@@ -48,12 +48,13 @@ def test_berserk_system():
     print(f"  Average multiplier: {stats['avg_multiplier']:.2f}x")
     print(f"  Extreme kills: {stats['extreme_kills']}")
     print("  Kills by range:")
-    for range_name, count in stats['kills_by_range'].items():
+    for range_name, count in stats["kills_by_range"].items():
         if count > 0:
             print(f"    {range_name}: {count}")
 
     print("\n✅ Berserk System test complete!")
     return True
+
 
 def test_effects():
     print("\n🎨 Testing Visual Effects System\n")
@@ -83,6 +84,7 @@ def test_effects():
     print("\n✅ Effect system test complete!")
     return True
 
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DEVIL BLADE BERSERK SYSTEM - STANDALONE TEST")
@@ -101,4 +103,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()

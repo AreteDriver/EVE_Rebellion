@@ -1,14 +1,15 @@
 """Quick STL dimension check."""
+
 import sys
 
 import bpy
 
 # Clear scene
-bpy.ops.object.select_all(action='SELECT')
+bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete()
 
 # Import STL
-argv = sys.argv[sys.argv.index('--') + 1:]
+argv = sys.argv[sys.argv.index("--") + 1 :]
 filepath = argv[0]
 bpy.ops.wm.stl_import(filepath=filepath)
 obj = bpy.context.selected_objects[0]

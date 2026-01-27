@@ -14,32 +14,32 @@ from datetime import datetime
 
 
 class GameIntegrator:
-    def __init__(self, game_path='game.py'):
+    def __init__(self, game_path="game.py"):
         self.game_path = game_path
         self.backup_path = None
         self.changes = []
 
     def backup_file(self):
         """Create backup of game.py"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.backup_path = f'game.py.backup_{timestamp}'
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.backup_path = f"game.py.backup_{timestamp}"
         shutil.copy(self.game_path, self.backup_path)
         print(f"✓ Backup created: {self.backup_path}")
 
     def read_file(self):
         """Read game.py content"""
-        with open(self.game_path, 'r', encoding='utf-8') as f:
+        with open(self.game_path, "r", encoding="utf-8") as f:
             return f.read()
 
     def write_file(self, content):
         """Write modified content to game.py"""
-        with open(self.game_path, 'w', encoding='utf-8') as f:
+        with open(self.game_path, "w", encoding="utf-8") as f:
             f.write(content)
 
     def add_imports(self, content):
         """Add system imports after existing imports"""
         # Find the last import statement
-        import_pattern = r'((?:from|import)\s+\S+.*\n)'
+        import_pattern = r"((?:from|import)\s+\S+.*\n)"
         imports = list(re.finditer(import_pattern, content))
 
         if not imports:
@@ -57,7 +57,7 @@ from core.tutorial import Tutorial
 """
 
         # Check if already added
-        if 'from core.save_manager import SaveManager' in content:
+        if "from core.save_manager import SaveManager" in content:
             print("⚠ Imports already present, skipping")
             return content
 
@@ -69,7 +69,7 @@ from core.tutorial import Tutorial
     def add_manager_init(self, content):
         """Add manager initialization in Game.__init__"""
         # Find Game.__init__ method
-        init_pattern = r'(class Game.*?def __init__\(self.*?\):.*?)(\n        [^\n])'
+        init_pattern = r"(class Game.*?def __init__\(self.*?\):.*?)(\n        [^\n])"
 
         match = re.search(init_pattern, content, re.DOTALL)
         if not match:
@@ -77,7 +77,7 @@ from core.tutorial import Tutorial
             return content
 
         # Check if already added
-        if 'self.save_manager = SaveManager()' in content:
+        if "self.save_manager = SaveManager()" in content:
             print("⚠ Manager initialization already present, skipping")
             return content
 
@@ -92,11 +92,11 @@ from core.tutorial import Tutorial
 """
 
         # Insert before the first non-comment, non-blank line after __init__ signature
-        lines = init_section.split('\n')
+        lines = init_section.split("\n")
         insert_line = 2  # After def __init__ line
 
         lines.insert(insert_line, manager_init.rstrip())
-        new_init = '\n'.join(lines)
+        new_init = "\n".join(lines)
 
         content = content.replace(init_section, new_init)
         self.changes.append("Added manager initialization")
@@ -107,7 +107,7 @@ from core.tutorial import Tutorial
         """Add save_game() and load_game() methods to Game class"""
 
         # Check if already added
-        if 'def save_game(self):' in content:
+        if "def save_game(self):" in content:
             print("⚠ Save/load methods already present, skipping")
             return content
 
@@ -139,14 +139,14 @@ from core.tutorial import Tutorial
 '''
 
         # Find a method definition to insert after
-        method_pattern = r'(    def \w+\(self.*?\n(?:        .*\n)*)'
+        method_pattern = r"(    def \w+\(self.*?\n(?:        .*\n)*)"
         methods = list(re.finditer(method_pattern, content))
 
         if methods:
             # Insert after last method found
             last_method = methods[-1]
             insert_pos = last_method.end()
-            content = content[:insert_pos] + '\n' + save_load_methods + content[insert_pos:]
+            content = content[:insert_pos] + "\n" + save_load_methods + content[insert_pos:]
             self.changes.append("Added save_game() and load_game() methods")
             print("✓ Added save/load methods")
         else:
@@ -158,19 +158,19 @@ from core.tutorial import Tutorial
         """Add auto-save when stage completes"""
 
         # Look for stage completion logic (self.stage_complete = True or similar)
-        stage_complete_pattern = r'(self\.stage_complete\s*=\s*True)'
+        stage_complete_pattern = r"(self\.stage_complete\s*=\s*True)"
 
         if not re.search(stage_complete_pattern, content):
             print("⚠ Warning: Could not find stage completion trigger")
             return content
 
         # Check if already added
-        if 'self.save_game()  # Auto-save on stage completion' in content:
+        if "self.save_game()  # Auto-save on stage completion" in content:
             print("⚠ Auto-save already present, skipping")
             return content
 
         # Add save_game() call after stage_complete = True
-        replacement = r'\1\n                self.save_game()  # Auto-save on stage completion'
+        replacement = r"\1\n                self.save_game()  # Auto-save on stage completion"
         content = re.sub(stage_complete_pattern, replacement, content)
 
         self.changes.append("Added auto-save trigger")
@@ -203,14 +203,16 @@ from core.tutorial import Tutorial
         """Add L key handler in menu state"""
 
         # Find menu event handling
-        menu_event_pattern = r"(elif self\.state == 'menu':.*?if event\.key == pygame\.K_RETURN.*?\n.*?\n)"
+        menu_event_pattern = (
+            r"(elif self\.state == 'menu':.*?if event\.key == pygame\.K_RETURN.*?\n.*?\n)"
+        )
 
         if not re.search(menu_event_pattern, content, re.DOTALL):
             print("⚠ Warning: Could not find menu event handler")
             return content
 
         # Check if already added
-        if 'pygame.K_l' in content and 'load_game()' in content:
+        if "pygame.K_l" in content and "load_game()" in content:
             print("⚠ Load event handler already present, skipping")
             return content
 
@@ -224,7 +226,7 @@ from core.tutorial import Tutorial
 """
 
         # Insert after the RETURN key handler
-        replacement = r'\1' + load_handler
+        replacement = r"\1" + load_handler
         content = re.sub(menu_event_pattern, replacement, content, flags=re.DOTALL)
 
         self.changes.append("Added load game key handler")
@@ -242,12 +244,12 @@ from core.tutorial import Tutorial
             return content
 
         # Check if already added
-        if 'self.tutorial.start()' in content:
+        if "self.tutorial.start()" in content:
             print("⚠ Tutorial start already present, skipping")
             return content
 
         # Add tutorial start before state change
-        replacement = r'self.tutorial.start()  # Start tutorial for new game\n        \1'
+        replacement = r"self.tutorial.start()  # Start tutorial for new game\n        \1"
         content = re.sub(new_game_pattern, replacement, content, count=1)
 
         self.changes.append("Added tutorial start trigger")
@@ -266,7 +268,7 @@ from core.tutorial import Tutorial
             return content
 
         # Check if already added
-        if 'self.tutorial.update' in content:
+        if "self.tutorial.update" in content:
             print("⚠ Tutorial update already present, skipping")
             return content
 
@@ -288,7 +290,7 @@ from core.tutorial import Tutorial
         """Add tutorial overlay rendering in draw_game"""
 
         # Find draw_game method
-        draw_pattern = r'(    def draw_game\(self\):.*?)(\n    def \w+\(self)'
+        draw_pattern = r"(    def draw_game\(self\):.*?)(\n    def \w+\(self)"
 
         match = re.search(draw_pattern, content, re.DOTALL)
         if not match:
@@ -296,11 +298,11 @@ from core.tutorial import Tutorial
             return content
 
         # Check if already added
-        if 'tutorial_data = self.tutorial.get_display_data()' in content:
+        if "tutorial_data = self.tutorial.get_display_data()" in content:
             print("⚠ Tutorial overlay already present, skipping")
             return content
 
-        tutorial_overlay = '''
+        tutorial_overlay = """
 
         # Draw tutorial overlay if active
         if self.tutorial.is_active:
@@ -320,7 +322,7 @@ from core.tutorial import Tutorial
                 progress = f"Step {tutorial_data['progress']['current']}/{tutorial_data['progress']['total']}"
                 progress_text = self.font_small.render(progress, True, (200, 200, 200))
                 self.render_surface.blit(progress_text, (SCREEN_WIDTH - 120, SCREEN_HEIGHT - 30))
-'''
+"""
 
         # Insert before the next method definition
         draw_section = match.group(1)
@@ -335,9 +337,9 @@ from core.tutorial import Tutorial
 
     def integrate_all(self, dry_run=False, backup=True):
         """Run all integration steps"""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Minmatar Rebellion - System Integration")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
         if not os.path.exists(self.game_path):
             print(f"❌ Error: {self.game_path} not found!")
@@ -345,11 +347,7 @@ from core.tutorial import Tutorial
             return False
 
         # Verify core modules exist
-        required_modules = [
-            'core/save_manager.py',
-            'core/pause_menu.py',
-            'core/tutorial.py'
-        ]
+        required_modules = ["core/save_manager.py", "core/pause_menu.py", "core/tutorial.py"]
 
         missing = [m for m in required_modules if not os.path.exists(m)]
         if missing:
@@ -383,7 +381,7 @@ from core.tutorial import Tutorial
         content = self.add_tutorial_overlay(content)
 
         # Show summary
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         if dry_run:
             print("DRY RUN - No changes written")
             print(f"Would have made {len(self.changes)} modifications:")
@@ -394,7 +392,7 @@ from core.tutorial import Tutorial
         for i, change in enumerate(self.changes, 1):
             print(f"  {i}. {change}")
 
-        print("="*60)
+        print("=" * 60)
 
         if not dry_run and self.changes:
             print("\n📋 Next Steps:")
@@ -402,43 +400,32 @@ from core.tutorial import Tutorial
             print("  2. Try saving and loading")
             print("  3. Check the tutorial on first launch")
             print(f"\n💾 Backup saved to: {self.backup_path}")
-            print("   (Restore with: mv {} {})\n".format(
-                self.backup_path, self.game_path
-            ))
+            print("   (Restore with: mv {} {})\n".format(self.backup_path, self.game_path))
 
         return True
+
 
 def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Integrate save/load, pause, and tutorial systems into game.py'
+        description="Integrate save/load, pause, and tutorial systems into game.py"
     )
     parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Show what would be done without making changes'
+        "--dry-run", action="store_true", help="Show what would be done without making changes"
     )
+    parser.add_argument("--no-backup", action="store_true", help="Skip creating backup file")
     parser.add_argument(
-        '--no-backup',
-        action='store_true',
-        help='Skip creating backup file'
-    )
-    parser.add_argument(
-        '--game-path',
-        default='game.py',
-        help='Path to game.py file (default: game.py)'
+        "--game-path", default="game.py", help="Path to game.py file (default: game.py)"
     )
 
     args = parser.parse_args()
 
     integrator = GameIntegrator(args.game_path)
-    success = integrator.integrate_all(
-        dry_run=args.dry_run,
-        backup=not args.no_backup
-    )
+    success = integrator.integrate_all(dry_run=args.dry_run, backup=not args.no_backup)
 
     sys.exit(0 if success else 1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

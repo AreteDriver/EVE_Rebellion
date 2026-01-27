@@ -185,8 +185,9 @@ class VerticalShmupMusic:
 
         return wave
 
-    def _generate_percussion(self, t: np.ndarray, duration: float,
-                            intensity: float = 0.3) -> np.ndarray:
+    def _generate_percussion(
+        self, t: np.ndarray, duration: float, intensity: float = 0.3
+    ) -> np.ndarray:
         """
         Generate percussion layer (hi-hats, kicks).
 
@@ -290,6 +291,7 @@ class VerticalShmupMusic:
 
 
 # === INTEGRATION EXAMPLE ===
+
 
 def example_dynamic_music():
     """

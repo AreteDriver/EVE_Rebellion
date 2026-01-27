@@ -28,12 +28,9 @@ DEFAULT_CONTROLS = {
         "special_ammo_4": ["K_4"],
         "special_ammo_5": ["K_5"],
         "cycle_ammo": ["K_q", "K_TAB"],
-        "pause": ["K_ESCAPE"]
+        "pause": ["K_ESCAPE"],
     },
-    "mouse": {
-        "fire": "BUTTON_LEFT",
-        "fire_rocket": "BUTTON_RIGHT"
-    },
+    "mouse": {"fire": "BUTTON_LEFT", "fire_rocket": "BUTTON_RIGHT"},
     "gamepad": {
         "move_left": {"type": "axis", "axis": 0, "direction": -1},
         "move_right": {"type": "axis", "axis": 0, "direction": 1},
@@ -42,9 +39,9 @@ DEFAULT_CONTROLS = {
         "fire": {"type": "button", "button": 0},
         "fire_rocket": {"type": "button", "button": 1},
         "cycle_ammo": {"type": "button", "button": 2},
-        "pause": {"type": "button", "button": 7}
+        "pause": {"type": "button", "button": 7},
     },
-    "gamepad_deadzone": 0.15
+    "gamepad_deadzone": 0.15,
 }
 
 
@@ -100,10 +97,10 @@ def load_controls(config_path=None):
         if file_size > MAX_CONFIG_SIZE:
             return DEFAULT_CONTROLS.copy()
 
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             controls = json.load(f)
         # Validate required sections exist
-        if not all(key in controls for key in ['keyboard', 'mouse', 'gamepad']):
+        if not all(key in controls for key in ["keyboard", "mouse", "gamepad"]):
             return DEFAULT_CONTROLS.copy()
         return controls
     except (FileNotFoundError, json.JSONDecodeError, IOError, OSError):
@@ -132,7 +129,7 @@ def save_controls(controls, config_path=None):
         # Ensure config directory exists
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(controls, f, indent=4)
         return True
     except (IOError, OSError):
@@ -149,7 +146,7 @@ def get_keyboard_keys(controls, action):
     Returns:
         list: List of pygame key constant names (e.g., ['K_LEFT', 'K_a']).
     """
-    return controls.get('keyboard', {}).get(action, [])
+    return controls.get("keyboard", {}).get(action, [])
 
 
 def get_mouse_button(controls, action):
@@ -162,7 +159,7 @@ def get_mouse_button(controls, action):
     Returns:
         str or None: Mouse button name or None if not bound.
     """
-    return controls.get('mouse', {}).get(action)
+    return controls.get("mouse", {}).get(action)
 
 
 def get_gamepad_binding(controls, action):
@@ -175,7 +172,7 @@ def get_gamepad_binding(controls, action):
     Returns:
         dict or None: Gamepad binding dict with 'type', 'axis'/'button', etc.
     """
-    return controls.get('gamepad', {}).get(action)
+    return controls.get("gamepad", {}).get(action)
 
 
 def get_gamepad_deadzone(controls):
@@ -187,7 +184,7 @@ def get_gamepad_deadzone(controls):
     Returns:
         float: Deadzone value (0.0 to 1.0).
     """
-    return controls.get('gamepad_deadzone', 0.15)
+    return controls.get("gamepad_deadzone", 0.15)
 
 
 class ControlsManager:
@@ -254,9 +251,9 @@ class ControlsManager:
             action: Action name.
             keys: List of pygame key constant names.
         """
-        if 'keyboard' not in self._controls:
-            self._controls['keyboard'] = {}
-        self._controls['keyboard'][action] = keys
+        if "keyboard" not in self._controls:
+            self._controls["keyboard"] = {}
+        self._controls["keyboard"][action] = keys
 
     def set_gamepad_binding(self, action, binding):
         """Set gamepad binding for an action.
@@ -265,9 +262,9 @@ class ControlsManager:
             action: Action name.
             binding: Gamepad binding dict.
         """
-        if 'gamepad' not in self._controls:
-            self._controls['gamepad'] = {}
-        self._controls['gamepad'][action] = binding
+        if "gamepad" not in self._controls:
+            self._controls["gamepad"] = {}
+        self._controls["gamepad"][action] = binding
 
     def reset_to_defaults(self):
         """Reset all bindings to defaults."""

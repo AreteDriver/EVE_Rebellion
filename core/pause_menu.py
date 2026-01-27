@@ -2,15 +2,12 @@
 
 Settings are stored in config/options.json.
 """
+
 import json
 from pathlib import Path
 
 # Default options
-DEFAULT_OPTIONS = {
-    "music_volume": 0.5,
-    "sfx_volume": 0.7,
-    "difficulty": "normal"
-}
+DEFAULT_OPTIONS = {"music_volume": 0.5, "sfx_volume": 0.7, "difficulty": "normal"}
 
 # Valid difficulties
 VALID_DIFFICULTIES = ["easy", "normal", "hard", "nightmare"]
@@ -35,26 +32,26 @@ def load_options():
         return DEFAULT_OPTIONS.copy()
 
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             options = json.load(f)
 
         # Validate and sanitize options
         validated = DEFAULT_OPTIONS.copy()
 
-        if 'music_volume' in options:
-            vol = options['music_volume']
+        if "music_volume" in options:
+            vol = options["music_volume"]
             if isinstance(vol, (int, float)):
-                validated['music_volume'] = max(0.0, min(1.0, float(vol)))
+                validated["music_volume"] = max(0.0, min(1.0, float(vol)))
 
-        if 'sfx_volume' in options:
-            vol = options['sfx_volume']
+        if "sfx_volume" in options:
+            vol = options["sfx_volume"]
             if isinstance(vol, (int, float)):
-                validated['sfx_volume'] = max(0.0, min(1.0, float(vol)))
+                validated["sfx_volume"] = max(0.0, min(1.0, float(vol)))
 
-        if 'difficulty' in options:
-            diff = options['difficulty']
+        if "difficulty" in options:
+            diff = options["difficulty"]
             if diff in VALID_DIFFICULTIES:
-                validated['difficulty'] = diff
+                validated["difficulty"] = diff
 
         return validated
     except (json.JSONDecodeError, IOError):
@@ -78,23 +75,23 @@ def save_options(options):
     # Validate before saving
     validated = DEFAULT_OPTIONS.copy()
 
-    if 'music_volume' in options:
-        vol = options['music_volume']
+    if "music_volume" in options:
+        vol = options["music_volume"]
         if isinstance(vol, (int, float)):
-            validated['music_volume'] = max(0.0, min(1.0, float(vol)))
+            validated["music_volume"] = max(0.0, min(1.0, float(vol)))
 
-    if 'sfx_volume' in options:
-        vol = options['sfx_volume']
+    if "sfx_volume" in options:
+        vol = options["sfx_volume"]
         if isinstance(vol, (int, float)):
-            validated['sfx_volume'] = max(0.0, min(1.0, float(vol)))
+            validated["sfx_volume"] = max(0.0, min(1.0, float(vol)))
 
-    if 'difficulty' in options:
-        diff = options['difficulty']
+    if "difficulty" in options:
+        diff = options["difficulty"]
         if diff in VALID_DIFFICULTIES:
-            validated['difficulty'] = diff
+            validated["difficulty"] = diff
 
     try:
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(validated, f, indent=4)
         return True
     except IOError:
@@ -114,14 +111,14 @@ class PauseMenu:
     def __init__(self):
         """Initialize pause menu and load saved options."""
         options = load_options()
-        self.music_volume = options['music_volume']
-        self.sfx_volume = options['sfx_volume']
-        self.difficulty = options['difficulty']
+        self.music_volume = options["music_volume"]
+        self.sfx_volume = options["sfx_volume"]
+        self.difficulty = options["difficulty"]
         self.is_active = False
 
         # Menu navigation
         self.selected_option = 0
-        self.options_list = ['music_volume', 'sfx_volume', 'difficulty', 'resume']
+        self.options_list = ["music_volume", "sfx_volume", "difficulty", "resume"]
 
     def toggle(self):
         """Toggle the pause menu on/off."""
@@ -142,9 +139,9 @@ class PauseMenu:
     def save(self):
         """Save current options to config file."""
         options = {
-            'music_volume': self.music_volume,
-            'sfx_volume': self.sfx_volume,
-            'difficulty': self.difficulty
+            "music_volume": self.music_volume,
+            "sfx_volume": self.sfx_volume,
+            "difficulty": self.difficulty,
         }
         save_options(options)
 
@@ -203,23 +200,23 @@ class PauseMenu:
         """
         current = self.get_selected_option()
 
-        if current == 'music_volume':
+        if current == "music_volume":
             if key_left:
                 self.adjust_music_volume(-0.1)
             elif key_right:
                 self.adjust_music_volume(0.1)
-        elif current == 'sfx_volume':
+        elif current == "sfx_volume":
             if key_left:
                 self.adjust_sfx_volume(-0.1)
             elif key_right:
                 self.adjust_sfx_volume(0.1)
-        elif current == 'difficulty':
+        elif current == "difficulty":
             if key_left or key_right or key_select:
                 self.toggle_difficulty()
-        elif current == 'resume':
+        elif current == "resume":
             if key_select:
                 self.hide()
-                return 'resume'
+                return "resume"
 
         return None
 
@@ -230,10 +227,10 @@ class PauseMenu:
             dict: Menu state for rendering including all options and selection.
         """
         return {
-            'music_volume': self.music_volume,
-            'sfx_volume': self.sfx_volume,
-            'difficulty': self.difficulty,
-            'selected_option': self.selected_option,
-            'options_list': self.options_list,
-            'is_active': self.is_active
+            "music_volume": self.music_volume,
+            "sfx_volume": self.sfx_volume,
+            "difficulty": self.difficulty,
+            "selected_option": self.selected_option,
+            "options_list": self.options_list,
+            "is_active": self.is_active,
         }

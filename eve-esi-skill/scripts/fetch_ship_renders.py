@@ -125,7 +125,7 @@ async def download_image(
     variation: str,
     size: int,
     output_dir: Path,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ) -> bool:
     """Download a single image from the EVE Image Server."""
     url = f"{IMAGE_SERVER}/types/{type_id}/{variation}?size={size}"
@@ -161,7 +161,7 @@ async def download_ship_set(
     sizes: List[int],
     variations: List[str],
     output_dir: Path,
-    names: Optional[Dict[int, str]] = None
+    names: Optional[Dict[int, str]] = None,
 ):
     """Download images for multiple ships."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -195,7 +195,7 @@ async def download_ship_set(
         "ships": {names.get(sid, str(sid)): sid for sid in ship_ids} if names else ship_ids,
         "sizes": sizes,
         "variations": variations,
-        "total_files": success
+        "total_files": success,
     }
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
@@ -229,23 +229,37 @@ Examples:
 
 Available ship classes: frigates, destroyers, cruisers, battlecruisers,
                         battleships, faction_battleships, capitals, supercapitals
-        """
+        """,
     )
 
     ships_group = parser.add_mutually_exclusive_group(required=True)
     ships_group.add_argument("--ships", type=str, help="Comma-separated ship names or type IDs")
-    ships_group.add_argument("--class", dest="ship_class", choices=SHIP_CLASSES.keys(),
-                            help="Download all ships in a class")
+    ships_group.add_argument(
+        "--class",
+        dest="ship_class",
+        choices=SHIP_CLASSES.keys(),
+        help="Download all ships in a class",
+    )
     ships_group.add_argument("--all-frigates", action="store_true", help="All T1 frigates")
     ships_group.add_argument("--all-cruisers", action="store_true", help="All T1 cruisers")
     ships_group.add_argument("--all", action="store_true", help="All defined ships")
 
-    parser.add_argument("--output", "-o", type=Path, default=Path("./eve_ships"),
-                       help="Output directory (default: ./eve_ships)")
-    parser.add_argument("--sizes", type=str, default="256,512",
-                       help="Comma-separated sizes (default: 256,512)")
-    parser.add_argument("--variations", type=str, default="render",
-                       help="Comma-separated variations: render,icon,bp (default: render)")
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        default=Path("./eve_ships"),
+        help="Output directory (default: ./eve_ships)",
+    )
+    parser.add_argument(
+        "--sizes", type=str, default="256,512", help="Comma-separated sizes (default: 256,512)"
+    )
+    parser.add_argument(
+        "--variations",
+        type=str,
+        default="render",
+        help="Comma-separated variations: render,icon,bp (default: render)",
+    )
     parser.add_argument("--list", action="store_true", help="List available ships and exit")
 
     args = parser.parse_args()

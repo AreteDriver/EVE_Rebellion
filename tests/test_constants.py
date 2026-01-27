@@ -1,4 +1,5 @@
 """Tests for game constants"""
+
 import os
 import sys
 from unittest.mock import MagicMock
@@ -13,7 +14,7 @@ pygame_mock.K_2 = 50
 pygame_mock.K_3 = 51
 pygame_mock.K_4 = 52
 pygame_mock.K_5 = 53
-sys.modules['pygame'] = pygame_mock
+sys.modules["pygame"] = pygame_mock
 
 from constants import (  # noqa: E402
     AMMO_TYPES,
@@ -49,23 +50,32 @@ class TestDifficultySettings:
 
     def test_all_difficulties_exist(self):
         """Test all difficulty levels are defined"""
-        assert 'easy' in DIFFICULTY_SETTINGS
-        assert 'normal' in DIFFICULTY_SETTINGS
-        assert 'hard' in DIFFICULTY_SETTINGS
-        assert 'nightmare' in DIFFICULTY_SETTINGS
+        assert "easy" in DIFFICULTY_SETTINGS
+        assert "normal" in DIFFICULTY_SETTINGS
+        assert "hard" in DIFFICULTY_SETTINGS
+        assert "nightmare" in DIFFICULTY_SETTINGS
 
     def test_difficulty_has_required_keys(self):
         """Test each difficulty has required settings"""
-        required_keys = ['enemy_health_mult', 'enemy_damage_mult', 'powerup_chance']
+        required_keys = ["enemy_health_mult", "enemy_damage_mult", "powerup_chance"]
         for difficulty in DIFFICULTY_SETTINGS.values():
             for key in required_keys:
                 assert key in difficulty
 
     def test_difficulty_scaling(self):
         """Test difficulty scales correctly (easy < normal < hard < nightmare)"""
-        assert DIFFICULTY_SETTINGS['easy']['enemy_health_mult'] < DIFFICULTY_SETTINGS['normal']['enemy_health_mult']
-        assert DIFFICULTY_SETTINGS['normal']['enemy_health_mult'] < DIFFICULTY_SETTINGS['hard']['enemy_health_mult']
-        assert DIFFICULTY_SETTINGS['hard']['enemy_health_mult'] < DIFFICULTY_SETTINGS['nightmare']['enemy_health_mult']
+        assert (
+            DIFFICULTY_SETTINGS["easy"]["enemy_health_mult"]
+            < DIFFICULTY_SETTINGS["normal"]["enemy_health_mult"]
+        )
+        assert (
+            DIFFICULTY_SETTINGS["normal"]["enemy_health_mult"]
+            < DIFFICULTY_SETTINGS["hard"]["enemy_health_mult"]
+        )
+        assert (
+            DIFFICULTY_SETTINGS["hard"]["enemy_health_mult"]
+            < DIFFICULTY_SETTINGS["nightmare"]["enemy_health_mult"]
+        )
 
 
 class TestAmmoTypes:
@@ -73,26 +83,26 @@ class TestAmmoTypes:
 
     def test_all_ammo_types_exist(self):
         """Test all ammo types are defined"""
-        assert 'sabot' in AMMO_TYPES
-        assert 'emp' in AMMO_TYPES
-        assert 'plasma' in AMMO_TYPES
-        assert 'fusion' in AMMO_TYPES
-        assert 'barrage' in AMMO_TYPES
+        assert "sabot" in AMMO_TYPES
+        assert "emp" in AMMO_TYPES
+        assert "plasma" in AMMO_TYPES
+        assert "fusion" in AMMO_TYPES
+        assert "barrage" in AMMO_TYPES
 
     def test_ammo_has_required_keys(self):
         """Test each ammo type has required settings"""
-        required_keys = ['name', 'color', 'shield_mult', 'armor_mult']
+        required_keys = ["name", "color", "shield_mult", "armor_mult"]
         for ammo in AMMO_TYPES.values():
             for key in required_keys:
                 assert key in ammo
 
     def test_emp_is_anti_shield(self):
         """Test EMP is effective against shields"""
-        assert AMMO_TYPES['emp']['shield_mult'] > AMMO_TYPES['emp']['armor_mult']
+        assert AMMO_TYPES["emp"]["shield_mult"] > AMMO_TYPES["emp"]["armor_mult"]
 
     def test_plasma_is_anti_armor(self):
         """Test Plasma is effective against armor"""
-        assert AMMO_TYPES['plasma']['armor_mult'] > AMMO_TYPES['plasma']['shield_mult']
+        assert AMMO_TYPES["plasma"]["armor_mult"] > AMMO_TYPES["plasma"]["shield_mult"]
 
 
 class TestEnemyStats:
@@ -100,12 +110,12 @@ class TestEnemyStats:
 
     def test_basic_enemies_exist(self):
         """Test basic enemy types are defined"""
-        assert 'executioner' in ENEMY_STATS
-        assert 'punisher' in ENEMY_STATS
+        assert "executioner" in ENEMY_STATS
+        assert "punisher" in ENEMY_STATS
 
     def test_enemy_has_required_stats(self):
         """Test enemies have required stats"""
-        required_keys = ['shields', 'armor', 'hull', 'speed', 'score']
+        required_keys = ["shields", "armor", "hull", "speed", "score"]
         for enemy_name, enemy in ENEMY_STATS.items():
             for key in required_keys:
                 assert key in enemy, f"{enemy_name} missing {key}"
@@ -113,7 +123,7 @@ class TestEnemyStats:
     def test_enemy_health_positive(self):
         """Test all enemies have positive health values"""
         for enemy_name, enemy in ENEMY_STATS.items():
-            total_health = enemy['shields'] + enemy['armor'] + enemy['hull']
+            total_health = enemy["shields"] + enemy["armor"] + enemy["hull"]
             assert total_health > 0, f"{enemy_name} has no health"
 
 
@@ -130,7 +140,7 @@ class TestStages:
 
     def test_stages_have_required_keys(self):
         """Test stages have required configuration"""
-        required_keys = ['name', 'waves', 'enemies']
+        required_keys = ["name", "waves", "enemies"]
         for stage in STAGES_MINMATAR:
             for key in required_keys:
                 assert key in stage
@@ -146,4 +156,4 @@ class TestUpgrades:
 
     def test_wolf_upgrade_exists(self):
         """Test Wolf ship upgrade exists"""
-        assert 'wolf_upgrade' in UPGRADE_COSTS
+        assert "wolf_upgrade" in UPGRADE_COSTS

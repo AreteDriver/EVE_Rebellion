@@ -1,4 +1,5 @@
 """Game sprites for Minmatar Rebellion"""
+
 import math
 import random
 
@@ -11,11 +12,11 @@ from constants import *
 class Player(pygame.sprite.Sprite):
     """Player ship - Rifter/Wolf/Jaguar"""
 
-    def __init__(self, ship_type='rifter'):
+    def __init__(self, ship_type="rifter"):
         super().__init__()
         self.ship_type = ship_type  # 'rifter', 'wolf', or 'jaguar'
-        self.is_wolf = (ship_type == 'wolf')
-        self.is_jaguar = (ship_type == 'jaguar')
+        self.is_wolf = ship_type == "wolf"
+        self.is_jaguar = ship_type == "jaguar"
         self.width = 40
         self.height = 50
         self.image = self._create_ship_image()
@@ -55,8 +56,8 @@ class Player(pygame.sprite.Sprite):
         self.hull = self.max_hull
 
         # Weapons
-        self.current_ammo = 'sabot'
-        self.unlocked_ammo = ['sabot']
+        self.current_ammo = "sabot"
+        self.unlocked_ammo = ["sabot"]
         self.rockets = PLAYER_MAX_ROCKETS
         self.max_rockets = PLAYER_MAX_ROCKETS
 
@@ -87,13 +88,13 @@ class Player(pygame.sprite.Sprite):
         """Create Rifter/Wolf/Jaguar sprite - loads SVG if available, else procedural"""
         # Determine ship name and color
         if self.is_jaguar:
-            ship_name = 'jaguar'
+            ship_name = "jaguar"
             color = (50, 150, 255)  # Blue accent for Jaguar
         elif self.is_wolf:
-            ship_name = 'Wolf'
+            ship_name = "Wolf"
             color = COLOR_MINMATAR_ACCENT  # Orange for Wolf
         else:
-            ship_name = 'rifter'
+            ship_name = "rifter"
             color = COLOR_MINMATAR_HULL  # Brown for Rifter
 
         # Try to load actual ship image
@@ -109,66 +110,90 @@ class Player(pygame.sprite.Sprite):
 
         if self.is_jaguar:
             # Jaguar - angular, fast, shield-focused
-            pygame.draw.polygon(surf, color, [
-                (self.width//2, 0),
-                (self.width-6, self.height-12),
-                (self.width//2, self.height-6),
-                (6, self.height-12)
-            ])
+            pygame.draw.polygon(
+                surf,
+                color,
+                [
+                    (self.width // 2, 0),
+                    (self.width - 6, self.height - 12),
+                    (self.width // 2, self.height - 6),
+                    (6, self.height - 12),
+                ],
+            )
             # Shield generator pods
-            pygame.draw.polygon(surf, (100, 180, 255), [
-                (2, self.height-18),
-                (8, self.height//2),
-                (8, self.height-8)
-            ])
-            pygame.draw.polygon(surf, (100, 180, 255), [
-                (self.width-2, self.height-18),
-                (self.width-8, self.height//2),
-                (self.width-8, self.height-8)
-            ])
+            pygame.draw.polygon(
+                surf,
+                (100, 180, 255),
+                [(2, self.height - 18), (8, self.height // 2), (8, self.height - 8)],
+            )
+            pygame.draw.polygon(
+                surf,
+                (100, 180, 255),
+                [
+                    (self.width - 2, self.height - 18),
+                    (self.width - 8, self.height // 2),
+                    (self.width - 8, self.height - 8),
+                ],
+            )
             # Blue engine glow
-            pygame.draw.circle(surf, (100, 200, 255), (self.width//2, self.height-6), 5)
+            pygame.draw.circle(surf, (100, 200, 255), (self.width // 2, self.height - 6), 5)
 
         elif self.is_wolf:
             # Wolf - sleeker, more refined
-            pygame.draw.polygon(surf, color, [
-                (self.width//2, 0),
-                (self.width-5, self.height-10),
-                (self.width//2, self.height-5),
-                (5, self.height-10)
-            ])
-            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
-                (0, self.height-15),
-                (10, self.height//2),
-                (10, self.height-5)
-            ])
-            pygame.draw.polygon(surf, COLOR_MINMATAR_HULL, [
-                (self.width, self.height-15),
-                (self.width-10, self.height//2),
-                (self.width-10, self.height-5)
-            ])
+            pygame.draw.polygon(
+                surf,
+                color,
+                [
+                    (self.width // 2, 0),
+                    (self.width - 5, self.height - 10),
+                    (self.width // 2, self.height - 5),
+                    (5, self.height - 10),
+                ],
+            )
+            pygame.draw.polygon(
+                surf,
+                COLOR_MINMATAR_HULL,
+                [(0, self.height - 15), (10, self.height // 2), (10, self.height - 5)],
+            )
+            pygame.draw.polygon(
+                surf,
+                COLOR_MINMATAR_HULL,
+                [
+                    (self.width, self.height - 15),
+                    (self.width - 10, self.height // 2),
+                    (self.width - 10, self.height - 5),
+                ],
+            )
             # Orange engine glow
-            pygame.draw.circle(surf, (255, 150, 50), (self.width//2, self.height-8), 5)
+            pygame.draw.circle(surf, (255, 150, 50), (self.width // 2, self.height - 8), 5)
         else:
             # Rifter - asymmetric, aggressive
-            pygame.draw.polygon(surf, color, [
-                (self.width//2 - 3, 0),
-                (self.width-8, self.height-15),
-                (self.width//2, self.height),
-                (8, self.height-15)
-            ])
-            pygame.draw.polygon(surf, COLOR_MINMATAR_DARK, [
-                (0, self.height-10),
-                (5, self.height//3),
-                (12, self.height-5)
-            ])
-            pygame.draw.polygon(surf, COLOR_MINMATAR_DARK, [
-                (self.width-3, self.height-20),
-                (self.width-8, self.height//2),
-                (self.width-12, self.height-8)
-            ])
+            pygame.draw.polygon(
+                surf,
+                color,
+                [
+                    (self.width // 2 - 3, 0),
+                    (self.width - 8, self.height - 15),
+                    (self.width // 2, self.height),
+                    (8, self.height - 15),
+                ],
+            )
+            pygame.draw.polygon(
+                surf,
+                COLOR_MINMATAR_DARK,
+                [(0, self.height - 10), (5, self.height // 3), (12, self.height - 5)],
+            )
+            pygame.draw.polygon(
+                surf,
+                COLOR_MINMATAR_DARK,
+                [
+                    (self.width - 3, self.height - 20),
+                    (self.width - 8, self.height // 2),
+                    (self.width - 12, self.height - 8),
+                ],
+            )
             # Red engine glow
-            pygame.draw.circle(surf, (255, 100, 0), (self.width//2, self.height-5), 4)
+            pygame.draw.circle(surf, (255, 100, 0), (self.width // 2, self.height - 5), 4)
 
         return surf
 
@@ -217,7 +242,7 @@ class Player(pygame.sprite.Sprite):
     def can_shoot(self):
         now = pygame.time.get_ticks()
         ammo = AMMO_TYPES[self.current_ammo]
-        cooldown = PLAYER_BASE_FIRE_RATE / (ammo['fire_rate'] * self.fire_rate_mult)
+        cooldown = PLAYER_BASE_FIRE_RATE / (ammo["fire_rate"] * self.fire_rate_mult)
         return now - self.last_shot > cooldown
 
     def shoot(self):
@@ -236,11 +261,12 @@ class Player(pygame.sprite.Sprite):
             bullet = Bullet(
                 self.rect.centerx + offset,
                 self.rect.top,
-                0, -BULLET_SPEED,
-                ammo['tracer'],
+                0,
+                -BULLET_SPEED,
+                ammo["tracer"],
                 BULLET_DAMAGE,
-                ammo['shield_mult'],
-                ammo['armor_mult']
+                ammo["shield_mult"],
+                ammo["armor_mult"],
             )
             bullets.append(bullet)
 
@@ -308,8 +334,12 @@ class Bullet(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += self.dx
         self.rect.y += self.dy
-        if (self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or
-            self.rect.right < 0 or self.rect.left > SCREEN_WIDTH):
+        if (
+            self.rect.bottom < 0
+            or self.rect.top > SCREEN_HEIGHT
+            or self.rect.right < 0
+            or self.rect.left > SCREEN_WIDTH
+        ):
             self.kill()
 
 
@@ -345,8 +375,12 @@ class EnemyBullet(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += self.dx
         self.rect.y += self.dy
-        if (self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or
-            self.rect.right < 0 or self.rect.left > SCREEN_WIDTH):
+        if (
+            self.rect.bottom < 0
+            or self.rect.top > SCREEN_HEIGHT
+            or self.rect.right < 0
+            or self.rect.left > SCREEN_WIDTH
+        ):
             self.kill()
 
 
@@ -367,33 +401,33 @@ class Enemy(pygame.sprite.Sprite):
         self.difficulty = difficulty or {}
         self.wave_scaling = wave_scaling
 
-        self.width, self.height = self.stats['size']
+        self.width, self.height = self.stats["size"]
         self.image = self._create_image()
         self.rect = self.image.get_rect(center=(x, y))
 
-        health_mult = self.difficulty.get('enemy_health_mult', 1.0) * wave_scaling
+        health_mult = self.difficulty.get("enemy_health_mult", 1.0) * wave_scaling
 
-        self.shields = int(self.stats['shields'] * health_mult)
-        self.armor = int(self.stats['armor'] * health_mult)
-        self.hull = int(self.stats['hull'] * health_mult)
+        self.shields = int(self.stats["shields"] * health_mult)
+        self.armor = int(self.stats["armor"] * health_mult)
+        self.hull = int(self.stats["hull"] * health_mult)
         self.max_shields = self.shields
         self.max_armor = self.armor
         self.max_hull = self.hull
 
-        self.speed = self.stats['speed']
-        fire_rate_mult = self.difficulty.get('enemy_fire_rate_mult', 1.0)
-        self.fire_rate = int(self.stats['fire_rate'] * fire_rate_mult)
+        self.speed = self.stats["speed"]
+        fire_rate_mult = self.difficulty.get("enemy_fire_rate_mult", 1.0)
+        self.fire_rate = int(self.stats["fire_rate"] * fire_rate_mult)
         self.last_shot = pygame.time.get_ticks() + random.randint(0, 1000)
-        self.score = int(self.stats['score'] * wave_scaling)
-        self.refugees = self.stats.get('refugees', 0)
-        self.is_boss = self.stats.get('boss', False)
-        self.sp_value = int(self.stats.get('sp_value', 5) * wave_scaling)
+        self.score = int(self.stats["score"] * wave_scaling)
+        self.refugees = self.stats.get("refugees", 0)
+        self.is_boss = self.stats.get("boss", False)
+        self.sp_value = int(self.stats.get("sp_value", 5) * wave_scaling)
 
         # Boss-specific attributes
         if self.is_boss:
             self.boss_phase = 0
             self.boss_phase_timer = 0
-            self.special_ability = self.stats.get('special_ability', None)
+            self.special_ability = self.stats.get("special_ability", None)
             self.ability_cooldown = 0
             self.ability_active = False
             self.enraged = False  # Enrage at 25% health
@@ -405,7 +439,7 @@ class Enemy(pygame.sprite.Sprite):
         self.pattern_timer = random.uniform(0, math.pi * 2)
         self.target_y = self._get_target_y()
         self.entered = False
-        self.swoop_state = 'enter'
+        self.swoop_state = "enter"
         self.flank_side = random.choice([-1, 1])
         self.circle_center_x = x
         self.circle_radius = random.randint(50, 100)
@@ -413,20 +447,19 @@ class Enemy(pygame.sprite.Sprite):
     def _select_movement_pattern(self):
         if self.is_boss:
             self.pattern = self.PATTERN_DRIFT
-        elif self.enemy_type == 'executioner':
-            self.pattern = random.choice([
-                self.PATTERN_SINE, self.PATTERN_ZIGZAG,
-                self.PATTERN_SWOOP, self.PATTERN_FLANK
-            ])
-        elif self.enemy_type == 'punisher':
-            self.pattern = random.choice([
-                self.PATTERN_DRIFT, self.PATTERN_SINE, self.PATTERN_CIRCLE
-            ])
-        elif self.enemy_type in ['omen', 'maller']:
-            self.pattern = random.choice([
-                self.PATTERN_CIRCLE, self.PATTERN_FLANK, self.PATTERN_DRIFT
-            ])
-        elif self.enemy_type == 'bestower':
+        elif self.enemy_type == "executioner":
+            self.pattern = random.choice(
+                [self.PATTERN_SINE, self.PATTERN_ZIGZAG, self.PATTERN_SWOOP, self.PATTERN_FLANK]
+            )
+        elif self.enemy_type == "punisher":
+            self.pattern = random.choice(
+                [self.PATTERN_DRIFT, self.PATTERN_SINE, self.PATTERN_CIRCLE]
+            )
+        elif self.enemy_type in ["omen", "maller"]:
+            self.pattern = random.choice(
+                [self.PATTERN_CIRCLE, self.PATTERN_FLANK, self.PATTERN_DRIFT]
+            )
+        elif self.enemy_type == "bestower":
             self.pattern = self.PATTERN_DRIFT
             self.speed *= 0.8
         else:
@@ -435,7 +468,7 @@ class Enemy(pygame.sprite.Sprite):
     def _get_target_y(self):
         if self.is_boss:
             return 120
-        elif self.enemy_type == 'bestower':
+        elif self.enemy_type == "bestower":
             return random.randint(80, 180)
         else:
             return random.randint(80, 300)
@@ -452,58 +485,89 @@ class Enemy(pygame.sprite.Sprite):
         # Fallback to procedural graphics
         surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
 
-        if self.enemy_type == 'executioner':
-            pygame.draw.polygon(surf, COLOR_AMARR_HULL, [
-                (self.width//2, self.height), (0, 10),
-                (self.width//2, 0), (self.width, 10)
-            ])
-            pygame.draw.polygon(surf, COLOR_AMARR_ACCENT, [
-                (self.width//2, self.height-5), (10, 15), (self.width-10, 15)
-            ])
+        if self.enemy_type == "executioner":
+            pygame.draw.polygon(
+                surf,
+                COLOR_AMARR_HULL,
+                [(self.width // 2, self.height), (0, 10), (self.width // 2, 0), (self.width, 10)],
+            )
+            pygame.draw.polygon(
+                surf,
+                COLOR_AMARR_ACCENT,
+                [(self.width // 2, self.height - 5), (10, 15), (self.width - 10, 15)],
+            )
 
-        elif self.enemy_type == 'punisher':
-            pygame.draw.polygon(surf, COLOR_AMARR_HULL, [
-                (self.width//2, self.height), (5, self.height//3),
-                (5, 5), (self.width-5, 5), (self.width-5, self.height//3)
-            ])
-            pygame.draw.rect(surf, COLOR_AMARR_ACCENT,
-                           (self.width//4, 10, self.width//2, self.height//2))
+        elif self.enemy_type == "punisher":
+            pygame.draw.polygon(
+                surf,
+                COLOR_AMARR_HULL,
+                [
+                    (self.width // 2, self.height),
+                    (5, self.height // 3),
+                    (5, 5),
+                    (self.width - 5, 5),
+                    (self.width - 5, self.height // 3),
+                ],
+            )
+            pygame.draw.rect(
+                surf, COLOR_AMARR_ACCENT, (self.width // 4, 10, self.width // 2, self.height // 2)
+            )
 
-        elif self.enemy_type == 'omen':
-            pygame.draw.polygon(surf, COLOR_AMARR_HULL, [
-                (self.width//2, self.height), (0, self.height//2),
-                (5, 5), (self.width-5, 5), (self.width, self.height//2)
-            ])
-            pygame.draw.ellipse(surf, COLOR_AMARR_ACCENT,
-                              (10, 10, self.width-20, self.height//2))
+        elif self.enemy_type == "omen":
+            pygame.draw.polygon(
+                surf,
+                COLOR_AMARR_HULL,
+                [
+                    (self.width // 2, self.height),
+                    (0, self.height // 2),
+                    (5, 5),
+                    (self.width - 5, 5),
+                    (self.width, self.height // 2),
+                ],
+            )
+            pygame.draw.ellipse(
+                surf, COLOR_AMARR_ACCENT, (10, 10, self.width - 20, self.height // 2)
+            )
 
-        elif self.enemy_type == 'maller':
-            pygame.draw.rect(surf, COLOR_AMARR_HULL,
-                           (5, 5, self.width-10, self.height-10))
-            pygame.draw.polygon(surf, COLOR_AMARR_ACCENT, [
-                (self.width//2, self.height-5), (10, self.height//2),
-                (self.width-10, self.height//2)
-            ])
+        elif self.enemy_type == "maller":
+            pygame.draw.rect(surf, COLOR_AMARR_HULL, (5, 5, self.width - 10, self.height - 10))
+            pygame.draw.polygon(
+                surf,
+                COLOR_AMARR_ACCENT,
+                [
+                    (self.width // 2, self.height - 5),
+                    (10, self.height // 2),
+                    (self.width - 10, self.height // 2),
+                ],
+            )
 
-        elif self.enemy_type == 'bestower':
-            pygame.draw.rect(surf, COLOR_AMARR_DARK,
-                           (10, 5, self.width-20, self.height-10))
-            pygame.draw.rect(surf, COLOR_AMARR_HULL,
-                           (5, self.height//3, self.width-10, self.height//3))
+        elif self.enemy_type == "bestower":
+            pygame.draw.rect(surf, COLOR_AMARR_DARK, (10, 5, self.width - 20, self.height - 10))
+            pygame.draw.rect(
+                surf, COLOR_AMARR_HULL, (5, self.height // 3, self.width - 10, self.height // 3)
+            )
 
-        elif self.enemy_type in ['apocalypse', 'abaddon']:
-            pygame.draw.polygon(surf, COLOR_AMARR_HULL, [
-                (self.width//2, self.height), (0, self.height*2//3),
-                (0, self.height//3), (self.width//4, 0),
-                (self.width*3//4, 0), (self.width, self.height//3),
-                (self.width, self.height*2//3)
-            ])
-            pygame.draw.ellipse(surf, COLOR_AMARR_ACCENT,
-                              (self.width//4, self.height//4,
-                               self.width//2, self.height//2))
-            if self.enemy_type == 'abaddon':
-                pygame.draw.rect(surf, (255, 215, 0),
-                               (self.width//3, 10, self.width//3, 20))
+        elif self.enemy_type in ["apocalypse", "abaddon"]:
+            pygame.draw.polygon(
+                surf,
+                COLOR_AMARR_HULL,
+                [
+                    (self.width // 2, self.height),
+                    (0, self.height * 2 // 3),
+                    (0, self.height // 3),
+                    (self.width // 4, 0),
+                    (self.width * 3 // 4, 0),
+                    (self.width, self.height // 3),
+                    (self.width, self.height * 2 // 3),
+                ],
+            )
+            pygame.draw.ellipse(
+                surf,
+                COLOR_AMARR_ACCENT,
+                (self.width // 4, self.height // 4, self.width // 2, self.height // 2),
+            )
+            if self.enemy_type == "abaddon":
+                pygame.draw.rect(surf, (255, 215, 0), (self.width // 3, 10, self.width // 3, 20))
 
         return surf
 
@@ -556,33 +620,35 @@ class Enemy(pygame.sprite.Sprite):
 
     def _move_circle(self):
         self.rect.centerx = self.circle_center_x + math.cos(self.pattern_timer) * self.circle_radius
-        self.rect.centery = self.target_y + math.sin(self.pattern_timer) * (self.circle_radius * 0.5)
+        self.rect.centery = self.target_y + math.sin(self.pattern_timer) * (
+            self.circle_radius * 0.5
+        )
         self.circle_center_x += math.sin(self.pattern_timer * 0.2) * 0.5
         self.circle_center_x = max(100, min(SCREEN_WIDTH - 100, self.circle_center_x))
 
     def _move_swoop(self, player_rect):
-        if self.swoop_state == 'enter':
+        if self.swoop_state == "enter":
             if self.rect.centery >= self.target_y:
-                self.swoop_state = 'aim'
-        elif self.swoop_state == 'aim':
+                self.swoop_state = "aim"
+        elif self.swoop_state == "aim":
             if self.pattern_timer % (math.pi * 2) < 0.1:
-                self.swoop_state = 'dive'
+                self.swoop_state = "dive"
                 if player_rect:
                     self.swoop_target_x = player_rect.centerx
                 else:
                     self.swoop_target_x = SCREEN_WIDTH // 2
-        elif self.swoop_state == 'dive':
+        elif self.swoop_state == "dive":
             self.rect.y += self.speed * 3
             dx = self.swoop_target_x - self.rect.centerx
             self.rect.x += max(-self.speed * 2, min(self.speed * 2, dx * 0.1))
             if self.rect.centery > SCREEN_HEIGHT * 0.6:
-                self.swoop_state = 'retreat'
-        elif self.swoop_state == 'retreat':
+                self.swoop_state = "retreat"
+        elif self.swoop_state == "retreat":
             self.rect.y -= self.speed * 2
             if self.rect.centery < self.target_y:
-                self.swoop_state = 'aim'
+                self.swoop_state = "aim"
 
-        if self.swoop_state == 'aim':
+        if self.swoop_state == "aim":
             self.rect.x += math.sin(self.pattern_timer * 2) * self.speed
 
     def _move_flank(self, player_rect):
@@ -602,7 +668,9 @@ class Enemy(pygame.sprite.Sprite):
 
     def _update_boss_behavior(self):
         self.boss_phase_timer += 1
-        health_pct = (self.shields + self.armor + self.hull) / (self.max_shields + self.max_armor + self.max_hull)
+        health_pct = (self.shields + self.armor + self.hull) / (
+            self.max_shields + self.max_armor + self.max_hull
+        )
 
         if health_pct < 0.3 and self.boss_phase < 2:
             self.boss_phase = 2
@@ -626,7 +694,7 @@ class Enemy(pygame.sprite.Sprite):
 
         dx = player_rect.centerx - self.rect.centerx
         dy = player_rect.centery - self.rect.centery
-        dist = math.sqrt(dx*dx + dy*dy)
+        dist = math.sqrt(dx * dx + dy * dy)
         if dist > 0:
             dx = dx / dist * 5
             dy = dy / dist * 5
@@ -698,7 +766,7 @@ class Powerup(pygame.sprite.Sprite):
         self.data = POWERUP_TYPES[powerup_type]
 
         self.image = pygame.Surface((20, 20), pygame.SRCALPHA)
-        pygame.draw.rect(self.image, self.data['color'], (2, 2, 16, 16))
+        pygame.draw.rect(self.image, self.data["color"], (2, 2, 16, 16))
         pygame.draw.rect(self.image, (255, 255, 255), (2, 2, 16, 16), 2)
 
         self.rect = self.image.get_rect(center=(x, y))
@@ -729,8 +797,7 @@ class Explosion(pygame.sprite.Sprite):
 
         self.image = pygame.Surface((current_size * 2, current_size * 2), pygame.SRCALPHA)
         color_with_alpha = (*self.color[:3], alpha)
-        pygame.draw.circle(self.image, color_with_alpha,
-                          (current_size, current_size), current_size)
+        pygame.draw.circle(self.image, color_with_alpha, (current_size, current_size), current_size)
         self.rect = self.image.get_rect(center=(self.x, self.y))
 
     def update(self):

@@ -12,6 +12,7 @@ def main():
     init_platform()
 
     from game import Game
+
     game = Game()
     game.run()
 

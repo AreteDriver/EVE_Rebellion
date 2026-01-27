@@ -2,6 +2,7 @@
 
 Reads/writes game state files in the saves/ directory.
 """
+
 import json
 import os
 from datetime import datetime
@@ -29,20 +30,20 @@ def list_saves():
 
     for file_path in saves_dir.glob("*.json"):
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             metadata = {
-                'filename': file_path.name,
-                'timestamp': data.get('timestamp', 'Unknown'),
-                'score': data.get('player', {}).get('score', 0),
-                'stage': data.get('game', {}).get('current_stage', 0),
-                'difficulty': data.get('game', {}).get('difficulty', 'normal')
+                "filename": file_path.name,
+                "timestamp": data.get("timestamp", "Unknown"),
+                "score": data.get("player", {}).get("score", 0),
+                "stage": data.get("game", {}).get("current_stage", 0),
+                "difficulty": data.get("game", {}).get("difficulty", "normal"),
             }
             saves.append((file_path.name, metadata))
         except (json.JSONDecodeError, IOError):
             # Include file but with minimal metadata if we can't read it
-            saves.append((file_path.name, {'filename': file_path.name, 'error': True}))
+            saves.append((file_path.name, {"filename": file_path.name, "error": True}))
 
     return saves
 
@@ -89,19 +90,19 @@ def save_game(filename, player_state, game_state):
 
     # Sanitize filename to prevent path traversal
     safe_filename = os.path.basename(filename)
-    if not safe_filename.endswith('.json'):
-        safe_filename += '.json'
+    if not safe_filename.endswith(".json"):
+        safe_filename += ".json"
 
     save_path = saves_dir / safe_filename
 
     save_data = {
-        'player': player_state,
-        'game': game_state,
-        'timestamp': datetime.utcnow().isoformat() + 'Z'
+        "player": player_state,
+        "game": game_state,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
     }
 
     try:
-        with open(save_path, 'w', encoding='utf-8') as f:
+        with open(save_path, "w", encoding="utf-8") as f:
             json.dump(save_data, f, indent=4)
         return True
     except IOError:
@@ -127,11 +128,11 @@ def load_game(filename):
         return None, None
 
     try:
-        with open(save_path, 'r', encoding='utf-8') as f:
+        with open(save_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        player_state = data.get('player', {})
-        game_state = data.get('game', {})
+        player_state = data.get("player", {})
+        game_state = data.get("game", {})
 
         # Validate required fields exist
         if not player_state or not game_state:
@@ -178,7 +179,7 @@ class SaveManager:
 
     def __init__(self):
         """Initialize the save manager."""
-        self.current_slot = 'save1.json'
+        self.current_slot = "save1.json"
 
     def get_saves(self):
         """Get list of all available saves.
@@ -195,8 +196,8 @@ class SaveManager:
             filename: Name of the save file to select.
         """
         self.current_slot = os.path.basename(filename)
-        if not self.current_slot.endswith('.json'):
-            self.current_slot += '.json'
+        if not self.current_slot.endswith(".json"):
+            self.current_slot += ".json"
 
     def save(self, player_state, game_state):
         """Save game to the current slot.
@@ -252,21 +253,21 @@ class SaveManager:
             dict: Player state dictionary suitable for save_game().
         """
         return {
-            'score': getattr(player, 'score', 0),
-            'refugees': getattr(player, 'refugees', 0),
-            'total_refugees': getattr(player, 'total_refugees', 0),
-            'shields': getattr(player, 'shields', 100),
-            'armor': getattr(player, 'armor', 100),
-            'hull': getattr(player, 'hull', 50),
-            'max_shields': getattr(player, 'max_shields', 100),
-            'max_armor': getattr(player, 'max_armor', 100),
-            'max_hull': getattr(player, 'max_hull', 50),
-            'rockets': getattr(player, 'rockets', 10),
-            'current_ammo': getattr(player, 'current_ammo', 'sabot'),
-            'unlocked_ammo': list(getattr(player, 'unlocked_ammo', ['sabot'])),
-            'has_gyro': getattr(player, 'has_gyro', False),
-            'has_tracking': getattr(player, 'has_tracking', False),
-            'is_wolf': getattr(player, 'is_wolf', False)
+            "score": getattr(player, "score", 0),
+            "refugees": getattr(player, "refugees", 0),
+            "total_refugees": getattr(player, "total_refugees", 0),
+            "shields": getattr(player, "shields", 100),
+            "armor": getattr(player, "armor", 100),
+            "hull": getattr(player, "hull", 50),
+            "max_shields": getattr(player, "max_shields", 100),
+            "max_armor": getattr(player, "max_armor", 100),
+            "max_hull": getattr(player, "max_hull", 50),
+            "rockets": getattr(player, "rockets", 10),
+            "current_ammo": getattr(player, "current_ammo", "sabot"),
+            "unlocked_ammo": list(getattr(player, "unlocked_ammo", ["sabot"])),
+            "has_gyro": getattr(player, "has_gyro", False),
+            "has_tracking": getattr(player, "has_tracking", False),
+            "is_wolf": getattr(player, "is_wolf", False),
         }
 
     def apply_player_state(self, player, state):
@@ -285,32 +286,32 @@ class SaveManager:
         try:
             # Only set attributes if they exist on the player object
             for attr, default in [
-                ('score', 0),
-                ('refugees', 0),
-                ('total_refugees', 0),
-                ('shields', 100),
-                ('armor', 100),
-                ('hull', 50),
-                ('max_shields', 100),
-                ('max_armor', 100),
-                ('max_hull', 50),
-                ('rockets', 10),
-                ('current_ammo', 'sabot'),
-                ('unlocked_ammo', ['sabot']),
-                ('has_gyro', False),
-                ('has_tracking', False),
+                ("score", 0),
+                ("refugees", 0),
+                ("total_refugees", 0),
+                ("shields", 100),
+                ("armor", 100),
+                ("hull", 50),
+                ("max_shields", 100),
+                ("max_armor", 100),
+                ("max_hull", 50),
+                ("rockets", 10),
+                ("current_ammo", "sabot"),
+                ("unlocked_ammo", ["sabot"]),
+                ("has_gyro", False),
+                ("has_tracking", False),
             ]:
                 if hasattr(player, attr):
                     value = state.get(attr, default)
                     # Ensure unlocked_ammo is always a list
-                    if attr == 'unlocked_ammo':
+                    if attr == "unlocked_ammo":
                         value = list(value)
                     setattr(player, attr, value)
             # Handle wolf upgrade specially since it affects ship appearance
-            if state.get('is_wolf', False) and not getattr(player, 'is_wolf', False):
-                if hasattr(player, 'upgrade_to_wolf'):
+            if state.get("is_wolf", False) and not getattr(player, "is_wolf", False):
+                if hasattr(player, "upgrade_to_wolf"):
                     player.upgrade_to_wolf()
-                elif hasattr(player, 'is_wolf'):
+                elif hasattr(player, "is_wolf"):
                     player.is_wolf = True
             return True
         except (AttributeError, TypeError):

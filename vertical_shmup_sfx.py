@@ -40,50 +40,50 @@ class VerticalShmupSFX:
         print("Generating vertical shmup sound effects...")
 
         # Weapons
-        self.sounds['autocannon'] = self._make_autocannon()
-        self.sounds['missile'] = self._make_missile()
-        self.sounds['laser'] = self._make_laser()
-        self.sounds['rocket'] = self._make_rocket()
+        self.sounds["autocannon"] = self._make_autocannon()
+        self.sounds["missile"] = self._make_missile()
+        self.sounds["laser"] = self._make_laser()
+        self.sounds["rocket"] = self._make_rocket()
 
         # Point-blank kills (proximity feedback)
-        self.sounds['kill_far'] = self._make_kill_far()
-        self.sounds['kill_close'] = self._make_kill_close()
-        self.sounds['kill_pointblank'] = self._make_kill_pointblank()
+        self.sounds["kill_far"] = self._make_kill_far()
+        self.sounds["kill_close"] = self._make_kill_close()
+        self.sounds["kill_pointblank"] = self._make_kill_pointblank()
 
         # Berserk system
-        self.sounds['berserk_activate'] = self._make_berserk_activate()
-        self.sounds['berserk_warning'] = self._make_berserk_warning()
-        self.sounds['berserk_expire'] = self._make_berserk_expire()
-        self.sounds['boost_start'] = self._make_boost_start()
-        self.sounds['boost_loop'] = self._make_boost_loop()
+        self.sounds["berserk_activate"] = self._make_berserk_activate()
+        self.sounds["berserk_warning"] = self._make_berserk_warning()
+        self.sounds["berserk_expire"] = self._make_berserk_expire()
+        self.sounds["boost_start"] = self._make_boost_start()
+        self.sounds["boost_loop"] = self._make_boost_loop()
 
         # Heat warnings
-        self.sounds['heat_25'] = self._make_heat_warning(0.25)
-        self.sounds['heat_50'] = self._make_heat_warning(0.50)
-        self.sounds['heat_75'] = self._make_heat_warning(0.75)
+        self.sounds["heat_25"] = self._make_heat_warning(0.25)
+        self.sounds["heat_50"] = self._make_heat_warning(0.50)
+        self.sounds["heat_75"] = self._make_heat_warning(0.75)
 
         # Combat
-        self.sounds['explosion_small'] = self._make_explosion_small()
-        self.sounds['explosion_large'] = self._make_explosion_large()
-        self.sounds['shield_hit'] = self._make_shield_hit()
-        self.sounds['shield_break'] = self._make_shield_break()
-        self.sounds['player_hit'] = self._make_player_hit()
+        self.sounds["explosion_small"] = self._make_explosion_small()
+        self.sounds["explosion_large"] = self._make_explosion_large()
+        self.sounds["shield_hit"] = self._make_shield_hit()
+        self.sounds["shield_break"] = self._make_shield_break()
+        self.sounds["player_hit"] = self._make_player_hit()
 
         # Bosses
-        self.sounds['boss_warning'] = self._make_boss_warning()
-        self.sounds['boss_spawn'] = self._make_boss_spawn()
-        self.sounds['boss_death'] = self._make_boss_death()
+        self.sounds["boss_warning"] = self._make_boss_warning()
+        self.sounds["boss_spawn"] = self._make_boss_spawn()
+        self.sounds["boss_death"] = self._make_boss_death()
 
         # Pickups
-        self.sounds['refugee_rescue'] = self._make_refugee_rescue()
-        self.sounds['powerup'] = self._make_powerup()
-        self.sounds['bomb_pickup'] = self._make_bomb_pickup()
+        self.sounds["refugee_rescue"] = self._make_refugee_rescue()
+        self.sounds["powerup"] = self._make_powerup()
+        self.sounds["bomb_pickup"] = self._make_bomb_pickup()
 
         # UI
-        self.sounds['ui_select'] = self._make_ui_select()
-        self.sounds['ui_confirm'] = self._make_ui_confirm()
-        self.sounds['ui_cancel'] = self._make_ui_cancel()
-        self.sounds['formation_switch'] = self._make_formation_switch()
+        self.sounds["ui_select"] = self._make_ui_select()
+        self.sounds["ui_confirm"] = self._make_ui_confirm()
+        self.sounds["ui_cancel"] = self._make_ui_cancel()
+        self.sounds["formation_switch"] = self._make_formation_switch()
 
         print(f"✓ Generated {len(self.sounds)} sound effects")
 
@@ -529,8 +529,8 @@ class VerticalShmupSFX:
         t = np.linspace(0, duration, int(self.sample_rate * duration))
 
         # Two-tone confirm
-        wave = np.sin(2 * np.pi * 600 * t[:len(t)//2]) * 0.4
-        wave = np.concatenate([wave, np.sin(2 * np.pi * 800 * t[len(t)//2:]) * 0.4])
+        wave = np.sin(2 * np.pi * 600 * t[: len(t) // 2]) * 0.4
+        wave = np.concatenate([wave, np.sin(2 * np.pi * 800 * t[len(t) // 2 :]) * 0.4])
 
         envelope = np.exp(-t * 12)
         wave *= envelope
@@ -592,11 +592,11 @@ class VerticalShmupSFX:
             distance: Distance from player when enemy died (pixels)
         """
         if distance < 50:
-            self.play('kill_pointblank', 1.0)
+            self.play("kill_pointblank", 1.0)
         elif distance < 100:
-            self.play('kill_close', 0.8)
+            self.play("kill_close", 0.8)
         else:
-            self.play('kill_far', 0.6)
+            self.play("kill_far", 0.6)
 
 
 if __name__ == "__main__":

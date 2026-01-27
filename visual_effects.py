@@ -11,26 +11,41 @@ import pygame
 
 try:
     import numpy as np
+
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
 
 
 # Faction colors
-MINMATAR_ENGINE = (255, 120, 40)    # Orange/rust
-AMARR_ENGINE = (255, 200, 80)       # Golden
-SHIELD_COLOR = (80, 160, 255)       # Blue
-ARMOR_COLOR = (255, 140, 40)        # Orange
-HULL_COLOR = (200, 80, 40)          # Red/brown
+MINMATAR_ENGINE = (255, 120, 40)  # Orange/rust
+AMARR_ENGINE = (255, 200, 80)  # Golden
+SHIELD_COLOR = (80, 160, 255)  # Blue
+ARMOR_COLOR = (255, 140, 40)  # Orange
+HULL_COLOR = (200, 80, 40)  # Red/brown
 
 
 class Particle:
     """Single particle with physics"""
-    __slots__ = ['x', 'y', 'vx', 'vy', 'life', 'max_life', 'color', 'size',
-                 'gravity', 'drag', 'fade', 'shrink']
 
-    def __init__(self, x, y, vx, vy, life, color, size,
-                 gravity=0, drag=0.98, fade=True, shrink=True):
+    __slots__ = [
+        "x",
+        "y",
+        "vx",
+        "vy",
+        "life",
+        "max_life",
+        "color",
+        "size",
+        "gravity",
+        "drag",
+        "fade",
+        "shrink",
+    ]
+
+    def __init__(
+        self, x, y, vx, vy, life, color, size, gravity=0, drag=0.98, fade=True, shrink=True
+    ):
         self.x = x
         self.y = y
         self.vx = vx
@@ -110,12 +125,12 @@ class ParticleSystem:
 
         surface.blit(psurf, (x - center, y - center), special_flags=pygame.BLEND_RGBA_ADD)
 
-    def emit_engine_trail(self, x, y, faction='minmatar', intensity=1.0):
+    def emit_engine_trail(self, x, y, faction="minmatar", intensity=1.0):
         """Emit engine trail particles"""
         if len(self.particles) >= self.max_particles:
             return
 
-        color = MINMATAR_ENGINE if faction == 'minmatar' else AMARR_ENGINE
+        color = MINMATAR_ENGINE if faction == "minmatar" else AMARR_ENGINE
 
         for _ in range(int(3 * intensity)):
             # Spread and velocity
@@ -124,17 +139,21 @@ class ParticleSystem:
 
             # Color variation
             var = random.randint(-20, 20)
-            pcolor = (min(255, max(0, color[0] + var)),
-                     min(255, max(0, color[1] + var)),
-                     min(255, max(0, color[2] + var)))
+            pcolor = (
+                min(255, max(0, color[0] + var)),
+                min(255, max(0, color[1] + var)),
+                min(255, max(0, color[2] + var)),
+            )
 
             p = Particle(
-                x + spread, y,
-                spread * 0.3, speed,
+                x + spread,
+                y,
+                spread * 0.3,
+                speed,
                 life=random.randint(10, 20),
                 color=pcolor,
                 size=random.randint(2, 4),
-                drag=0.95
+                drag=0.95,
             )
             self.particles.append(p)
 
@@ -156,13 +175,14 @@ class ParticleSystem:
                 color = SHIELD_COLOR
 
             p = Particle(
-                x, y,
+                x,
+                y,
                 math.cos(angle) * speed,
                 math.sin(angle) * speed,
                 life=random.randint(15, 25),
                 color=color,
                 size=random.randint(2, 4),
-                drag=0.92
+                drag=0.92,
             )
             self.particles.append(p)
 
@@ -179,14 +199,15 @@ class ParticleSystem:
             color = (255, random.randint(100, 200), random.randint(20, 60))
 
             p = Particle(
-                x, y,
+                x,
+                y,
                 math.cos(angle) * speed,
                 math.sin(angle) * speed,
                 life=random.randint(10, 25),
                 color=color,
                 size=random.randint(1, 3),
                 gravity=0.1,
-                drag=0.96
+                drag=0.96,
             )
             self.particles.append(p)
 
@@ -213,7 +234,7 @@ class ParticleSystem:
                 color=color,
                 size=random.randint(2, 5),
                 gravity=0.15,
-                drag=0.97
+                drag=0.97,
             )
             self.particles.append(p)
 
@@ -231,7 +252,7 @@ class ParticleSystem:
                 color=color,
                 size=random.randint(3, 6),
                 gravity=-0.05,  # Fire rises
-                drag=0.95
+                drag=0.95,
             )
             self.particles.append(p)
 
@@ -243,21 +264,22 @@ class ParticleSystem:
         # Flash particles in firing direction
         for _ in range(5):
             # Cone in firing direction
-            flash_angle = angle + math.radians(random.uniform(-spread/2, spread/2))
+            flash_angle = angle + math.radians(random.uniform(-spread / 2, spread / 2))
             speed = random.uniform(4, 8)
 
             # Yellow/white flash
             color = (255, 255, random.randint(150, 255))
 
             p = Particle(
-                x, y,
+                x,
+                y,
                 math.cos(flash_angle) * speed,
                 math.sin(flash_angle) * speed,
                 life=random.randint(3, 6),
                 color=color,
                 size=random.randint(2, 4),
                 fade=True,
-                shrink=False
+                shrink=False,
             )
             self.particles.append(p)
 
@@ -281,7 +303,7 @@ class ParticleSystem:
                 color=color,
                 size=random.randint(3, 6),
                 drag=0.98,
-                gravity=-0.02
+                gravity=-0.02,
             )
             self.particles.append(p)
 
@@ -298,24 +320,27 @@ class ParticleSystem:
 
             if color is None:
                 # Fire colors
-                c = random.choice([
-                    (255, 200, 50),   # Yellow
-                    (255, 150, 30),   # Orange
-                    (255, 80, 20),    # Red-orange
-                    (200, 200, 200),  # Smoke
-                ])
+                c = random.choice(
+                    [
+                        (255, 200, 50),  # Yellow
+                        (255, 150, 30),  # Orange
+                        (255, 80, 20),  # Red-orange
+                        (200, 200, 200),  # Smoke
+                    ]
+                )
             else:
                 c = color
 
             p = Particle(
-                x, y,
+                x,
+                y,
                 math.cos(angle) * speed,
                 math.sin(angle) * speed,
                 life=random.randint(15, 35),
                 color=c,
                 size=random.randint(2, 6),
                 gravity=0.05,
-                drag=0.95
+                drag=0.95,
             )
             self.particles.append(p)
 
@@ -362,18 +387,23 @@ class WarpEffect:
                     vx = (px - self.x) / dist * speed
                     vy = (py - self.y) / dist * speed
 
-                self.particles.append({
-                    'x': px, 'y': py, 'vx': vx, 'vy': vy,
-                    'life': random.randint(10, 20),
-                    'color': (100, 150, 255) if random.random() < 0.7 else (200, 220, 255)
-                })
+                self.particles.append(
+                    {
+                        "x": px,
+                        "y": py,
+                        "vx": vx,
+                        "vy": vy,
+                        "life": random.randint(10, 20),
+                        "color": (100, 150, 255) if random.random() < 0.7 else (200, 220, 255),
+                    }
+                )
 
         # Update particles
         for p in self.particles[:]:
-            p['x'] += p['vx']
-            p['y'] += p['vy']
-            p['life'] -= 1
-            if p['life'] <= 0:
+            p["x"] += p["vx"]
+            p["y"] += p["vy"]
+            p["life"] -= 1
+            if p["life"] <= 0:
                 self.particles.remove(p)
 
         if self.timer <= 0:
@@ -399,18 +429,21 @@ class WarpEffect:
             flash = pygame.Surface((flash_size * 2, flash_size * 2), pygame.SRCALPHA)
             for r in range(flash_size, 0, -2):
                 alpha = int(flash_alpha * (r / flash_size) * 0.5)
-                pygame.draw.circle(flash, (100, 150, 255, alpha),
-                                 (flash_size, flash_size), r)
-            surface.blit(flash, (self.x - flash_size, self.y - flash_size),
-                        special_flags=pygame.BLEND_RGBA_ADD)
+                pygame.draw.circle(flash, (100, 150, 255, alpha), (flash_size, flash_size), r)
+            surface.blit(
+                flash,
+                (self.x - flash_size, self.y - flash_size),
+                special_flags=pygame.BLEND_RGBA_ADD,
+            )
 
         # Draw particles
         for p in self.particles:
-            alpha = int(255 * (p['life'] / 20))
+            alpha = int(255 * (p["life"] / 20))
             psurf = pygame.Surface((6, 6), pygame.SRCALPHA)
-            pygame.draw.circle(psurf, (*p['color'], alpha), (3, 3), 3)
-            surface.blit(psurf, (int(p['x']) - 3, int(p['y']) - 3),
-                        special_flags=pygame.BLEND_RGBA_ADD)
+            pygame.draw.circle(psurf, (*p["color"], alpha), (3, 3), 3)
+            surface.blit(
+                psurf, (int(p["x"]) - 3, int(p["y"]) - 3), special_flags=pygame.BLEND_RGBA_ADD
+            )
 
 
 class ScreenEffects:
@@ -446,11 +479,11 @@ class ScreenEffects:
             # Simple box blur (3x3)
             kernel_size = 3
             blurred = np.zeros_like(bloom)
-            for i in range(-kernel_size//2, kernel_size//2 + 1):
-                for j in range(-kernel_size//2, kernel_size//2 + 1):
+            for i in range(-kernel_size // 2, kernel_size // 2 + 1):
+                for j in range(-kernel_size // 2, kernel_size // 2 + 1):
                     shifted = np.roll(np.roll(bloom, i, axis=0), j, axis=1)
                     blurred += shifted
-            blurred /= (kernel_size * kernel_size)
+            blurred /= kernel_size * kernel_size
 
             # Combine with original
             result = arr.astype(np.float32) + blurred * self.bloom_intensity
@@ -467,23 +500,23 @@ class ScreenEffects:
         pygame.draw.line(surface, color, (x1, y1), (x2, y2), width)
 
         # Glow layers
-        glow_color = (min(color[0] + 50, 255),
-                     min(color[1] + 50, 255),
-                     min(color[2] + 50, 255))
+        glow_color = (min(color[0] + 50, 255), min(color[1] + 50, 255), min(color[2] + 50, 255))
 
         for i in range(3):
             glow_width = width + (i + 1) * 2
             alpha = 100 - i * 30
 
-            glow_surf = pygame.Surface((abs(x2-x1) + glow_width * 2,
-                                       abs(y2-y1) + glow_width * 2), pygame.SRCALPHA)
+            glow_surf = pygame.Surface(
+                (abs(x2 - x1) + glow_width * 2, abs(y2 - y1) + glow_width * 2), pygame.SRCALPHA
+            )
 
             # Offset for surface
             ox = min(x1, x2) - glow_width
             oy = min(y1, y2) - glow_width
 
-            pygame.draw.line(glow_surf, (*glow_color, alpha),
-                           (x1 - ox, y1 - oy), (x2 - ox, y2 - oy), glow_width)
+            pygame.draw.line(
+                glow_surf, (*glow_color, alpha), (x1 - ox, y1 - oy), (x2 - ox, y2 - oy), glow_width
+            )
 
             surface.blit(glow_surf, (ox, oy), special_flags=pygame.BLEND_RGBA_ADD)
 
@@ -544,6 +577,7 @@ def add_strong_outline(surface, color, thickness=2):
 # SHIP DAMAGE VISUAL EFFECTS
 # ============================================================================
 
+
 class ShipDamageEffects:
     """
     Manages visual damage effects for a ship based on shield/armor/hull state.
@@ -559,20 +593,28 @@ class ShipDamageEffects:
         self.smoke_timer = 0
         self.fire_timer = 0
 
-    def update(self, x: float, y: float, width: int, height: int,
-               shield_pct: float, armor_pct: float, hull_pct: float):
+    def update(
+        self,
+        x: float,
+        y: float,
+        width: int,
+        height: int,
+        shield_pct: float,
+        armor_pct: float,
+        hull_pct: float,
+    ):
         """Update damage effects based on ship state"""
         # Update existing particles
         for p in self.particles:
-            p['x'] += p['vx']
-            p['y'] += p['vy']
-            p['vy'] += p.get('gravity', 0)
-            p['vx'] *= p.get('drag', 0.98)
-            p['vy'] *= p.get('drag', 0.98)
-            p['life'] -= 1
+            p["x"] += p["vx"]
+            p["y"] += p["vy"]
+            p["vy"] += p.get("gravity", 0)
+            p["vx"] *= p.get("drag", 0.98)
+            p["vy"] *= p.get("drag", 0.98)
+            p["life"] -= 1
 
         # Remove dead particles
-        self.particles = [p for p in self.particles if p['life'] > 0]
+        self.particles = [p for p in self.particles if p["life"] > 0]
 
         # Spawn new effects based on damage state
         self.spark_timer += 1
@@ -591,7 +633,10 @@ class ShipDamageEffects:
         # === ARMOR DAMAGED: Smoke and orange sparks ===
         if armor_pct < 0.5 and armor_pct > 0:
             intensity = 1.0 - (armor_pct / 0.5)
-            if self.smoke_timer >= int(12 - intensity * 8) and len(self.particles) < self.max_particles:
+            if (
+                self.smoke_timer >= int(12 - intensity * 8)
+                and len(self.particles) < self.max_particles
+            ):
                 self.smoke_timer = 0
                 px = x + random.randint(-width // 4, width // 4)
                 py = y + random.randint(-height // 4, height // 4)
@@ -611,7 +656,10 @@ class ShipDamageEffects:
         # === HULL CRITICAL: Fire and heavy smoke ===
         if hull_pct <= 0.25 and hull_pct > 0:
             intensity = 1.0 - (hull_pct / 0.25)
-            if self.fire_timer >= int(4 - intensity * 2) and len(self.particles) < self.max_particles:
+            if (
+                self.fire_timer >= int(4 - intensity * 2)
+                and len(self.particles) < self.max_particles
+            ):
                 self.fire_timer = 0
                 # Fire from multiple points
                 for _ in range(1 + int(intensity * 2)):
@@ -629,127 +677,147 @@ class ShipDamageEffects:
         """Blue electrical spark"""
         angle = random.uniform(0, math.pi * 2)
         speed = random.uniform(1, 3)
-        self.particles.append({
-            'x': x, 'y': y,
-            'vx': math.cos(angle) * speed,
-            'vy': math.sin(angle) * speed,
-            'life': random.randint(5, 12),
-            'max_life': 12,
-            'size': random.randint(2, 4),
-            'type': 'spark',
-            'color': (100, 180, 255),
-            'gravity': 0,
-            'drag': 0.9
-        })
+        self.particles.append(
+            {
+                "x": x,
+                "y": y,
+                "vx": math.cos(angle) * speed,
+                "vy": math.sin(angle) * speed,
+                "life": random.randint(5, 12),
+                "max_life": 12,
+                "size": random.randint(2, 4),
+                "type": "spark",
+                "color": (100, 180, 255),
+                "gravity": 0,
+                "drag": 0.9,
+            }
+        )
 
     def _spawn_armor_smoke(self, x: float, y: float, intensity: float):
         """Gray/brown smoke puff"""
-        self.particles.append({
-            'x': x, 'y': y,
-            'vx': random.uniform(-0.5, 0.5),
-            'vy': random.uniform(-1.5, -0.5),
-            'life': random.randint(20, 35),
-            'max_life': 35,
-            'size': int(4 + intensity * 6),
-            'type': 'smoke',
-            'color': (80, 70, 60),
-            'gravity': -0.02,
-            'drag': 0.98
-        })
+        self.particles.append(
+            {
+                "x": x,
+                "y": y,
+                "vx": random.uniform(-0.5, 0.5),
+                "vy": random.uniform(-1.5, -0.5),
+                "life": random.randint(20, 35),
+                "max_life": 35,
+                "size": int(4 + intensity * 6),
+                "type": "smoke",
+                "color": (80, 70, 60),
+                "gravity": -0.02,
+                "drag": 0.98,
+            }
+        )
 
     def _spawn_armor_spark(self, x: float, y: float):
         """Orange armor spark"""
         angle = random.uniform(0, math.pi * 2)
         speed = random.uniform(2, 4)
-        self.particles.append({
-            'x': x, 'y': y,
-            'vx': math.cos(angle) * speed,
-            'vy': math.sin(angle) * speed,
-            'life': random.randint(8, 15),
-            'max_life': 15,
-            'size': random.randint(2, 3),
-            'type': 'spark',
-            'color': (255, 150, 50),
-            'gravity': 0.1,
-            'drag': 0.95
-        })
+        self.particles.append(
+            {
+                "x": x,
+                "y": y,
+                "vx": math.cos(angle) * speed,
+                "vy": math.sin(angle) * speed,
+                "life": random.randint(8, 15),
+                "max_life": 15,
+                "size": random.randint(2, 3),
+                "type": "spark",
+                "color": (255, 150, 50),
+                "gravity": 0.1,
+                "drag": 0.95,
+            }
+        )
 
     def _spawn_hull_spark(self, x: float, y: float):
         """Red/orange hull damage spark"""
         angle = random.uniform(0, math.pi * 2)
         speed = random.uniform(1.5, 3.5)
-        self.particles.append({
-            'x': x, 'y': y,
-            'vx': math.cos(angle) * speed,
-            'vy': math.sin(angle) * speed,
-            'life': random.randint(6, 12),
-            'max_life': 12,
-            'size': random.randint(2, 4),
-            'type': 'spark',
-            'color': (255, 100, 50),
-            'gravity': 0.15,
-            'drag': 0.92
-        })
+        self.particles.append(
+            {
+                "x": x,
+                "y": y,
+                "vx": math.cos(angle) * speed,
+                "vy": math.sin(angle) * speed,
+                "life": random.randint(6, 12),
+                "max_life": 12,
+                "size": random.randint(2, 4),
+                "type": "spark",
+                "color": (255, 100, 50),
+                "gravity": 0.15,
+                "drag": 0.92,
+            }
+        )
 
     def _spawn_fire(self, x: float, y: float, intensity: float):
         """Fire particle"""
-        self.particles.append({
-            'x': x, 'y': y,
-            'vx': random.uniform(-0.8, 0.8),
-            'vy': random.uniform(-2.5, -1.0),
-            'life': random.randint(12, 25),
-            'max_life': 25,
-            'size': int(5 + intensity * 8),
-            'type': 'fire',
-            'color': (255, 100, 30),
-            'gravity': -0.05,
-            'drag': 0.97
-        })
+        self.particles.append(
+            {
+                "x": x,
+                "y": y,
+                "vx": random.uniform(-0.8, 0.8),
+                "vy": random.uniform(-2.5, -1.0),
+                "life": random.randint(12, 25),
+                "max_life": 25,
+                "size": int(5 + intensity * 8),
+                "type": "fire",
+                "color": (255, 100, 30),
+                "gravity": -0.05,
+                "drag": 0.97,
+            }
+        )
 
     def _spawn_heavy_smoke(self, x: float, y: float):
         """Heavy black smoke trail"""
-        self.particles.append({
-            'x': x, 'y': y,
-            'vx': random.uniform(-0.3, 0.3),
-            'vy': random.uniform(0.5, 1.5),  # Trails behind
-            'life': random.randint(30, 50),
-            'max_life': 50,
-            'size': random.randint(8, 15),
-            'type': 'smoke',
-            'color': (40, 35, 30),
-            'gravity': 0,
-            'drag': 0.99
-        })
+        self.particles.append(
+            {
+                "x": x,
+                "y": y,
+                "vx": random.uniform(-0.3, 0.3),
+                "vy": random.uniform(0.5, 1.5),  # Trails behind
+                "life": random.randint(30, 50),
+                "max_life": 50,
+                "size": random.randint(8, 15),
+                "type": "smoke",
+                "color": (40, 35, 30),
+                "gravity": 0,
+                "drag": 0.99,
+            }
+        )
 
     def draw(self, surface: pygame.Surface):
         """Draw all damage particles"""
         for p in self.particles:
-            alpha = int(255 * (p['life'] / p['max_life']))
-            size = max(1, int(p['size'] * (p['life'] / p['max_life'])))
+            alpha = int(255 * (p["life"] / p["max_life"]))
+            size = max(1, int(p["size"] * (p["life"] / p["max_life"])))
 
-            if p['type'] == 'spark':
+            if p["type"] == "spark":
                 # Bright spark with glow
                 if size > 1:
                     glow_surf = pygame.Surface((size * 4, size * 4), pygame.SRCALPHA)
-                    glow_color = (*p['color'], alpha // 3)
+                    glow_color = (*p["color"], alpha // 3)
                     pygame.draw.circle(glow_surf, glow_color, (size * 2, size * 2), size * 2)
-                    surface.blit(glow_surf, (int(p['x']) - size * 2, int(p['y']) - size * 2))
+                    surface.blit(glow_surf, (int(p["x"]) - size * 2, int(p["y"]) - size * 2))
 
-                spark_color = (min(255, p['color'][0] + 50),
-                              min(255, p['color'][1] + 50),
-                              min(255, p['color'][2] + 50))
-                pygame.draw.circle(surface, spark_color, (int(p['x']), int(p['y'])), size)
+                spark_color = (
+                    min(255, p["color"][0] + 50),
+                    min(255, p["color"][1] + 50),
+                    min(255, p["color"][2] + 50),
+                )
+                pygame.draw.circle(surface, spark_color, (int(p["x"]), int(p["y"])), size)
 
-            elif p['type'] == 'smoke':
+            elif p["type"] == "smoke":
                 # Soft smoke puff
                 smoke_surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
-                smoke_color = (*p['color'], alpha // 2)
+                smoke_color = (*p["color"], alpha // 2)
                 pygame.draw.circle(smoke_surf, smoke_color, (size, size), size)
-                surface.blit(smoke_surf, (int(p['x']) - size, int(p['y']) - size))
+                surface.blit(smoke_surf, (int(p["x"]) - size, int(p["y"]) - size))
 
-            elif p['type'] == 'fire':
+            elif p["type"] == "fire":
                 # Layered fire effect
-                progress = p['life'] / p['max_life']
+                progress = p["life"] / p["max_life"]
 
                 # Outer orange
                 fire_surf = pygame.Surface((size * 3, size * 3), pygame.SRCALPHA)
@@ -759,17 +827,20 @@ class ShipDamageEffects:
                 # Inner yellow
                 inner_size = int(size * 0.6)
                 inner_color = (255, 180 + int(75 * progress), 50, alpha)
-                pygame.draw.circle(fire_surf, inner_color,
-                                 (int(size * 1.5), int(size * 1.5)), inner_size)
+                pygame.draw.circle(
+                    fire_surf, inner_color, (int(size * 1.5), int(size * 1.5)), inner_size
+                )
 
                 # Core white
                 core_size = max(1, int(size * 0.3))
                 core_color = (255, 255, 200, alpha)
-                pygame.draw.circle(fire_surf, core_color,
-                                 (int(size * 1.5), int(size * 1.5)), core_size)
+                pygame.draw.circle(
+                    fire_surf, core_color, (int(size * 1.5), int(size * 1.5)), core_size
+                )
 
-                surface.blit(fire_surf, (int(p['x']) - int(size * 1.5),
-                                        int(p['y']) - int(size * 1.5)))
+                surface.blit(
+                    fire_surf, (int(p["x"]) - int(size * 1.5), int(p["y"]) - int(size * 1.5))
+                )
 
 
 class EnhancedExplosion:
@@ -783,9 +854,14 @@ class EnhancedExplosion:
     - Lingering smoke
     """
 
-    def __init__(self, x: float, y: float, size: int = 30,
-                 color: Tuple[int, int, int] = (255, 150, 50),
-                 has_secondaries: bool = False):
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        size: int = 30,
+        color: Tuple[int, int, int] = (255, 150, 50),
+        has_secondaries: bool = False,
+    ):
         self.x = x
         self.y = y
         self.size = size
@@ -802,29 +878,34 @@ class EnhancedExplosion:
         for _ in range(num_debris):
             angle = random.uniform(0, math.pi * 2)
             speed = random.uniform(3, 8) * (size / 30)
-            self.debris.append({
-                'x': 0, 'y': 0,
-                'vx': math.cos(angle) * speed,
-                'vy': math.sin(angle) * speed,
-                'size': random.randint(2, max(4, size // 6)),
-                'life': random.randint(20, 35),
-                'rotation': random.uniform(0, 360),
-                'rot_speed': random.uniform(-10, 10),
-                'is_hull': random.random() < 0.3  # Some debris is hull plating
-            })
+            self.debris.append(
+                {
+                    "x": 0,
+                    "y": 0,
+                    "vx": math.cos(angle) * speed,
+                    "vy": math.sin(angle) * speed,
+                    "size": random.randint(2, max(4, size // 6)),
+                    "life": random.randint(20, 35),
+                    "rotation": random.uniform(0, 360),
+                    "rot_speed": random.uniform(-10, 10),
+                    "is_hull": random.random() < 0.3,  # Some debris is hull plating
+                }
+            )
 
         # Secondary explosions (for big ships)
         self.secondaries = []
         if has_secondaries:
             num_secondary = random.randint(2, 4)
             for _ in range(num_secondary):
-                self.secondaries.append({
-                    'x': random.randint(-size, size),
-                    'y': random.randint(-size, size),
-                    'delay': random.randint(10, 25),
-                    'size': random.randint(size // 3, size // 2),
-                    'triggered': False
-                })
+                self.secondaries.append(
+                    {
+                        "x": random.randint(-size, size),
+                        "y": random.randint(-size, size),
+                        "delay": random.randint(10, 25),
+                        "size": random.randint(size // 3, size // 2),
+                        "triggered": False,
+                    }
+                )
 
     def update(self) -> bool:
         """Update explosion, return False when done"""
@@ -832,21 +913,21 @@ class EnhancedExplosion:
 
         # Update debris
         for d in self.debris:
-            if d['life'] > 0:
-                d['x'] += d['vx']
-                d['y'] += d['vy']
-                d['vy'] += 0.2  # Gravity
-                d['vx'] *= 0.98
-                d['rotation'] += d['rot_speed']
-                d['life'] -= 1
+            if d["life"] > 0:
+                d["x"] += d["vx"]
+                d["y"] += d["vy"]
+                d["vy"] += 0.2  # Gravity
+                d["vx"] *= 0.98
+                d["rotation"] += d["rot_speed"]
+                d["life"] -= 1
 
         # Trigger secondary explosions
         for s in self.secondaries:
-            if not s['triggered'] and self.frame >= s['delay']:
-                s['triggered'] = True
-                s['frame'] = 0
-            elif s['triggered']:
-                s['frame'] += 1
+            if not s["triggered"] and self.frame >= s["delay"]:
+                s["triggered"] = True
+                s["frame"] = 0
+            elif s["triggered"]:
+                s["frame"] += 1
 
         if self.frame >= self.max_frames:
             self.alive = False
@@ -862,8 +943,9 @@ class EnhancedExplosion:
             flash_alpha = int(200 * (1 - self.frame / 4))
             flash_size = int(self.size * 2 * (1 + self.frame * 0.3))
             flash_surf = pygame.Surface((flash_size * 2, flash_size * 2), pygame.SRCALPHA)
-            pygame.draw.circle(flash_surf, (255, 255, 255, flash_alpha),
-                             (flash_size, flash_size), flash_size)
+            pygame.draw.circle(
+                flash_surf, (255, 255, 255, flash_alpha), (flash_size, flash_size), flash_size
+            )
             surface.blit(flash_surf, (int(self.x) - flash_size, int(self.y) - flash_size))
 
         # === SHOCKWAVE RING ===
@@ -873,9 +955,16 @@ class EnhancedExplosion:
             ring_alpha = int(150 * (1 - ring_progress))
             ring_width = max(2, int(6 * (1 - ring_progress)))
 
-            ring_surf = pygame.Surface((ring_radius * 2 + 10, ring_radius * 2 + 10), pygame.SRCALPHA)
-            pygame.draw.circle(ring_surf, (255, 255, 255, ring_alpha),
-                             (ring_radius + 5, ring_radius + 5), ring_radius, ring_width)
+            ring_surf = pygame.Surface(
+                (ring_radius * 2 + 10, ring_radius * 2 + 10), pygame.SRCALPHA
+            )
+            pygame.draw.circle(
+                ring_surf,
+                (255, 255, 255, ring_alpha),
+                (ring_radius + 5, ring_radius + 5),
+                ring_radius,
+                ring_width,
+            )
             surface.blit(ring_surf, (int(self.x) - ring_radius - 5, int(self.y) - ring_radius - 5))
 
         # === MAIN FIREBALL ===
@@ -889,41 +978,62 @@ class EnhancedExplosion:
                 ox = random.randint(-4, 4)
                 oy = random.randint(-4, 4)
                 outer_size = fireball_size + random.randint(-3, 3)
-                fire_surf = pygame.Surface((outer_size * 2 + 10, outer_size * 2 + 10), pygame.SRCALPHA)
-                pygame.draw.circle(fire_surf, (255, 80, 20, outer_alpha // 2),
-                                 (outer_size + 5, outer_size + 5), outer_size)
-                surface.blit(fire_surf, (int(self.x) + ox - outer_size - 5,
-                                        int(self.y) + oy - outer_size - 5))
+                fire_surf = pygame.Surface(
+                    (outer_size * 2 + 10, outer_size * 2 + 10), pygame.SRCALPHA
+                )
+                pygame.draw.circle(
+                    fire_surf,
+                    (255, 80, 20, outer_alpha // 2),
+                    (outer_size + 5, outer_size + 5),
+                    outer_size,
+                )
+                surface.blit(
+                    fire_surf,
+                    (int(self.x) + ox - outer_size - 5, int(self.y) + oy - outer_size - 5),
+                )
 
             # Middle fire (orange)
             mid_size = int(fireball_size * 0.75)
             mid_surf = pygame.Surface((mid_size * 2 + 10, mid_size * 2 + 10), pygame.SRCALPHA)
-            pygame.draw.circle(mid_surf, (255, 150, 30, outer_alpha),
-                             (mid_size + 5, mid_size + 5), mid_size)
+            pygame.draw.circle(
+                mid_surf, (255, 150, 30, outer_alpha), (mid_size + 5, mid_size + 5), mid_size
+            )
             surface.blit(mid_surf, (int(self.x) - mid_size - 5, int(self.y) - mid_size - 5))
 
             # Inner core (yellow/white)
             if progress < 0.4:
                 core_alpha = int(255 * (1 - progress / 0.4))
                 core_size = int(fireball_size * 0.4)
-                core_surf = pygame.Surface((core_size * 2 + 10, core_size * 2 + 10), pygame.SRCALPHA)
-                pygame.draw.circle(core_surf, (255, 255, 150, core_alpha),
-                                 (core_size + 5, core_size + 5), core_size)
-                pygame.draw.circle(core_surf, (255, 255, 255, core_alpha),
-                                 (core_size + 5, core_size + 5), core_size // 2)
+                core_surf = pygame.Surface(
+                    (core_size * 2 + 10, core_size * 2 + 10), pygame.SRCALPHA
+                )
+                pygame.draw.circle(
+                    core_surf,
+                    (255, 255, 150, core_alpha),
+                    (core_size + 5, core_size + 5),
+                    core_size,
+                )
+                pygame.draw.circle(
+                    core_surf,
+                    (255, 255, 255, core_alpha),
+                    (core_size + 5, core_size + 5),
+                    core_size // 2,
+                )
                 surface.blit(core_surf, (int(self.x) - core_size - 5, int(self.y) - core_size - 5))
 
         # === DEBRIS ===
         for d in self.debris:
-            if d['life'] > 0:
-                debris_alpha = int(255 * (d['life'] / 35))
-                dx = int(self.x + d['x'])
-                dy = int(self.y + d['y'])
+            if d["life"] > 0:
+                debris_alpha = int(255 * (d["life"] / 35))
+                dx = int(self.x + d["x"])
+                dy = int(self.y + d["y"])
 
-                if d['is_hull']:
+                if d["is_hull"]:
                     # Hull debris - metallic gray chunks
-                    debris_size = d['size']
-                    debris_surf = pygame.Surface((debris_size * 3, debris_size * 3), pygame.SRCALPHA)
+                    debris_size = d["size"]
+                    debris_surf = pygame.Surface(
+                        (debris_size * 3, debris_size * 3), pygame.SRCALPHA
+                    )
                     points = [
                         (debris_size * 1.5, debris_size * 0.5),
                         (debris_size * 2.5, debris_size * 1.5),
@@ -931,17 +1041,26 @@ class EnhancedExplosion:
                         (debris_size * 0.5, debris_size * 1.5),
                     ]
                     pygame.draw.polygon(debris_surf, (100, 90, 80, debris_alpha), points)
-                    rotated = pygame.transform.rotate(debris_surf, d['rotation'])
-                    surface.blit(rotated, (dx - rotated.get_width() // 2,
-                                          dy - rotated.get_height() // 2))
+                    rotated = pygame.transform.rotate(debris_surf, d["rotation"])
+                    surface.blit(
+                        rotated, (dx - rotated.get_width() // 2, dy - rotated.get_height() // 2)
+                    )
                 else:
                     # Hot debris with glow
-                    glow_surf = pygame.Surface((d['size'] * 4, d['size'] * 4), pygame.SRCALPHA)
-                    pygame.draw.circle(glow_surf, (255, 150, 50, debris_alpha // 3),
-                                     (d['size'] * 2, d['size'] * 2), d['size'] * 2)
-                    pygame.draw.circle(glow_surf, (255, 200, 100, debris_alpha),
-                                     (d['size'] * 2, d['size'] * 2), d['size'])
-                    surface.blit(glow_surf, (dx - d['size'] * 2, dy - d['size'] * 2))
+                    glow_surf = pygame.Surface((d["size"] * 4, d["size"] * 4), pygame.SRCALPHA)
+                    pygame.draw.circle(
+                        glow_surf,
+                        (255, 150, 50, debris_alpha // 3),
+                        (d["size"] * 2, d["size"] * 2),
+                        d["size"] * 2,
+                    )
+                    pygame.draw.circle(
+                        glow_surf,
+                        (255, 200, 100, debris_alpha),
+                        (d["size"] * 2, d["size"] * 2),
+                        d["size"],
+                    )
+                    surface.blit(glow_surf, (dx - d["size"] * 2, dy - d["size"] * 2))
 
         # === SMOKE (late phase) ===
         if progress > 0.3:
@@ -953,26 +1072,32 @@ class EnhancedExplosion:
                 sx = int(self.x + random.randint(-10, 10))
                 sy = int(self.y + random.randint(-10, 10) - smoke_progress * 20)
                 smoke_surf = pygame.Surface((smoke_size * 2, smoke_size * 2), pygame.SRCALPHA)
-                pygame.draw.circle(smoke_surf, (60, 50, 45, smoke_alpha),
-                                 (smoke_size, smoke_size), smoke_size)
+                pygame.draw.circle(
+                    smoke_surf, (60, 50, 45, smoke_alpha), (smoke_size, smoke_size), smoke_size
+                )
                 surface.blit(smoke_surf, (sx - smoke_size, sy - smoke_size))
 
         # === SECONDARY EXPLOSIONS ===
         for s in self.secondaries:
-            if s['triggered'] and s.get('frame', 0) < 20:
-                sec_progress = s['frame'] / 20
-                sec_size = int(s['size'] * (1 - sec_progress * 0.5))
+            if s["triggered"] and s.get("frame", 0) < 20:
+                sec_progress = s["frame"] / 20
+                sec_size = int(s["size"] * (1 - sec_progress * 0.5))
                 sec_alpha = int(200 * (1 - sec_progress))
 
-                sec_x = int(self.x + s['x'])
-                sec_y = int(self.y + s['y'])
+                sec_x = int(self.x + s["x"])
+                sec_y = int(self.y + s["y"])
 
                 # Secondary fireball
                 sec_surf = pygame.Surface((sec_size * 2 + 10, sec_size * 2 + 10), pygame.SRCALPHA)
-                pygame.draw.circle(sec_surf, (255, 120, 30, sec_alpha),
-                                 (sec_size + 5, sec_size + 5), sec_size)
-                pygame.draw.circle(sec_surf, (255, 200, 100, sec_alpha),
-                                 (sec_size + 5, sec_size + 5), sec_size // 2)
+                pygame.draw.circle(
+                    sec_surf, (255, 120, 30, sec_alpha), (sec_size + 5, sec_size + 5), sec_size
+                )
+                pygame.draw.circle(
+                    sec_surf,
+                    (255, 200, 100, sec_alpha),
+                    (sec_size + 5, sec_size + 5),
+                    sec_size // 2,
+                )
                 surface.blit(sec_surf, (sec_x - sec_size - 5, sec_y - sec_size - 5))
 
 
@@ -980,14 +1105,23 @@ class EnhancedExplosion:
 # SHIELD IMPACT RIPPLE EFFECT
 # ============================================================================
 
+
 class ShieldImpactRipple:
     """
     Visual ripple effect when shields absorb damage.
     Shows an expanding ring at the impact point with EVE-style blue shimmer.
     """
 
-    def __init__(self, x: float, y: float, ship_x: float, ship_y: float,
-                 ship_width: int, ship_height: int, intensity: float = 1.0):
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        ship_x: float,
+        ship_y: float,
+        ship_width: int,
+        ship_height: int,
+        intensity: float = 1.0,
+    ):
         self.x = x  # Impact point
         self.y = y
         self.ship_x = ship_x  # Ship center for shield bubble
@@ -1012,27 +1146,29 @@ class ShieldImpactRipple:
             spread = random.uniform(-0.5, 0.5)
             angle = self.impact_angle + spread
             speed = random.uniform(1, 3) * intensity
-            self.particles.append({
-                'x': x,
-                'y': y,
-                'vx': math.cos(angle) * speed * 0.5,
-                'vy': math.sin(angle) * speed * 0.5,
-                'life': random.randint(10, 18),
-                'size': random.randint(2, 4)
-            })
+            self.particles.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "vx": math.cos(angle) * speed * 0.5,
+                    "vy": math.sin(angle) * speed * 0.5,
+                    "life": random.randint(10, 18),
+                    "size": random.randint(2, 4),
+                }
+            )
 
     def update(self) -> bool:
         self.frame += 1
 
         # Update particles
         for p in self.particles:
-            p['x'] += p['vx']
-            p['y'] += p['vy']
-            p['vx'] *= 0.92
-            p['vy'] *= 0.92
-            p['life'] -= 1
+            p["x"] += p["vx"]
+            p["y"] += p["vy"]
+            p["vx"] *= 0.92
+            p["vy"] *= 0.92
+            p["life"] -= 1
 
-        self.particles = [p for p in self.particles if p['life'] > 0]
+        self.particles = [p for p in self.particles if p["life"] > 0]
 
         if self.frame >= self.max_frames:
             self.alive = False
@@ -1047,10 +1183,15 @@ class ShieldImpactRipple:
             flash_alpha = int(180 * (1 - self.frame / 5) * self.intensity)
             flash_size = int(15 + self.frame * 4)
             flash_surf = pygame.Surface((flash_size * 2, flash_size * 2), pygame.SRCALPHA)
-            pygame.draw.circle(flash_surf, (150, 200, 255, flash_alpha),
-                             (flash_size, flash_size), flash_size)
-            pygame.draw.circle(flash_surf, (200, 230, 255, min(255, flash_alpha + 50)),
-                             (flash_size, flash_size), flash_size // 2)
+            pygame.draw.circle(
+                flash_surf, (150, 200, 255, flash_alpha), (flash_size, flash_size), flash_size
+            )
+            pygame.draw.circle(
+                flash_surf,
+                (200, 230, 255, min(255, flash_alpha + 50)),
+                (flash_size, flash_size),
+                flash_size // 2,
+            )
             surface.blit(flash_surf, (int(self.x) - flash_size, int(self.y) - flash_size))
 
         # === EXPANDING RIPPLE ARC ===
@@ -1079,11 +1220,15 @@ class ShieldImpactRipple:
 
             if len(points) >= 2:
                 # Outer glow
-                pygame.draw.lines(arc_surf, (80, 160, 255, arc_alpha // 2), False, points, arc_width + 4)
+                pygame.draw.lines(
+                    arc_surf, (80, 160, 255, arc_alpha // 2), False, points, arc_width + 4
+                )
                 # Main arc
                 pygame.draw.lines(arc_surf, (120, 200, 255, arc_alpha), False, points, arc_width)
                 # Bright core
-                pygame.draw.lines(arc_surf, (200, 230, 255, arc_alpha), False, points, max(1, arc_width - 2))
+                pygame.draw.lines(
+                    arc_surf, (200, 230, 255, arc_alpha), False, points, max(1, arc_width - 2)
+                )
 
             surface.blit(arc_surf, (int(self.x) - center, int(self.y) - center))
 
@@ -1099,14 +1244,14 @@ class ShieldImpactRipple:
 
         # === PARTICLES ===
         for p in self.particles:
-            if p['life'] > 0:
-                int(200 * (p['life'] / 18))
-                size = max(1, p['size'] * p['life'] // 18)
-                pygame.draw.circle(surface, (150, 200, 255),
-                                 (int(p['x']), int(p['y'])), size)
+            if p["life"] > 0:
+                int(200 * (p["life"] / 18))
+                size = max(1, p["size"] * p["life"] // 18)
+                pygame.draw.circle(surface, (150, 200, 255), (int(p["x"]), int(p["y"])), size)
                 if size > 2:
-                    pygame.draw.circle(surface, (220, 240, 255),
-                                     (int(p['x']), int(p['y'])), size // 2)
+                    pygame.draw.circle(
+                        surface, (220, 240, 255), (int(p["x"]), int(p["y"])), size // 2
+                    )
 
     def _draw_mini_hex(self, surface: pygame.Surface, x: int, y: int, size: int, alpha: int):
         """Draw a small hexagon shape"""
@@ -1129,14 +1274,22 @@ class ShieldImpactManager:
     def __init__(self):
         self.impacts: List[ShieldImpactRipple] = []
 
-    def add_impact(self, impact_x: float, impact_y: float,
-                   ship_x: float, ship_y: float,
-                   ship_width: int, ship_height: int,
-                   damage: float = 10, max_damage: float = 50):
+    def add_impact(
+        self,
+        impact_x: float,
+        impact_y: float,
+        ship_x: float,
+        ship_y: float,
+        ship_width: int,
+        ship_height: int,
+        damage: float = 10,
+        max_damage: float = 50,
+    ):
         """Add a new shield impact effect"""
         intensity = min(2.0, damage / max_damage * 2)
-        impact = ShieldImpactRipple(impact_x, impact_y, ship_x, ship_y,
-                                    ship_width, ship_height, intensity)
+        impact = ShieldImpactRipple(
+            impact_x, impact_y, ship_x, ship_y, ship_width, ship_height, intensity
+        )
         self.impacts.append(impact)
 
     def update(self):
@@ -1156,6 +1309,7 @@ class ShieldImpactManager:
 # SCREEN SHAKE SYSTEM
 # ============================================================================
 
+
 class ScreenShake:
     """
     Camera shake effect for impacts, explosions, and dramatic moments.
@@ -1167,7 +1321,7 @@ class ScreenShake:
         self.offset_x = 0
         self.offset_y = 0
 
-    def add_shake(self, intensity: float, duration: int, falloff: str = 'linear'):
+    def add_shake(self, intensity: float, duration: int, falloff: str = "linear"):
         """
         Add a shake effect.
 
@@ -1176,12 +1330,14 @@ class ScreenShake:
             duration: Duration in frames (e.g., 10-30)
             falloff: 'linear', 'exponential', or 'constant'
         """
-        self.shakes.append({
-            'intensity': intensity,
-            'duration': duration,
-            'remaining': duration,
-            'falloff': falloff
-        })
+        self.shakes.append(
+            {
+                "intensity": intensity,
+                "duration": duration,
+                "remaining": duration,
+                "falloff": falloff,
+            }
+        )
 
     def add_trauma(self, trauma: float):
         """
@@ -1191,7 +1347,7 @@ class ScreenShake:
         # Convert trauma to intensity/duration
         intensity = trauma * 15
         duration = int(10 + trauma * 10)
-        self.add_shake(intensity, duration, 'exponential')
+        self.add_shake(intensity, duration, "exponential")
 
     def update(self):
         """Update shake and calculate offset"""
@@ -1199,25 +1355,25 @@ class ScreenShake:
         self.offset_y = 0
 
         for shake in self.shakes:
-            shake['remaining'] -= 1
+            shake["remaining"] -= 1
 
-            if shake['remaining'] > 0:
+            if shake["remaining"] > 0:
                 # Calculate intensity based on falloff
-                progress = shake['remaining'] / shake['duration']
+                progress = shake["remaining"] / shake["duration"]
 
-                if shake['falloff'] == 'exponential':
-                    current_intensity = shake['intensity'] * (progress ** 2)
-                elif shake['falloff'] == 'constant':
-                    current_intensity = shake['intensity']
+                if shake["falloff"] == "exponential":
+                    current_intensity = shake["intensity"] * (progress**2)
+                elif shake["falloff"] == "constant":
+                    current_intensity = shake["intensity"]
                 else:  # linear
-                    current_intensity = shake['intensity'] * progress
+                    current_intensity = shake["intensity"] * progress
 
                 # Random offset
                 self.offset_x += random.uniform(-current_intensity, current_intensity)
                 self.offset_y += random.uniform(-current_intensity, current_intensity)
 
         # Remove finished shakes
-        self.shakes = [s for s in self.shakes if s['remaining'] > 0]
+        self.shakes = [s for s in self.shakes if s["remaining"] > 0]
 
         # Round to integers for pixel-perfect rendering
         self.offset_x = int(self.offset_x)
@@ -1242,13 +1398,16 @@ class ScreenShake:
 # MUZZLE FLASH SYSTEM
 # ============================================================================
 
+
 class MuzzleFlash:
     """
     Quick bright flash when weapons fire.
     Shows a brief flash at the muzzle with fading glow.
     """
 
-    def __init__(self, x: float, y: float, size: str = 'medium', color: Tuple[int, int, int] = None):
+    def __init__(
+        self, x: float, y: float, size: str = "medium", color: Tuple[int, int, int] = None
+    ):
         """
         Create a muzzle flash effect.
 
@@ -1262,14 +1421,14 @@ class MuzzleFlash:
 
         # Size-based parameters
         size_params = {
-            'small': {'radius': 8, 'duration': 4},
-            'medium': {'radius': 14, 'duration': 5},
-            'large': {'radius': 22, 'duration': 6}
+            "small": {"radius": 8, "duration": 4},
+            "medium": {"radius": 14, "duration": 5},
+            "large": {"radius": 22, "duration": 6},
         }
-        params = size_params.get(size, size_params['medium'])
+        params = size_params.get(size, size_params["medium"])
 
-        self.max_radius = params['radius']
-        self.max_frames = params['duration']
+        self.max_radius = params["radius"]
+        self.max_frames = params["duration"]
         self.frame = 0
         self.alive = True
 
@@ -1309,23 +1468,29 @@ class MuzzleFlash:
 
         # Outer glow
         glow_alpha = max(0, min(255, alpha // 2))
-        pygame.draw.circle(flash_surf,
-                          (self.color[0], self.color[1], self.color[2], glow_alpha),
-                          (center, center), radius)
+        pygame.draw.circle(
+            flash_surf,
+            (self.color[0], self.color[1], self.color[2], glow_alpha),
+            (center, center),
+            radius,
+        )
 
         # Mid ring
         mid_alpha = max(0, min(255, int(alpha * 0.8)))
         mid_radius = max(1, radius * 2 // 3)
-        pygame.draw.circle(flash_surf,
-                          (self.core_color[0], self.core_color[1], self.core_color[2], mid_alpha),
-                          (center, center), mid_radius)
+        pygame.draw.circle(
+            flash_surf,
+            (self.core_color[0], self.core_color[1], self.core_color[2], mid_alpha),
+            (center, center),
+            mid_radius,
+        )
 
         # Bright core
         if self.frame < 2:
             core_radius = max(1, radius // 3)
-            pygame.draw.circle(flash_surf,
-                              (255, 255, 255, min(255, alpha + 50)),
-                              (center, center), core_radius)
+            pygame.draw.circle(
+                flash_surf, (255, 255, 255, min(255, alpha + 50)), (center, center), core_radius
+            )
 
         surface.blit(flash_surf, (int(self.x) - center, int(self.y) - center))
 
@@ -1336,14 +1501,19 @@ class MuzzleFlashManager:
     def __init__(self):
         self.flashes: List[MuzzleFlash] = []
 
-    def add_flash(self, x: float, y: float, size: str = 'medium',
-                  color: Tuple[int, int, int] = None):
+    def add_flash(
+        self, x: float, y: float, size: str = "medium", color: Tuple[int, int, int] = None
+    ):
         """Add a muzzle flash at position"""
         flash = MuzzleFlash(x, y, size, color)
         self.flashes.append(flash)
 
-    def add_multi_flash(self, positions: List[Tuple[float, float]],
-                        size: str = 'medium', color: Tuple[int, int, int] = None):
+    def add_multi_flash(
+        self,
+        positions: List[Tuple[float, float]],
+        size: str = "medium",
+        color: Tuple[int, int, int] = None,
+    ):
         """Add multiple flashes at once (for multi-barrel weapons)"""
         for x, y in positions:
             self.add_flash(x, y, size, color)
@@ -1429,7 +1599,12 @@ def get_muzzle_flash_manager() -> MuzzleFlashManager:
 
 def clear_all_effects():
     """Clear all visual effects (call on game reset)"""
-    global _particle_system, _ship_damage_effects, _shield_impact_manager, _screen_shake, _muzzle_flash_manager
+    global \
+        _particle_system, \
+        _ship_damage_effects, \
+        _shield_impact_manager, \
+        _screen_shake, \
+        _muzzle_flash_manager
     if _particle_system:
         _particle_system.clear()
     _ship_damage_effects = {}

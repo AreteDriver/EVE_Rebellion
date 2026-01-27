@@ -16,12 +16,14 @@ class TribeType(Enum):
     VHEROKIOR = "vherokior"
     KRUSUAL = "krusual"
 
+
 class CinematicType(Enum):
     OPENING = "opening"
     FIRST_SHIP = "first_ship"
     UPGRADE_WOLF = "upgrade_wolf"
     UPGRADE_JAGUAR = "upgrade_jaguar"
     MISSION_DEBRIEF = "mission_debrief"
+
 
 class CinematicManager:
     """Manages all cinematic sequences and tribal narrative"""
@@ -45,8 +47,8 @@ class CinematicManager:
                 "thanks_messages": [
                     "Your technical precision honors our clan, Ace.",
                     "The efficiency of your strike pleases the engineers, Ace.",
-                    "Data shows exceptional performance. The tribe is grateful, Ace."
-                ]
+                    "Data shows exceptional performance. The tribe is grateful, Ace.",
+                ],
             },
             TribeType.BRUTOR: {
                 "name": "Brutor",
@@ -58,8 +60,8 @@ class CinematicManager:
                 "thanks_messages": [
                     "You fight with the strength of ancestors, Ace!",
                     "The enemy falls before your fury! Well done, Ace!",
-                    "Blood and honor! Your courage inspires us all, Ace!"
-                ]
+                    "Blood and honor! Your courage inspires us all, Ace!",
+                ],
             },
             TribeType.VHEROKIOR: {
                 "name": "Vherokior",
@@ -71,8 +73,8 @@ class CinematicManager:
                 "thanks_messages": [
                     "The spirits guide your path, Ace. We are grateful.",
                     "Your dance between the stars is blessed, Ace.",
-                    "The ancestors smile upon your journey, Ace."
-                ]
+                    "The ancestors smile upon your journey, Ace.",
+                ],
             },
             TribeType.KRUSUAL: {
                 "name": "Krusual",
@@ -84,9 +86,9 @@ class CinematicManager:
                 "thanks_messages": [
                     "Efficiency and honor. The Krusual way. Well done, Ace.",
                     "Tactical superiority confirmed. The tribe approves, Ace.",
-                    "You rescued many. Pragmatic and effective, Ace."
-                ]
-            }
+                    "You rescued many. Pragmatic and effective, Ace.",
+                ],
+            },
         }
 
     def start_opening_cinematic(self):
@@ -128,12 +130,16 @@ class CinematicManager:
 
         # Phase 3: Main explosion
         elif self.cinematic_timer < PHASE_EXPLOSION_PEAK:
-            progress = (self.cinematic_timer - PHASE_EXPLOSION_START) / (PHASE_EXPLOSION_PEAK - PHASE_EXPLOSION_START)
+            progress = (self.cinematic_timer - PHASE_EXPLOSION_START) / (
+                PHASE_EXPLOSION_PEAK - PHASE_EXPLOSION_START
+            )
             self._render_explosion_effects(screen, progress, intensity=1.0)
 
         # Phase 4: Show message
         elif self.cinematic_timer < PHASE_MESSAGE:
-            progress = (self.cinematic_timer - PHASE_EXPLOSION_PEAK) / (PHASE_MESSAGE - PHASE_EXPLOSION_PEAK)
+            progress = (self.cinematic_timer - PHASE_EXPLOSION_PEAK) / (
+                PHASE_MESSAGE - PHASE_EXPLOSION_PEAK
+            )
             self._render_rebellion_message(screen, progress)
 
         # Phase 5: Fade out
@@ -164,8 +170,9 @@ class CinematicManager:
         planet_radius = 150
         pygame.draw.circle(screen, (80, 60, 100), planet_pos, planet_radius)
         # Planet highlight
-        pygame.draw.circle(screen, (120, 90, 140),
-                         (planet_pos[0] - 40, planet_pos[1] - 40), planet_radius // 3)
+        pygame.draw.circle(
+            screen, (120, 90, 140), (planet_pos[0] - 40, planet_pos[1] - 40), planet_radius // 3
+        )
 
         # Draw titan silhouette (upper left)
         titan_rect = pygame.Rect(100, 100, 400, 150)
@@ -178,12 +185,12 @@ class CinematicManager:
         points_left = [
             (titan_rect.left, titan_rect.centery),
             (titan_rect.left - 80, titan_rect.top + 20),
-            (titan_rect.left - 60, titan_rect.centery)
+            (titan_rect.left - 60, titan_rect.centery),
         ]
         points_right = [
             (titan_rect.right, titan_rect.centery),
             (titan_rect.right + 80, titan_rect.top + 20),
-            (titan_rect.right + 60, titan_rect.centery)
+            (titan_rect.right + 60, titan_rect.centery),
         ]
         pygame.draw.polygon(screen, (120, 120, 140), points_left)
         pygame.draw.polygon(screen, (120, 120, 140), points_right)
@@ -216,12 +223,17 @@ class CinematicManager:
 
         # Debris particles (simple version)
         import random
+
         random.seed(42)  # Consistent debris pattern
         for i in range(50):
             angle = (i / 50.0) * 6.28  # Full circle
             distance = progress * 300
-            debris_x = int(titan_center[0] + distance * pygame.math.Vector2(1, 0).rotate_rad(angle).x)
-            debris_y = int(titan_center[1] + distance * pygame.math.Vector2(1, 0).rotate_rad(angle).y)
+            debris_x = int(
+                titan_center[0] + distance * pygame.math.Vector2(1, 0).rotate_rad(angle).x
+            )
+            debris_y = int(
+                titan_center[1] + distance * pygame.math.Vector2(1, 0).rotate_rad(angle).y
+            )
             if 0 <= debris_x < self.width and 0 <= debris_y < self.height:
                 debris_size = random.randint(2, 5)
                 pygame.draw.circle(screen, (200, 100, 0), (debris_x, debris_y), debris_size)
@@ -254,7 +266,7 @@ class CinematicManager:
             "OUR CAPTORS ARE WEAK",
             "NOW IS THE TIME FOR REBELLION",
             "",
-            "- Elder Council"
+            "- Elder Council",
         ]
 
         # Simple text rendering (placeholder - would use proper fonts)
@@ -278,7 +290,9 @@ class CinematicManager:
         text_rect = text.get_rect(bottomright=(self.width - 20, self.height - 20))
         screen.blit(text, text_rect)
 
-    def render_tribal_selection(self, screen: pygame.Surface, selected_tribe: Optional[TribeType] = None) -> None:
+    def render_tribal_selection(
+        self, screen: pygame.Surface, selected_tribe: Optional[TribeType] = None
+    ) -> None:
         """Render tribal selection screen"""
         screen.fill((10, 10, 15))
 
@@ -318,7 +332,7 @@ class CinematicManager:
             name_text = font_name.render(
                 f"{tribe_data['name'].upper()} - {tribe_data['tagline']}",
                 True,
-                (255, 255, 255) if selected_tribe == tribe_type else (200, 200, 200)
+                (255, 255, 255) if selected_tribe == tribe_type else (200, 200, 200),
             )
             name_rect = name_text.get_rect(midleft=(box_rect.left + 20, box_rect.centery - 15))
             screen.blit(name_text, name_rect)
@@ -327,13 +341,15 @@ class CinematicManager:
             motto_text = font_detail.render(
                 f'"{tribe_data["motto"]}"',
                 True,
-                (220, 220, 220) if selected_tribe == tribe_type else (150, 150, 150)
+                (220, 220, 220) if selected_tribe == tribe_type else (150, 150, 150),
             )
             motto_rect = motto_text.get_rect(midleft=(box_rect.left + 20, box_rect.centery + 15))
             screen.blit(motto_text, motto_rect)
 
         # Instructions
-        inst_text = font_detail.render("Use UP/DOWN arrows to select, ENTER to confirm", True, (150, 150, 150))
+        inst_text = font_detail.render(
+            "Use UP/DOWN arrows to select, ENTER to confirm", True, (150, 150, 150)
+        )
         inst_rect = inst_text.get_rect(center=(self.width // 2, self.height - 50))
         screen.blit(inst_text, inst_rect)
 
@@ -371,7 +387,7 @@ class CinematicManager:
                 "In Rust We Trust!",
                 "Duct tape holds! In Rust We Trust!",
                 "Still flying! In Rust We Trust!",
-                "Rust bucket for the win!"
+                "Rust bucket for the win!",
             ]
 
             if performance == "excellent":
@@ -387,7 +403,7 @@ class CinematicManager:
                 "The Wolf hunts well!",
                 "Upgraded and deadly!",
                 "This is more like it!",
-                "No more rust - just steel!"
+                "No more rust - just steel!",
             ]
             return wolf_shouts[0] if performance == "excellent" else wolf_shouts[1]
 
@@ -397,11 +413,13 @@ class CinematicManager:
                 "Lightning strike! Mission complete!",
                 "Jaguar precision!",
                 "This is what power feels like!",
-                "From rust to legend!"
+                "From rust to legend!",
             ]
             return jaguar_shouts[0] if performance == "excellent" else jaguar_shouts[1]
 
-    def render_upgrade_cinematic(self, screen: pygame.Surface, ship_tier: int, delta_time: float) -> bool:
+    def render_upgrade_cinematic(
+        self, screen: pygame.Surface, ship_tier: int, delta_time: float
+    ) -> bool:
         """
         Render ship upgrade cinematic
         Returns True when complete
@@ -410,7 +428,9 @@ class CinematicManager:
         # Would show ship in hangar, engineer message, visual upgrades
         return False
 
-    def render_first_ship_cinematic(self, screen: pygame.Surface, delta_time: float, tribe: TribeType) -> bool:
+    def render_first_ship_cinematic(
+        self, screen: pygame.Surface, delta_time: float, tribe: TribeType
+    ) -> bool:
         """
         Render the first ship acquisition scene - beat up Rifter
         Returns True when complete
@@ -434,20 +454,33 @@ class CinematicManager:
         # Phase 2: Ace's reaction
         elif self.cinematic_timer < PHASE_ACE_REACTION:
             self._render_hangar_scene(screen, 1.0)
-            progress = (self.cinematic_timer - PHASE_SHIP_REVEAL) / (PHASE_ACE_REACTION - PHASE_SHIP_REVEAL)
-            self._render_ace_dialogue(screen, progress,
-                "A Rifter? THIS is what you're giving me?\nIt looks like a pile of rust duct-taped together!")
+            progress = (self.cinematic_timer - PHASE_SHIP_REVEAL) / (
+                PHASE_ACE_REACTION - PHASE_SHIP_REVEAL
+            )
+            self._render_ace_dialogue(
+                screen,
+                progress,
+                "A Rifter? THIS is what you're giving me?\nIt looks like a pile of rust duct-taped together!",
+            )
 
         # Phase 3: Elder's response
         elif self.cinematic_timer < PHASE_ELDER_RESPONSE:
             self._render_hangar_scene(screen, 1.0)
-            progress = (self.cinematic_timer - PHASE_ACE_REACTION) / (PHASE_ELDER_RESPONSE - PHASE_ACE_REACTION)
-            self._render_elder_dialogue(screen, progress, tribe,
-                "It's what we have, Ace. Prove yourself worthy,\nand better ships will come. Now fly.")
+            progress = (self.cinematic_timer - PHASE_ACE_REACTION) / (
+                PHASE_ELDER_RESPONSE - PHASE_ACE_REACTION
+            )
+            self._render_elder_dialogue(
+                screen,
+                progress,
+                tribe,
+                "It's what we have, Ace. Prove yourself worthy,\nand better ships will come. Now fly.",
+            )
 
         # Phase 4: Fade out
         else:
-            progress = (self.cinematic_timer - PHASE_ELDER_RESPONSE) / (PHASE_TOTAL - PHASE_ELDER_RESPONSE)
+            progress = (self.cinematic_timer - PHASE_ELDER_RESPONSE) / (
+                PHASE_TOTAL - PHASE_ELDER_RESPONSE
+            )
             _fade_alpha = int((1.0 - progress) * 255)
             # Simple fade to black
 
@@ -479,19 +512,19 @@ class CinematicManager:
         # Main hull (angular, Minmatar style - rusty brown/grey)
         hull_color = (100, 85, 70)  # Rusty brown
         hull_points = [
-            (ship_center[0] - ship_width//2, ship_center[1]),  # Left point
-            (ship_center[0] - ship_width//4, ship_center[1] - ship_height//2),  # Top left
-            (ship_center[0] + ship_width//4, ship_center[1] - ship_height//2),  # Top right
-            (ship_center[0] + ship_width//2, ship_center[1]),  # Right point
-            (ship_center[0] + ship_width//4, ship_center[1] + ship_height//2),  # Bottom right
-            (ship_center[0] - ship_width//4, ship_center[1] + ship_height//2),  # Bottom left
+            (ship_center[0] - ship_width // 2, ship_center[1]),  # Left point
+            (ship_center[0] - ship_width // 4, ship_center[1] - ship_height // 2),  # Top left
+            (ship_center[0] + ship_width // 4, ship_center[1] - ship_height // 2),  # Top right
+            (ship_center[0] + ship_width // 2, ship_center[1]),  # Right point
+            (ship_center[0] + ship_width // 4, ship_center[1] + ship_height // 2),  # Bottom right
+            (ship_center[0] - ship_width // 4, ship_center[1] + ship_height // 2),  # Bottom left
         ]
         pygame.draw.polygon(screen, hull_color, hull_points)
 
         # Damage marks (scorch marks, dents)
         for i in range(15):
-            mark_x = ship_center[0] + random.randint(-ship_width//2, ship_width//2)
-            mark_y = ship_center[1] + random.randint(-ship_height//2, ship_height//2)
+            mark_x = ship_center[0] + random.randint(-ship_width // 2, ship_width // 2)
+            mark_y = ship_center[1] + random.randint(-ship_height // 2, ship_height // 2)
             mark_size = random.randint(3, 10)
             pygame.draw.circle(screen, (60, 50, 40), (mark_x, mark_y), mark_size)
 
@@ -506,8 +539,8 @@ class CinematicManager:
             pygame.draw.rect(screen, (180, 180, 180), (x, y, w, h), 1)
 
         # Engine exhausts (dim, not very bright - barely working)
-        left_engine = (ship_center[0] - ship_width//4, ship_center[1] + ship_height//2)
-        right_engine = (ship_center[0] + ship_width//4, ship_center[1] + ship_height//2)
+        left_engine = (ship_center[0] - ship_width // 4, ship_center[1] + ship_height // 2)
+        right_engine = (ship_center[0] + ship_width // 4, ship_center[1] + ship_height // 2)
 
         # Faint glow (engines barely work)
         glow_color = (100, 120, 150)  # Dim blue
@@ -524,7 +557,7 @@ class CinematicManager:
                 (light_x - 100, light_y),
                 (light_x + 100, light_y),
                 (light_x + 150, floor_y),
-                (light_x - 150, floor_y)
+                (light_x - 150, floor_y),
             ]
             beam_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             pygame.draw.polygon(beam_surface, (255, 200, 150, 20), beam_points)
@@ -552,7 +585,9 @@ class CinematicManager:
         # ACE label above portrait
         font_small = pygame.font.Font(None, 24)
         ace_label = font_small.render("ACE PILOT", True, (200, 180, 150))
-        screen.blit(ace_label, (portrait_rect.centerx - ace_label.get_width()//2, portrait_rect.top - 25))
+        screen.blit(
+            ace_label, (portrait_rect.centerx - ace_label.get_width() // 2, portrait_rect.top - 25)
+        )
 
         # Dialogue text (right side)
         font_dialogue = pygame.font.Font(None, 28)
@@ -560,10 +595,10 @@ class CinematicManager:
         text_area_width = box_rect.right - text_area_x - 20
 
         # Word wrap
-        lines = text.split('\n')
+        lines = text.split("\n")
         y_offset = box_rect.top + 30
         for line in lines:
-            words = line.split(' ')
+            words = line.split(" ")
             current_line = ""
             for word in words:
                 test_line = current_line + word + " "
@@ -581,7 +616,9 @@ class CinematicManager:
                 screen.blit(line_surf, (text_area_x, y_offset))
                 y_offset += 35
 
-    def _render_elder_dialogue(self, screen: pygame.Surface, alpha: float, tribe: TribeType, text: str):
+    def _render_elder_dialogue(
+        self, screen: pygame.Surface, alpha: float, tribe: TribeType, text: str
+    ):
         """Render tribal elder dialogue box"""
         if alpha <= 0:
             return
@@ -607,17 +644,20 @@ class CinematicManager:
         font_small = pygame.font.Font(None, 24)
         tribe_name = self.tribes[tribe]["name"].upper()
         elder_label = font_small.render(f"{tribe_name} ELDER", True, tribe_color)
-        screen.blit(elder_label, (portrait_rect.centerx - elder_label.get_width()//2, portrait_rect.top - 25))
+        screen.blit(
+            elder_label,
+            (portrait_rect.centerx - elder_label.get_width() // 2, portrait_rect.top - 25),
+        )
 
         # Dialogue text
         font_dialogue = pygame.font.Font(None, 28)
         text_area_x = portrait_rect.right + 20
         text_area_width = box_rect.right - text_area_x - 20
 
-        lines = text.split('\n')
+        lines = text.split("\n")
         y_offset = box_rect.top + 30
         for line in lines:
-            words = line.split(' ')
+            words = line.split(" ")
             current_line = ""
             for word in words:
                 test_line = current_line + word + " "

@@ -34,13 +34,13 @@ def get_base_path() -> str:
         Base directory path for the application.
     """
     # PyInstaller sets _MEIPASS for bundled apps
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return sys._MEIPASS
 
     # Check if we're running from a portable install
     # (EVE_REBELLION_ROOT environment variable can be set by launcher)
-    if 'EVE_REBELLION_ROOT' in os.environ:
-        return os.environ['EVE_REBELLION_ROOT']
+    if "EVE_REBELLION_ROOT" in os.environ:
+        return os.environ["EVE_REBELLION_ROOT"]
 
     # Development mode - use the directory containing this file
     return os.path.dirname(os.path.abspath(__file__))
@@ -61,12 +61,12 @@ def get_resource_path(relative_path: str) -> str:
 
 def is_wayland_session() -> bool:
     """Check if running under a Wayland session."""
-    return bool(os.environ.get('WAYLAND_DISPLAY'))
+    return bool(os.environ.get("WAYLAND_DISPLAY"))
 
 
 def is_x11_session() -> bool:
     """Check if running under an X11 session."""
-    return bool(os.environ.get('DISPLAY'))
+    return bool(os.environ.get("DISPLAY"))
 
 
 def get_linux_display_driver() -> str:
@@ -83,17 +83,17 @@ def get_linux_display_driver() -> str:
         Video driver name or empty string for default.
     """
     # Respect user override
-    user_driver = os.environ.get('SDL_VIDEODRIVER')
+    user_driver = os.environ.get("SDL_VIDEODRIVER")
     if user_driver:
         return user_driver
 
     # Auto-detect based on session type
     if is_wayland_session():
-        return 'wayland'
+        return "wayland"
     elif is_x11_session():
-        return 'x11'
+        return "x11"
 
-    return ''
+    return ""
 
 
 def init_platform() -> str:
@@ -114,45 +114,45 @@ def init_platform() -> str:
     global _platform_initialized, _detected_driver
 
     if _platform_initialized:
-        return _detected_driver or 'default'
+        return _detected_driver or "default"
 
     platform = sys.platform
-    driver = ''
+    driver = ""
 
-    if platform == 'linux':
+    if platform == "linux":
         driver = get_linux_display_driver()
 
         if driver:
-            os.environ['SDL_VIDEODRIVER'] = driver
+            os.environ["SDL_VIDEODRIVER"] = driver
 
             # Additional Wayland-specific settings
-            if driver == 'wayland':
+            if driver == "wayland":
                 # Enable Wayland IME support
-                os.environ.setdefault('SDL_IM_MODULE', 'fcitx')
+                os.environ.setdefault("SDL_IM_MODULE", "fcitx")
 
                 # Allow fallback to X11 via XWayland if needed
                 # This helps with some edge cases where pure Wayland fails
-                os.environ.setdefault('SDL_VIDEO_WAYLAND_ALLOW_LIBDECOR', '1')
+                os.environ.setdefault("SDL_VIDEO_WAYLAND_ALLOW_LIBDECOR", "1")
 
                 # Better scaling on HiDPI displays
-                os.environ.setdefault('SDL_VIDEO_WAYLAND_SCALE_TO_DISPLAY', '1')
+                os.environ.setdefault("SDL_VIDEO_WAYLAND_SCALE_TO_DISPLAY", "1")
 
-    elif platform == 'darwin':
+    elif platform == "darwin":
         # macOS-specific settings
         # Let SDL use the default Cocoa driver
         pass
 
-    elif platform == 'win32':
+    elif platform == "win32":
         # Windows-specific settings
         # Let SDL use the default Windows driver
         pass
 
     # Common settings for all platforms
     # Disable compositor bypass which can cause issues on some systems
-    os.environ.setdefault('SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR', '0')
+    os.environ.setdefault("SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR", "0")
 
     _platform_initialized = True
-    _detected_driver = driver or 'default'
+    _detected_driver = driver or "default"
 
     return _detected_driver
 
@@ -166,8 +166,8 @@ def get_detected_driver() -> str:
         or 'uninitialized' if init_platform() hasn't been called.
     """
     if not _platform_initialized:
-        return 'uninitialized'
-    return _detected_driver or 'default'
+        return "uninitialized"
+    return _detected_driver or "default"
 
 
 def print_platform_info():
@@ -184,7 +184,7 @@ def print_platform_info():
     print("=" * 40)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Initialize and print debug info
     init_platform()
     print_platform_info()

@@ -1,4 +1,5 @@
 """Procedural sound effects for Minmatar Rebellion"""
+
 import io
 
 import numpy as np
@@ -24,41 +25,41 @@ class SoundGenerator:
     def _generate_all_sounds(self):
         """Generate all game sound effects"""
         # Player weapons
-        self.sounds['autocannon'] = self._make_autocannon()
-        self.sounds['rocket'] = self._make_rocket()
+        self.sounds["autocannon"] = self._make_autocannon()
+        self.sounds["rocket"] = self._make_rocket()
 
         # Ammo swap
-        self.sounds['ammo_switch'] = self._make_ammo_switch()
+        self.sounds["ammo_switch"] = self._make_ammo_switch()
 
         # Enemy laser
-        self.sounds['laser'] = self._make_laser()
+        self.sounds["laser"] = self._make_laser()
 
         # Explosions
-        self.sounds['explosion_small'] = self._make_explosion(0.2, 200)
-        self.sounds['explosion_medium'] = self._make_explosion(0.4, 150)
-        self.sounds['explosion_large'] = self._make_explosion(0.7, 100)
+        self.sounds["explosion_small"] = self._make_explosion(0.2, 200)
+        self.sounds["explosion_medium"] = self._make_explosion(0.4, 150)
+        self.sounds["explosion_large"] = self._make_explosion(0.7, 100)
 
         # Pickups
-        self.sounds['pickup_refugee'] = self._make_pickup_refugee()
-        self.sounds['pickup_powerup'] = self._make_pickup_powerup()
+        self.sounds["pickup_refugee"] = self._make_pickup_refugee()
+        self.sounds["pickup_powerup"] = self._make_pickup_powerup()
 
         # UI
-        self.sounds['menu_select'] = self._make_menu_select()
-        self.sounds['purchase'] = self._make_purchase()
-        self.sounds['error'] = self._make_error()
+        self.sounds["menu_select"] = self._make_menu_select()
+        self.sounds["purchase"] = self._make_purchase()
+        self.sounds["error"] = self._make_error()
 
         # Player damage
-        self.sounds['shield_hit'] = self._make_shield_hit()
-        self.sounds['armor_hit'] = self._make_armor_hit()
-        self.sounds['hull_hit'] = self._make_hull_hit()
+        self.sounds["shield_hit"] = self._make_shield_hit()
+        self.sounds["armor_hit"] = self._make_armor_hit()
+        self.sounds["hull_hit"] = self._make_hull_hit()
 
         # Alerts
-        self.sounds['warning'] = self._make_warning()
-        self.sounds['wave_start'] = self._make_wave_start()
-        self.sounds['stage_complete'] = self._make_stage_complete()
+        self.sounds["warning"] = self._make_warning()
+        self.sounds["wave_start"] = self._make_wave_start()
+        self.sounds["stage_complete"] = self._make_stage_complete()
 
         # Wolf upgrade
-        self.sounds['upgrade'] = self._make_upgrade()
+        self.sounds["upgrade"] = self._make_upgrade()
 
     def _numpy_to_sound(self, samples):
         """Convert numpy array to pygame Sound"""
@@ -76,12 +77,14 @@ class SoundGenerator:
         release_samples = int(release * length)
         sustain_samples = length - attack_samples - decay_samples - release_samples
 
-        envelope = np.concatenate([
-            np.linspace(0, 1, attack_samples),
-            np.linspace(1, sustain, decay_samples),
-            np.ones(sustain_samples) * sustain,
-            np.linspace(sustain, 0, release_samples)
-        ])
+        envelope = np.concatenate(
+            [
+                np.linspace(0, 1, attack_samples),
+                np.linspace(1, sustain, decay_samples),
+                np.ones(sustain_samples) * sustain,
+                np.linspace(sustain, 0, release_samples),
+            ]
+        )
 
         if len(envelope) < length:
             envelope = np.pad(envelope, (0, length - len(envelope)))
@@ -138,7 +141,7 @@ class SoundGenerator:
         freq = base_freq * np.exp(-t * 5)
         wave = np.sin(2 * np.pi * freq * t) * 0.4
         noise = np.random.uniform(-1, 1, len(t))
-        noise_filtered = np.convolve(noise, np.ones(50)/50, mode='same')
+        noise_filtered = np.convolve(noise, np.ones(50) / 50, mode="same")
         wave += noise_filtered * np.exp(-t * 8) * 0.6
         envelope = np.exp(-t * (3 / duration)) * (1 - np.exp(-t * 100))
         wave *= envelope * 0.6
@@ -317,15 +320,16 @@ class MusicGenerator:
             stereo = np.column_stack((samples, samples))
 
             import wave as wave_module
+
             buffer = io.BytesIO()
-            with wave_module.open(buffer, 'wb') as wf:
+            with wave_module.open(buffer, "wb") as wf:
                 wf.setnchannels(2)
                 wf.setsampwidth(2)
                 wf.setframerate(self.sample_rate)
                 wf.writeframes(stereo.tobytes())
 
             buffer.seek(0)
-            pygame.mixer.music.load(buffer, 'wav')
+            pygame.mixer.music.load(buffer, "wav")
             pygame.mixer.music.set_volume(0.3)
             pygame.mixer.music.play(-1)
             self.playing = True

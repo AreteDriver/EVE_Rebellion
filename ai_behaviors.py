@@ -9,19 +9,20 @@ from dataclasses import dataclass
 from typing import Any, Tuple
 
 # Behavior type constants
-AI_BASIC = 'basic'
-AI_KAMIKAZE = 'kamikaze'
-AI_WEAVER = 'weaver'
-AI_SNIPER = 'sniper'
-AI_SPAWNER = 'spawner'
-AI_TANK = 'tank'
+AI_BASIC = "basic"
+AI_KAMIKAZE = "kamikaze"
+AI_WEAVER = "weaver"
+AI_SNIPER = "sniper"
+AI_SPAWNER = "spawner"
+AI_TANK = "tank"
 
 
 @dataclass
 class AIState:
     """State for AI behavior."""
+
     timer: float = 0.0
-    phase: str = 'idle'
+    phase: str = "idle"
     target_x: float = 0.0
     target_y: float = 0.0
     last_dodge_time: float = 0.0
@@ -39,7 +40,9 @@ class AIBehavior:
         self.screen_height = screen_height
         self.state = AIState()
 
-    def update(self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1/60) -> Tuple[float, float, bool]:
+    def update(
+        self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1 / 60
+    ) -> Tuple[float, float, bool]:
         """
         Update AI and return velocity and shoot flag.
 
@@ -59,7 +62,9 @@ class BasicAI(AIBehavior):
     Moves toward player's general area, shoots periodically.
     """
 
-    def update(self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1/60) -> Tuple[float, float, bool]:
+    def update(
+        self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1 / 60
+    ) -> Tuple[float, float, bool]:
         self.state.timer += dt
 
         # Simple drift toward player's x position
@@ -92,38 +97,40 @@ class KamikazeAI(AIBehavior):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.state.phase = 'approach'
+        self.state.phase = "approach"
         self.dive_speed = 0.0
         self.max_dive_speed = 8.0
         self.locked = False
 
-    def update(self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1/60) -> Tuple[float, float, bool]:
+    def update(
+        self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1 / 60
+    ) -> Tuple[float, float, bool]:
         self.state.timer += dt
         ex, ey = self.enemy.rect.centerx, self.enemy.rect.centery
         px, py = player_pos
 
-        if self.state.phase == 'approach':
+        if self.state.phase == "approach":
             # Move down until in range
             if ey < 150:
                 return 0.0, self.enemy.speed * 0.8, False
             else:
-                self.state.phase = 'lock_on'
+                self.state.phase = "lock_on"
                 self.state.target_x = px
                 self.state.target_y = py
 
-        elif self.state.phase == 'lock_on':
+        elif self.state.phase == "lock_on":
             # Lock onto player and start dive
-            self.state.phase = 'dive'
+            self.state.phase = "dive"
             self.dive_speed = self.enemy.speed
 
-        elif self.state.phase == 'dive':
+        elif self.state.phase == "dive":
             # Accelerate toward locked position (slightly leading player)
             self.dive_speed = min(self.dive_speed + 0.2, self.max_dive_speed)
 
             # Aim at player with slight lead
             dx = px - ex
             dy = py - ey
-            dist = max(1, math.sqrt(dx*dx + dy*dy))
+            dist = max(1, math.sqrt(dx * dx + dy * dy))
 
             # Normalize and apply speed
             vx = (dx / dist) * self.dive_speed
@@ -151,7 +158,9 @@ class WeaverAI(AIBehavior):
         self.weave_amplitude = 80
         self.weave_frequency = 2.0
 
-    def update(self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1/60) -> Tuple[float, float, bool]:
+    def update(
+        self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1 / 60
+    ) -> Tuple[float, float, bool]:
         self.state.timer += dt
         self.dodge_timer += dt
 
@@ -167,7 +176,7 @@ class WeaverAI(AIBehavior):
                 bx, by = bullet.rect.centerx, bullet.rect.centery
                 dx = bx - ex
                 dy = by - ey
-                dist = math.sqrt(dx*dx + dy*dy)
+                dist = math.sqrt(dx * dx + dy * dy)
 
                 # If bullet is close and approaching
                 if dist < 100 and by < ey:
@@ -208,7 +217,9 @@ class SniperAI(AIBehavior):
         self.aim_timer = 0.0
         self.aiming = False
 
-    def update(self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1/60) -> Tuple[float, float, bool]:
+    def update(
+        self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1 / 60
+    ) -> Tuple[float, float, bool]:
         self.state.timer += dt
 
         ex, ey = self.enemy.rect.centerx, self.enemy.rect.centery
@@ -217,7 +228,7 @@ class SniperAI(AIBehavior):
         # Calculate distance to player
         dx = px - ex
         dy = py - ey
-        dist = math.sqrt(dx*dx + dy*dy)
+        dist = math.sqrt(dx * dx + dy * dy)
 
         # Movement: maintain optimal range
         if dist < self.optimal_range - 50:
@@ -271,7 +282,9 @@ class SpawnerAI(AIBehavior):
         self.children_spawned = 0
         self.spawn_queue = []  # Queue of enemies to spawn
 
-    def update(self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1/60) -> Tuple[float, float, bool]:
+    def update(
+        self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1 / 60
+    ) -> Tuple[float, float, bool]:
         self.state.timer += dt
 
         ex, ey = self.enemy.rect.centerx, self.enemy.rect.centery
@@ -296,16 +309,16 @@ class SpawnerAI(AIBehavior):
             vx = -abs(vx)
 
         # Spawn check
-        if (self.state.timer - self.last_spawn > self.spawn_cooldown and
-            self.children_spawned < self.max_children):
+        if (
+            self.state.timer - self.last_spawn > self.spawn_cooldown
+            and self.children_spawned < self.max_children
+        ):
             self.last_spawn = self.state.timer
             self.children_spawned += 1
             # Signal to spawn a drone (handled by game.py)
-            self.spawn_queue.append({
-                'type': 'drone',
-                'x': ex + random.randint(-30, 30),
-                'y': ey + 30
-            })
+            self.spawn_queue.append(
+                {"type": "drone", "x": ex + random.randint(-30, 30), "y": ey + 30}
+            )
 
         # Occasional shooting
         should_shoot = random.random() < 0.02
@@ -330,7 +343,9 @@ class TankAI(AIBehavior):
         self.advance_speed = 0.3
         self.suppression_mode = False
 
-    def update(self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1/60) -> Tuple[float, float, bool]:
+    def update(
+        self, player_pos: Tuple[float, float], bullets: Any = None, dt: float = 1 / 60
+    ) -> Tuple[float, float, bool]:
         self.state.timer += dt
 
         ex, ey = self.enemy.rect.centerx, self.enemy.rect.centery
@@ -377,65 +392,60 @@ def get_ai_for_enemy(enemy_type: str) -> str:
     # Map enemy types to AI behaviors
     ai_mapping = {
         # === AMARR ===
-        'executioner': AI_BASIC,
-        'punisher': AI_TANK,
-        'tormentor': AI_SNIPER,
-        'crucifier': AI_WEAVER,
-        'coercer': AI_TANK,
-        'omen': AI_SNIPER,
-        'maller': AI_TANK,
-        'harbinger': AI_SPAWNER,
-        'prophecy': AI_TANK,
-        'apocalypse': AI_TANK,
-        'abaddon': AI_SNIPER,
-
+        "executioner": AI_BASIC,
+        "punisher": AI_TANK,
+        "tormentor": AI_SNIPER,
+        "crucifier": AI_WEAVER,
+        "coercer": AI_TANK,
+        "omen": AI_SNIPER,
+        "maller": AI_TANK,
+        "harbinger": AI_SPAWNER,
+        "prophecy": AI_TANK,
+        "apocalypse": AI_TANK,
+        "abaddon": AI_SNIPER,
         # === MINMATAR ===
-        'rifter': AI_BASIC,
-        'slasher': AI_WEAVER,
-        'breacher': AI_BASIC,
-        'burst': AI_BASIC,
-        'thrasher': AI_BASIC,
-        'stabber': AI_WEAVER,
-        'rupture': AI_TANK,
-        'bellicose': AI_SNIPER,
-        'hurricane': AI_TANK,
-        'cyclone': AI_SPAWNER,
-        'tempest': AI_SNIPER,
-        'typhoon': AI_SPAWNER,
-        'maelstrom': AI_TANK,
-
+        "rifter": AI_BASIC,
+        "slasher": AI_WEAVER,
+        "breacher": AI_BASIC,
+        "burst": AI_BASIC,
+        "thrasher": AI_BASIC,
+        "stabber": AI_WEAVER,
+        "rupture": AI_TANK,
+        "bellicose": AI_SNIPER,
+        "hurricane": AI_TANK,
+        "cyclone": AI_SPAWNER,
+        "tempest": AI_SNIPER,
+        "typhoon": AI_SPAWNER,
+        "maelstrom": AI_TANK,
         # === GALLENTE ===
-        'tristan': AI_SPAWNER,  # Drone boat
-        'atron': AI_WEAVER,
-        'incursus': AI_TANK,
-        'catalyst': AI_BASIC,
-        'thorax': AI_TANK,
-        'vexor': AI_SPAWNER,  # Drone boat
-        'brutix': AI_TANK,
-        'myrmidon': AI_SPAWNER,  # Drone boat
-        'dominix': AI_SPAWNER,  # Drone boat
-        'megathron': AI_SNIPER,
-
+        "tristan": AI_SPAWNER,  # Drone boat
+        "atron": AI_WEAVER,
+        "incursus": AI_TANK,
+        "catalyst": AI_BASIC,
+        "thorax": AI_TANK,
+        "vexor": AI_SPAWNER,  # Drone boat
+        "brutix": AI_TANK,
+        "myrmidon": AI_SPAWNER,  # Drone boat
+        "dominix": AI_SPAWNER,  # Drone boat
+        "megathron": AI_SNIPER,
         # === CALDARI ===
-        'kestrel': AI_SNIPER,  # Missiles
-        'merlin': AI_TANK,
-        'condor': AI_WEAVER,
-        'cormorant': AI_SNIPER,
-        'caracal': AI_SNIPER,  # Missiles
-        'moa': AI_TANK,
-        'drake': AI_TANK,  # Famous shield tank
-        'ferox': AI_SNIPER,
-        'raven': AI_SNIPER,  # Missiles
-        'rokh': AI_SNIPER,
-
+        "kestrel": AI_SNIPER,  # Missiles
+        "merlin": AI_TANK,
+        "condor": AI_WEAVER,
+        "cormorant": AI_SNIPER,
+        "caracal": AI_SNIPER,  # Missiles
+        "moa": AI_TANK,
+        "drake": AI_TANK,  # Famous shield tank
+        "ferox": AI_SNIPER,
+        "raven": AI_SNIPER,  # Missiles
+        "rokh": AI_SNIPER,
         # === SPECIAL ===
-        'drone': AI_KAMIKAZE,
-        'interceptor': AI_KAMIKAZE,
-        'bomber': AI_SNIPER,
-
+        "drone": AI_KAMIKAZE,
+        "interceptor": AI_KAMIKAZE,
+        "bomber": AI_SNIPER,
         # === TRIGLAVIAN ===
-        'vedmak': AI_WEAVER,
-        'leshak': AI_SNIPER,
+        "vedmak": AI_WEAVER,
+        "leshak": AI_SNIPER,
     }
 
     return ai_mapping.get(enemy_type, AI_BASIC)

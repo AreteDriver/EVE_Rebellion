@@ -36,7 +36,6 @@ SHIP_DATABASE = {
         "probe": {"type_id": 586, "faction": "minmatar", "role": "exploration"},
         "burst": {"type_id": 599, "faction": "minmatar", "role": "logistics"},
         "vigil": {"type_id": 3766, "faction": "minmatar", "role": "ewar"},
-
         # Gallente
         "tristan": {"type_id": 593, "faction": "gallente", "role": "combat"},
         "atron": {"type_id": 608, "faction": "gallente", "role": "combat"},
@@ -44,7 +43,6 @@ SHIP_DATABASE = {
         "imicus": {"type_id": 607, "faction": "gallente", "role": "exploration"},
         "navitas": {"type_id": 592, "faction": "gallente", "role": "logistics"},
         "maulus": {"type_id": 609, "faction": "gallente", "role": "ewar"},
-
         # Caldari
         "merlin": {"type_id": 603, "faction": "caldari", "role": "combat"},
         "kestrel": {"type_id": 602, "faction": "caldari", "role": "combat"},
@@ -52,7 +50,6 @@ SHIP_DATABASE = {
         "heron": {"type_id": 605, "faction": "caldari", "role": "exploration"},
         "bantam": {"type_id": 582, "faction": "caldari", "role": "logistics"},
         "griffin": {"type_id": 584, "faction": "caldari", "role": "ewar"},
-
         # Amarr
         "punisher": {"type_id": 597, "faction": "amarr", "role": "combat"},
         "executioner": {"type_id": 589, "faction": "amarr", "role": "combat"},
@@ -61,26 +58,21 @@ SHIP_DATABASE = {
         "inquisitor": {"type_id": 590, "faction": "amarr", "role": "logistics"},
         "crucifier": {"type_id": 2161, "faction": "amarr", "role": "ewar"},
     },
-
     # ========== DESTROYERS ==========
     "destroyers": {
         # Minmatar
         "thrasher": {"type_id": 16242, "faction": "minmatar", "role": "combat"},
         "talwar": {"type_id": 32872, "faction": "minmatar", "role": "combat"},
-
         # Gallente
         "catalyst": {"type_id": 16240, "faction": "gallente", "role": "combat"},
         "algos": {"type_id": 32875, "faction": "gallente", "role": "combat"},
-
         # Caldari
         "cormorant": {"type_id": 16238, "faction": "caldari", "role": "combat"},
         "corax": {"type_id": 32876, "faction": "caldari", "role": "combat"},
-
         # Amarr
         "coercer": {"type_id": 16236, "faction": "amarr", "role": "combat"},
         "dragoon": {"type_id": 32874, "faction": "amarr", "role": "combat"},
     },
-
     # ========== CRUISERS ==========
     "cruisers": {
         # Minmatar
@@ -88,105 +80,87 @@ SHIP_DATABASE = {
         "rupture": {"type_id": 629, "faction": "minmatar", "role": "combat"},
         "bellicose": {"type_id": 630, "faction": "minmatar", "role": "combat"},
         "scythe": {"type_id": 631, "faction": "minmatar", "role": "logistics"},
-
         # Gallente
         "thorax": {"type_id": 627, "faction": "gallente", "role": "combat"},
         "vexor": {"type_id": 626, "faction": "gallente", "role": "combat"},
         "celestis": {"type_id": 633, "faction": "gallente", "role": "ewar"},
         "exequror": {"type_id": 634, "faction": "gallente", "role": "logistics"},
-
         # Caldari
         "caracal": {"type_id": 621, "faction": "caldari", "role": "combat"},
         "moa": {"type_id": 623, "faction": "caldari", "role": "combat"},
         "blackbird": {"type_id": 632, "faction": "caldari", "role": "ewar"},
         "osprey": {"type_id": 620, "faction": "caldari", "role": "logistics"},
-
         # Amarr
         "maller": {"type_id": 624, "faction": "amarr", "role": "combat"},
         "omen": {"type_id": 625, "faction": "amarr", "role": "combat"},
         "arbitrator": {"type_id": 628, "faction": "amarr", "role": "ewar"},
         "augoror": {"type_id": 619, "faction": "amarr", "role": "logistics"},
     },
-
     # ========== BATTLECRUISERS ==========
     "battlecruisers": {
         # Minmatar
         "hurricane": {"type_id": 24702, "faction": "minmatar", "role": "combat"},
         "cyclone": {"type_id": 24700, "faction": "minmatar", "role": "combat"},
         "tornado": {"type_id": 4310, "faction": "minmatar", "role": "attack"},
-
         # Gallente
         "brutix": {"type_id": 16229, "faction": "gallente", "role": "combat"},
         "myrmidon": {"type_id": 24698, "faction": "gallente", "role": "combat"},
         "talos": {"type_id": 4308, "faction": "gallente", "role": "attack"},
-
         # Caldari
         "drake": {"type_id": 24690, "faction": "caldari", "role": "combat"},
         "ferox": {"type_id": 24688, "faction": "caldari", "role": "combat"},
         "naga": {"type_id": 4306, "faction": "caldari", "role": "attack"},
-
         # Amarr
         "harbinger": {"type_id": 24696, "faction": "amarr", "role": "combat"},
         "prophecy": {"type_id": 24692, "faction": "amarr", "role": "combat"},
         "oracle": {"type_id": 4302, "faction": "amarr", "role": "attack"},
     },
-
     # ========== BATTLESHIPS ==========
     "battleships": {
         # Minmatar
         "tempest": {"type_id": 639, "faction": "minmatar", "role": "combat"},
         "typhoon": {"type_id": 644, "faction": "minmatar", "role": "combat"},
         "maelstrom": {"type_id": 24694, "faction": "minmatar", "role": "combat"},
-
         # Gallente
         "megathron": {"type_id": 641, "faction": "gallente", "role": "combat"},
         "dominix": {"type_id": 645, "faction": "gallente", "role": "combat"},
         "hyperion": {"type_id": 24690, "faction": "gallente", "role": "combat"},
-
         # Caldari
         "raven": {"type_id": 638, "faction": "caldari", "role": "combat"},
         "scorpion": {"type_id": 640, "faction": "caldari", "role": "ewar"},
         "rokh": {"type_id": 24688, "faction": "caldari", "role": "combat"},
-
         # Amarr
         "apocalypse": {"type_id": 642, "faction": "amarr", "role": "combat"},
         "armageddon": {"type_id": 643, "faction": "amarr", "role": "combat"},
         "abaddon": {"type_id": 24692, "faction": "amarr", "role": "combat"},
     },
-
     # ========== FACTION/PIRATE SHIPS ==========
     "faction": {
         # Angel Cartel
         "dramiel": {"type_id": 17703, "faction": "angel", "role": "frigate"},
         "cynabal": {"type_id": 17715, "faction": "angel", "role": "cruiser"},
         "machariel": {"type_id": 17738, "faction": "angel", "role": "battleship"},
-
         # Sansha's Nation
         "succubus": {"type_id": 17924, "faction": "sansha", "role": "frigate"},
         "phantasm": {"type_id": 17718, "faction": "sansha", "role": "cruiser"},
         "nightmare": {"type_id": 17736, "faction": "sansha", "role": "battleship"},
-
         # Serpentis
         "daredevil": {"type_id": 17928, "faction": "serpentis", "role": "frigate"},
         "vigilant": {"type_id": 17720, "faction": "serpentis", "role": "cruiser"},
         "vindicator": {"type_id": 17740, "faction": "serpentis", "role": "battleship"},
-
         # Blood Raiders
         "cruor": {"type_id": 17926, "faction": "blood", "role": "frigate"},
         "ashimmu": {"type_id": 17922, "faction": "blood", "role": "cruiser"},
         "bhaalgorn": {"type_id": 17920, "faction": "blood", "role": "battleship"},
-
         # Guristas
         "worm": {"type_id": 17930, "faction": "guristas", "role": "frigate"},
         "gila": {"type_id": 17715, "faction": "guristas", "role": "cruiser"},
         "rattlesnake": {"type_id": 17918, "faction": "guristas", "role": "battleship"},
-
         # Sisters of EVE
         "astero": {"type_id": 33468, "faction": "soe", "role": "frigate"},
         "stratios": {"type_id": 33470, "faction": "soe", "role": "cruiser"},
         "nestor": {"type_id": 33472, "faction": "soe", "role": "battleship"},
     },
-
     # ========== CAPITAL SHIPS ==========
     "capitals": {
         # Dreadnoughts
@@ -194,20 +168,17 @@ SHIP_DATABASE = {
         "moros": {"type_id": 19720, "faction": "gallente", "role": "dreadnought"},
         "phoenix": {"type_id": 19726, "faction": "caldari", "role": "dreadnought"},
         "revelation": {"type_id": 19722, "faction": "amarr", "role": "dreadnought"},
-
         # Carriers
         "nidhoggur": {"type_id": 24483, "faction": "minmatar", "role": "carrier"},
         "thanatos": {"type_id": 23911, "faction": "gallente", "role": "carrier"},
         "chimera": {"type_id": 23915, "faction": "caldari", "role": "carrier"},
         "archon": {"type_id": 23757, "faction": "amarr", "role": "carrier"},
-
         # Force Auxiliaries
         "lif": {"type_id": 37605, "faction": "minmatar", "role": "fax"},
         "ninazu": {"type_id": 37607, "faction": "gallente", "role": "fax"},
         "minokawa": {"type_id": 37606, "faction": "caldari", "role": "fax"},
         "apostle": {"type_id": 37604, "faction": "amarr", "role": "fax"},
     },
-
     # ========== SUPERCAPITALS ==========
     "supercapitals": {
         # Supercarriers
@@ -215,14 +186,12 @@ SHIP_DATABASE = {
         "nyx": {"type_id": 23913, "faction": "gallente", "role": "supercarrier"},
         "wyvern": {"type_id": 23917, "faction": "caldari", "role": "supercarrier"},
         "aeon": {"type_id": 23919, "faction": "amarr", "role": "supercarrier"},
-
         # Titans
         "ragnarok": {"type_id": 11568, "faction": "minmatar", "role": "titan"},
         "erebus": {"type_id": 671, "faction": "gallente", "role": "titan"},
         "leviathan": {"type_id": 3764, "faction": "caldari", "role": "titan"},
         "avatar": {"type_id": 11567, "faction": "amarr", "role": "titan"},
     },
-
     # ========== INDUSTRIAL & SPECIALTY ==========
     "industrial": {
         # Haulers
@@ -230,7 +199,6 @@ SHIP_DATABASE = {
         "iteron_v": {"type_id": 657, "faction": "gallente", "role": "hauler"},
         "badger": {"type_id": 648, "faction": "caldari", "role": "hauler"},
         "bestower": {"type_id": 1944, "faction": "amarr", "role": "hauler"},
-
         # Mining
         "venture": {"type_id": 32880, "faction": "ore", "role": "mining"},
         "procurer": {"type_id": 17480, "faction": "ore", "role": "mining"},
@@ -239,11 +207,9 @@ SHIP_DATABASE = {
         "hulk": {"type_id": 22544, "faction": "ore", "role": "mining"},
         "skiff": {"type_id": 22546, "faction": "ore", "role": "mining"},
         "mackinaw": {"type_id": 22548, "faction": "ore", "role": "mining"},
-
         # Orca/Rorqual
         "orca": {"type_id": 28606, "faction": "ore", "role": "command"},
         "rorqual": {"type_id": 28352, "faction": "ore", "role": "capital_industrial"},
-
         # Freighters
         "fenrir": {"type_id": 20189, "faction": "minmatar", "role": "freighter"},
         "obelisk": {"type_id": 20187, "faction": "gallente", "role": "freighter"},
@@ -256,7 +222,7 @@ IMAGE_SERVER = "https://images.evetech.net"
 VALID_SIZES = [32, 64, 128, 256, 512, 1024]
 
 
-README_TEMPLATE = '''# EVE Ships - Official Render Collection
+README_TEMPLATE = """# EVE Ships - Official Render Collection
 
 A complete collection of EVE Online ship renders from the official [EVE Image Server](https://images.evetech.net/).
 
@@ -338,16 +304,11 @@ This repository is not affiliated with or endorsed by CCP hf.
 
 Ship images: © CCP hf. Used under Content Creation Terms.
 Repository structure and scripts: MIT License
-'''
+"""
 
 
 async def download_image(
-    client: httpx.AsyncClient,
-    type_id: int,
-    name: str,
-    size: int,
-    variation: str,
-    output_dir: Path
+    client: httpx.AsyncClient, type_id: int, name: str, size: int, variation: str, output_dir: Path
 ) -> bool:
     """Download a single image."""
     url = f"{IMAGE_SERVER}/types/{type_id}/{variation}?size={size}"
@@ -372,7 +333,7 @@ async def download_all_ships(
     output_dir: Path,
     sizes: List[int] = [256, 512],
     include_icons: bool = False,
-    progress_callback=None
+    progress_callback=None,
 ):
     """Download all ships."""
     renders_dir = output_dir / "renders"
@@ -411,23 +372,27 @@ async def download_all_ships(
 
                 for size in sizes:
                     # Render
-                    tasks.append((
-                        bounded_download(
-                            client, type_id, name, size, "render",
-                            renders_dir / str(size)
-                        ),
-                        name, "render"
-                    ))
+                    tasks.append(
+                        (
+                            bounded_download(
+                                client, type_id, name, size, "render", renders_dir / str(size)
+                            ),
+                            name,
+                            "render",
+                        )
+                    )
 
                     # Icon
                     if include_icons and size <= 64:
-                        tasks.append((
-                            bounded_download(
-                                client, type_id, name, size, "icon",
-                                icons_dir / str(size)
-                            ),
-                            name, "icon"
-                        ))
+                        tasks.append(
+                            (
+                                bounded_download(
+                                    client, type_id, name, size, "icon", icons_dir / str(size)
+                                ),
+                                name,
+                                "icon",
+                            )
+                        )
 
             # Execute tasks
             results = await asyncio.gather(*[t[0] for t in tasks])
@@ -438,7 +403,9 @@ async def download_all_ships(
                 else:
                     failed += 1
 
-            success_rate = (completed / (completed + failed)) * 100 if (completed + failed) > 0 else 0
+            success_rate = (
+                (completed / (completed + failed)) * 100 if (completed + failed) > 0 else 0
+            )
             print(f"   ✅ {completed} downloaded, ❌ {failed} failed ({success_rate:.0f}%)")
 
     return completed, failed
@@ -453,7 +420,7 @@ def create_manifest(output_dir: Path):
         "ships": {},
         "by_type_id": {},
         "by_faction": {},
-        "by_class": {}
+        "by_class": {},
     }
 
     for ship_class, ships in SHIP_DATABASE.items():
@@ -470,7 +437,7 @@ def create_manifest(output_dir: Path):
                 "class": ship_class,
                 "role": info.get("role", "combat"),
                 "render_url": f"https://images.evetech.net/types/{type_id}/render",
-                "icon_url": f"https://images.evetech.net/types/{type_id}/icon"
+                "icon_url": f"https://images.evetech.net/types/{type_id}/icon",
             }
 
             manifest["ships"][name] = ship_entry
@@ -497,7 +464,7 @@ def create_readme(output_dir: Path, sizes: List[int]):
         total_ships=total_ships,
         ship_classes=ship_classes,
         sizes=", ".join(str(s) for s in sizes),
-        date=datetime.now().strftime("%Y-%m-%d")
+        date=datetime.now().strftime("%Y-%m-%d"),
     )
 
     readme_path = output_dir / "README.md"
@@ -584,7 +551,7 @@ async def rebuild_repository(
     output_dir: Path,
     sizes: List[int] = [256, 512],
     include_icons: bool = False,
-    backup: bool = True
+    backup: bool = True,
 ):
     """Complete repository rebuild."""
     print("\n" + "=" * 60)
@@ -593,7 +560,10 @@ async def rebuild_repository(
 
     # Backup existing
     if output_dir.exists() and backup:
-        backup_dir = output_dir.parent / f"{output_dir.name}_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        backup_dir = (
+            output_dir.parent
+            / f"{output_dir.name}_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
         print(f"\n📦 Backing up existing repo to: {backup_dir.name}")
         shutil.move(str(output_dir), str(backup_dir))
 
@@ -602,9 +572,7 @@ async def rebuild_repository(
 
     # Download all ships
     completed, failed = await download_all_ships(
-        output_dir,
-        sizes=sizes,
-        include_icons=include_icons
+        output_dir, sizes=sizes, include_icons=include_icons
     )
 
     # Create manifest
@@ -648,16 +616,20 @@ Examples:
     %(prog)s ~/projects/EVE_Ships
     %(prog)s ~/projects/EVE_Ships --sizes 64,256,512
     %(prog)s ~/projects/EVE_Ships --include-icons --no-backup
-        """
+        """,
     )
 
     parser.add_argument("output", type=Path, help="Output directory (e.g., ~/projects/EVE_Ships)")
-    parser.add_argument("--sizes", type=str, default="256,512",
-                       help="Comma-separated render sizes (default: 256,512)")
-    parser.add_argument("--include-icons", action="store_true",
-                       help="Also download inventory icons")
-    parser.add_argument("--no-backup", action="store_true",
-                       help="Don't backup existing directory")
+    parser.add_argument(
+        "--sizes",
+        type=str,
+        default="256,512",
+        help="Comma-separated render sizes (default: 256,512)",
+    )
+    parser.add_argument(
+        "--include-icons", action="store_true", help="Also download inventory icons"
+    )
+    parser.add_argument("--no-backup", action="store_true", help="Don't backup existing directory")
 
     args = parser.parse_args()
 
@@ -669,12 +641,14 @@ Examples:
         print(f"Valid sizes: {VALID_SIZES}")
         return
 
-    asyncio.run(rebuild_repository(
-        args.output.expanduser(),
-        sizes=sizes,
-        include_icons=args.include_icons,
-        backup=not args.no_backup
-    ))
+    asyncio.run(
+        rebuild_repository(
+            args.output.expanduser(),
+            sizes=sizes,
+            include_icons=args.include_icons,
+            backup=not args.no_backup,
+        )
+    )
 
 
 if __name__ == "__main__":

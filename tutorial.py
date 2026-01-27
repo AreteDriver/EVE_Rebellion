@@ -10,6 +10,7 @@ from constants import COLOR_MINMATAR_ACCENT, COLOR_TEXT, SCREEN_WIDTH
 
 class TutorialStep:
     """A single step in the tutorial"""
+
     def __init__(self, title, instruction, condition_text, check_func=None):
         self.title = title
         self.instruction = instruction
@@ -47,51 +48,51 @@ class TutorialManager:
                 "WELCOME, PILOT",
                 "You are the last hope of the Minmatar Rebellion.\nMaster your ship to liberate your people.",
                 "Press SPACE or (A) to continue",
-                lambda: self.skip_timer > 0
+                lambda: self.skip_timer > 0,
             ),
             TutorialStep(
                 "MOVEMENT",
                 "Use WASD/Arrows or Left Stick to move.\nStay mobile to avoid enemy fire!",
                 "Move around the screen",
-                lambda: self.moves_made >= 50
+                lambda: self.moves_made >= 50,
             ),
             TutorialStep(
                 "AUTOCANNONS",
                 "Press SPACE/Left Click or RT to fire autocannons.\nThey are your primary weapon.",
                 "Fire your weapons (0/10)",
-                lambda: self.shots_fired >= 10
+                lambda: self.shots_fired >= 10,
             ),
             TutorialStep(
                 "ROCKETS",
                 "Press SHIFT/Right Click or LT to fire rockets.\nRockets deal heavy damage but are limited.",
                 "Fire 2 rockets",
-                lambda: self.rockets_fired >= 2
+                lambda: self.rockets_fired >= 2,
             ),
             TutorialStep(
                 "AMMO TYPES",
                 "Press 1-5 or RB to cycle ammo types:\n1=Sabot  2=EMP(shields)  3=Plasma(armor)\n4=Fusion(damage)  5=Barrage(speed)",
                 "Switch ammo types 3 times",
-                lambda: self.ammo_switches >= 3
+                lambda: self.ammo_switches >= 3,
             ),
             TutorialStep(
                 "BERSERK SCORING",
                 "Get CLOSE to enemies when you kill them!\nCloser kills = Higher score multiplier.\nExtreme close (5x) > Close (3x) > Far (0.5x)",
                 "Kill an enemy at close range",
-                lambda: self.close_kills >= 1
+                lambda: self.close_kills >= 1,
             ),
             TutorialStep(
                 "REFUGEES",
                 "Destroy industrial ships to rescue refugees.\nRefugees are your currency for upgrades.",
                 "You're ready! Press SPACE or (A) to start",
-                lambda: self.skip_timer > 0
+                lambda: self.skip_timer > 0,
             ),
         ]
 
         # Set targets for progress tracking
         self.steps[1].target = 50  # moves
         self.steps[2].target = 10  # shots
-        self.steps[3].target = 2   # rockets
-        self.steps[4].target = 3   # ammo switches
+        self.steps[3].target = 2  # rockets
+        self.steps[4].target = 3  # ammo switches
 
     def start_tutorial(self):
         """Begin the tutorial"""
@@ -129,7 +130,7 @@ class TutorialManager:
     def track_kill(self, distance_range):
         """Track enemy kill with berserk range"""
         self.enemies_killed += 1
-        if distance_range in ['EXTREME', 'CLOSE']:
+        if distance_range in ["EXTREME", "CLOSE"]:
             self.close_kills += 1
 
     def handle_input(self, event):
@@ -187,7 +188,9 @@ class TutorialManager:
         pygame.draw.line(surface, COLOR_MINMATAR_ACCENT, (0, 158), (SCREEN_WIDTH, 158), 2)
 
         # Tutorial indicator
-        step_text = font_small.render(f"TUTORIAL {self.current_step + 1}/{len(self.steps)}", True, (150, 150, 150))
+        step_text = font_small.render(
+            f"TUTORIAL {self.current_step + 1}/{len(self.steps)}", True, (150, 150, 150)
+        )
         surface.blit(step_text, (10, 10))
 
         # Title
@@ -197,7 +200,7 @@ class TutorialManager:
 
         # Instructions (multi-line)
         y = 70
-        for line in step.instruction.split('\n'):
+        for line in step.instruction.split("\n"):
             inst_text = font.render(line, True, COLOR_TEXT)
             inst_rect = inst_text.get_rect(center=(SCREEN_WIDTH // 2, y))
             surface.blit(inst_text, inst_rect)
@@ -212,11 +215,7 @@ class TutorialManager:
 
         # Pulsing effect for condition
         pulse = abs((pygame.time.get_ticks() % 1000) - 500) / 500
-        cond_color = (
-            int(100 + 155 * pulse),
-            int(200 + 55 * pulse),
-            int(100 + 55 * pulse)
-        )
+        cond_color = (int(100 + 155 * pulse), int(200 + 55 * pulse), int(100 + 55 * pulse))
         cond_surface = font.render(cond_text, True, cond_color)
         cond_rect = cond_surface.get_rect(center=(SCREEN_WIDTH // 2, 140))
         surface.blit(cond_surface, cond_rect)
